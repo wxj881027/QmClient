@@ -1,10 +1,13 @@
 #include <base/str.h>
 
+#include <game/client/QmUi/QmSearchHeader.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsTextPlanUnits.h>
 #include <game/client/components/settings_resource_jobs.h>
 
 #include <gtest/gtest.h>
+
+#include <vector>
 
 TEST(SettingsLoadingPrewarm, AdvanceRequiresNoProgressToFinish)
 {
@@ -280,6 +283,45 @@ TEST(SettingsLoadingPrewarm, GlyphDemandTableCountsFrequencyAndPrioritizesVisibl
 	EXPECT_EQ(Table.PrewarmBatches().size(), 4u);
 	EXPECT_EQ(Table.PrewarmBatches()[0].m_GlyphCount, 2u);
 	EXPECT_EQ(Table.PrewarmBatches()[0].m_PixelSize, 32);
+}
+
+TEST(SettingsLoadingPrewarm, SearchHeaderPrewarmEnumeratesEveryRandomTextCandidate)
+{
+	struct SInput
+	{
+		const char *m_pText;
+		int m_PixelSize;
+		uint8_t m_Priority;
+	};
+	std::vector<SInput> vInputs;
+	qm_search_header::ForEachGlyphPrewarmText(
+		[&vInputs](const char *pText, int PixelSize, uint8_t Priority) {
+			vInputs.push_back({pText, PixelSize, Priority});
+		},
+		18, 20, 1);
+	ASSERT_EQ(vInputs.size(), qm_search_header::NUM_SPLASHES + qm_search_header::NUM_SEARCH_PLACEHOLDERS);
+	for(int Index = 0; Index < qm_search_header::NUM_SPLASHES; ++Index)
+	{
+		EXPECT_STREQ(vInputs[Index].m_pText, qm_search_header::SPLASHES[Index]);
+		EXPECT_EQ(vInputs[Index].m_PixelSize, 18);
+		EXPECT_EQ(vInputs[Index].m_Priority, 1);
+	}
+	for(int Index = 0; Index < qm_search_header::NUM_SEARCH_PLACEHOLDERS; ++Index)
+	{
+		const SInput &Input = vInputs[qm_search_header::NUM_SPLASHES + Index];
+		EXPECT_STREQ(Input.m_pText, qm_search_header::SEARCH_PLACEHOLDERS[Index]);
+		EXPECT_EQ(Input.m_PixelSize, 20);
+		EXPECT_EQ(Input.m_Priority, 1);
+	}
+	vInputs.clear();
+	qm_search_header::ForEachGlyphPrewarmText(
+		[&vInputs](const char *pText, int PixelSize, uint8_t Priority) {
+			vInputs.push_back({pText, PixelSize, Priority});
+		},
+		0, 20, 2);
+	ASSERT_EQ(vInputs.size(), qm_search_header::NUM_SEARCH_PLACEHOLDERS);
+	for(const SInput &Input : vInputs)
+		EXPECT_EQ(Input.m_Priority, 2);
 }
 
 TEST(SettingsLoadingPrewarm, GlyphDemandBatchesKeepPixelSizesTogether)

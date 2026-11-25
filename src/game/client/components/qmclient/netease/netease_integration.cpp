@@ -477,7 +477,7 @@ bool CNeteaseIntegration::GetCurrentLyric(char *pBuffer, size_t BufferSize, Colo
 	if(pBuffer == nullptr || BufferSize == 0)
 		return false;
 	pBuffer[0] = '\0';
-	if(!g_Config.m_QmLyrics || !g_Config.m_QmLyricsInMediaIsland)
+	if(!g_Config.m_QmLyricsInMediaIsland)
 		return false;
 	const NeteaseLyrics::SCurrentState &State = m_LyricState.Snapshot();
 	if(!State.m_HasSong || !State.m_LyricValid || State.m_CurrentLyric.empty())
@@ -490,12 +490,12 @@ bool CNeteaseIntegration::GetCurrentLyric(char *pBuffer, size_t BufferSize, Colo
 
 bool CNeteaseIntegration::HasCurrentLyric() const
 {
-	return g_Config.m_QmLyrics != 0 && g_Config.m_QmLyricsInMediaIsland != 0 && m_LyricState.Snapshot().m_LyricValid;
+	return g_Config.m_QmLyricsInMediaIsland != 0 && m_LyricState.Snapshot().m_LyricValid;
 }
 
 bool CNeteaseIntegration::HasActiveLyrics() const
 {
-	return g_Config.m_QmLyrics != 0 && g_Config.m_QmLyricsInMediaIsland != 0 && m_LyricState.Snapshot().m_HasSong && m_ActiveLyrics;
+	return g_Config.m_QmLyricsInMediaIsland != 0 && m_LyricState.Snapshot().m_HasSong && m_ActiveLyrics;
 }
 
 uint64_t CNeteaseIntegration::CurrentSongId() const

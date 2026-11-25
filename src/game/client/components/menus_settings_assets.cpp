@@ -103,7 +103,7 @@ namespace
 
 	bool AssetsPerfDebugEnabled()
 	{
-		return g_Config.m_QmPerfDebug != 0;
+		return g_Config.m_QmPerfEnabled;
 	}
 
 	void LogAssetsPerfStage(const IClient *pClient, const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)

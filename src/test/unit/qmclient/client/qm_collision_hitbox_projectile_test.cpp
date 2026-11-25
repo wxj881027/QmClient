@@ -1,3 +1,4 @@
+#include <game/client/components/qmclient/collision_hitbox_logic.h>
 #include <game/client/components/qmclient/collision_hitbox_projectile_logic.h>
 
 #include <gtest/gtest.h>
@@ -96,4 +97,80 @@ TEST(QmProjectileHitbox, OrdinaryGrenadeRetainsExplosionRange)
 	EXPECT_TRUE(Display.m_ShowTrail);
 	EXPECT_TRUE(Display.m_ShowExplosion);
 	EXPECT_FLOAT_EQ(Display.m_FreezeRadius, 0.0f);
+}
+
+TEST(QmCollisionHitboxVisibility, RacingCanShowFreezeVolumesWithoutRegularWeaponRanges)
+{
+	CConfig Config{};
+	Config.m_QmHitboxMode = 1;
+	Config.m_QmHitboxShowFreezeProjectiles = 1;
+
+	const auto Visibility = ResolveQmCollisionHitboxVisibility(Config, false);
+	EXPECT_FALSE(Visibility.m_HammerAndHook);
+	EXPECT_TRUE(Visibility.ShowLaser(true));
+	EXPECT_FALSE(Visibility.ShowLaser(false));
+
+	CProjectileData FreezeProjectile{};
+	FreezeProjectile.m_Freeze = true;
+	FreezeProjectile.m_Explosive = true;
+	const auto Freeze = ResolveQmProjectileHitboxDisplay(FreezeProjectile, Visibility.m_ProjectilesAndLasers, Visibility.m_FreezeProjectilesAndLasers, true);
+	EXPECT_GT(Freeze.m_FreezeRadius, 0.0f);
+	EXPECT_FALSE(Freeze.m_ShowTrail);
+	EXPECT_FALSE(Freeze.m_ShowExplosion);
+}
+
+TEST(QmCollisionHitboxVisibility, RegularWeaponsCanStayVisibleWithFreezeVolumesDisabled)
+{
+	CConfig Config{};
+	Config.m_QmHitboxMode = 1;
+	Config.m_QmHitboxShowHammer = 1;
+	Config.m_QmHitboxShowProjectiles = 1;
+
+	const auto Visibility = ResolveQmCollisionHitboxVisibility(Config, false);
+	EXPECT_TRUE(Visibility.m_HammerAndHook);
+	EXPECT_FALSE(Visibility.ShowLaser(true));
+	EXPECT_TRUE(Visibility.ShowLaser(false));
+
+	CProjectileData Grenade{};
+	Grenade.m_Type = WEAPON_GRENADE;
+	const auto Regular = ResolveQmProjectileHitboxDisplay(Grenade, Visibility.m_ProjectilesAndLasers, Visibility.m_FreezeProjectilesAndLasers, true);
+	EXPECT_FLOAT_EQ(Regular.m_FreezeRadius, 0.0f);
+	EXPECT_TRUE(Regular.m_ShowTrail);
+	EXPECT_TRUE(Regular.m_ShowExplosion);
+}
+
+TEST(QmCollisionHitboxVisibility, ReplayViewHidesPlayerPredictionOverlays)
+{
+	CConfig Config{};
+	Config.m_QmHitboxMode = 1;
+	Config.m_QmHitboxShowMap = 1;
+	Config.m_QmHitboxShowTeeCollision = 1;
+	Config.m_QmHitboxShowTeeFreeze = 1;
+	Config.m_QmHitboxShowPickups = 1;
+	Config.m_QmHitboxShowHammer = 1;
+	Config.m_QmHitboxShowProjectiles = 1;
+	Config.m_QmHitboxShowFreezeProjectiles = 1;
+
+	const auto Visibility = ResolveQmCollisionHitboxVisibility(Config, true);
+	EXPECT_TRUE(Visibility.m_MapBorders);
+	EXPECT_TRUE(Visibility.m_ShieldPickups);
+	EXPECT_FALSE(Visibility.m_TeeCircle);
+	EXPECT_FALSE(Visibility.m_TeeCheckPoints);
+	EXPECT_FALSE(Visibility.m_HammerAndHook);
+	EXPECT_TRUE(Visibility.ShowLaser(true));
+	EXPECT_TRUE(Visibility.ShowLaser(false));
+}
+
+TEST(QmCollisionHitboxVisibility, TeeCircleStaysVisibleWhenCheckPointsAreTurnedOff)
+{
+	CConfig Config{};
+	Config.m_QmHitboxMode = 1;
+	Config.m_QmHitboxShowTeeCollision = 1;
+	Config.m_QmHitboxShowTeeFreeze = 1;
+	EXPECT_TRUE(ResolveQmCollisionHitboxVisibility(Config, false).m_TeeCheckPoints);
+
+	Config.m_QmHitboxShowTeeFreeze = 0;
+	const auto Visibility = ResolveQmCollisionHitboxVisibility(Config, false);
+	EXPECT_FALSE(Visibility.m_TeeCheckPoints);
+	EXPECT_TRUE(Visibility.m_TeeCircle);
 }

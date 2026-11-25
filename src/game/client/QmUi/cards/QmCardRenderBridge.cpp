@@ -180,11 +180,6 @@ void qm_card_catalog::QmCardRenderHook::RenderQmHudDebugGraphContent(CMenus *pMe
 	pMenus->RenderQmHudDebugGraphContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmHudDebugModeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
-{
-	pMenus->RenderQmHudDebugModeContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
-}
-
 void qm_card_catalog::QmCardRenderHook::RenderQmHudInputOverlayContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmHudInputOverlayContent(Content, Metrics, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));

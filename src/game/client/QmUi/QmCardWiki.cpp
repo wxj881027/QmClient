@@ -504,9 +504,9 @@ namespace
 		},
 		{
 			"qm:collision_hitbox",
-			Localizable("Draws collision and interaction ranges on the map: tee collision, pickups, hammer, hook, lasers and explosions."),
-			Localizable("Tick \"Show hitbox mode\", choose the ranges you need, then set \"Player range\" to \"Local only\", \"Local + Dummy\" or \"All players\"."),
-			Localizable("It stays on for every match, so switch it off before real races to keep the screen and your aim clean."),
+			Localizable("See freeze and death borders, character check points, shield pickups and weapon ranges."),
+			Localizable("Turn on \"Enable collision hitboxes\", choose what to draw, then pick which players to show under \"Show hitboxes for\"."),
+			Localizable("When racing, you can keep \"Freeze projectiles and lasers\" on and turn off the other weapon ranges to see incoming freeze hazards more clearly."),
 		},
 		{
 			"qm:coords",
@@ -517,14 +517,8 @@ namespace
 		{
 			"qm:debug_graph",
 			Localizable("Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget."),
-			Localizable("Bind \"Global toggle key\" to show or hide the panel, and raise \"Panel opacity\" if the graphs are hard to read."),
+			Localizable("Use cl_show_perf 1 to show the panel."),
 			Localizable("It is a diagnostic overlay, not gameplay data; lower the opacity when it covers the map."),
-		},
-		{
-			"qm:debug_mode",
-			Localizable("Logs slow frames and startup stutter timings so you can report why the game felt laggy."),
-			Localizable("Tick \"Debug mode\" to turn all options on, then set \"Performance debug log threshold (ms)\" to choose which frames get logged."),
-			Localizable("Switch it off when you are done; these logs are for bug reports, not daily play."),
 		},
 		{
 			"qm:dummy_miniview",
@@ -625,7 +619,7 @@ namespace
 		{
 			"qm:lyrics",
 			Localizable("Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it."),
-			Localizable("Tick \"Enable lyrics\" and \"Show lyrics inside Dynamic Island\", then enable one source such as \"Enable Netease music Hook\" or \"Enable Spotify lyrics\"."),
+			Localizable("Enable a music source to display its lyrics."),
 			Localizable("Lyrics live in the Dynamic Island, so they stay hidden until that option is on."),
 		},
 		{
@@ -636,9 +630,9 @@ namespace
 		},
 		{
 			"qm:mini_features",
-			Localizable("A grab bag of small convenience switches that do not deserve their own card: chat completion, the Qm scoreboard badge, tune zone colors, message merging, repeat and combo."),
+			Localizable("Convenience options for chat, the scoreboard and tune zones."),
 			Localizable("Switch on only the ones you recognize; chat completion affects the chat input, and \"Show Qm badge\" adds the Qm marker next to names on the scoreboard."),
-			Localizable("Leave \"Automatic updates\" off if you update by hand: it can restart the client to install a build."),
+			Localizable("These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered."),
 		},
 		{
 			"qm:pie_menu",

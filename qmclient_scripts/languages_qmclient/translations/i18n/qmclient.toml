@@ -3695,6 +3695,22 @@ turkish = "Bir anahtar kelime kuralı kaydedilemedi. Tetikleyicinin => içerip i
 polish = "Nie udało się zapisać reguły słów kluczowych. Sprawdź, czy wyzwalacz zawiera => lub zaczyna się od zastrzeżonego prefiksu."
 
 [[message]]
+key = "Convenience options for chat, the scoreboard and tune zones."
+[message.translations]
+simplified_chinese = "聊天、计分板和调参区的便捷设置。"
+traditional_chinese = "聊天、計分板和調參區的便利設定。"
+japanese = "チャット、スコアボード、調整ゾーンの便利な設定。"
+korean = "채팅, 점수판, 튜닝 구역의 편의 설정입니다."
+russian = "Дополнительные параметры чата, таблицы счёта и зон настроек."
+german = "Zusatzoptionen für Chat, Punktetabelle und Tuning-Zonen."
+spanish = "Opciones adicionales para el chat, el marcador y las zonas de ajustes."
+french = "Options pratiques pour le chat, le tableau des scores et les zones de réglage."
+brazilian_portuguese = "Opções práticas para o chat, o placar e as zonas de ajuste."
+portuguese = "Opções úteis para o chat, a tabela de pontuações e as zonas de ajuste."
+turkish = "Sohbet, skor tablosu ve ayar bölgeleri için kolaylık seçenekleri."
+polish = "Dodatkowe opcje czatu, tabeli wyników i stref ustawień."
+
+[[message]]
 key = "Could not save keyword rules. Edit a rule to retry."
 [message.translations]
 simplified_chinese = "无法保存关键词规则。编辑任意一条规则可重试。"
@@ -10197,6 +10213,22 @@ turkish = "3D arka plan parçacıklarını etkinleştir"
 polish = "Włącz cząsteczki tła 3D"
 
 [[message]]
+key = "Enable a music source to display its lyrics."
+[message.translations]
+simplified_chinese = "启用一个音乐来源以显示歌词。"
+traditional_chinese = "啟用一個音樂來源以顯示歌詞。"
+japanese = "歌詞を表示する音楽ソースを有効にします。"
+korean = "가사를 표시할 음악 소스를 켭니다."
+russian = "Включите источник музыки для показа текста песни."
+german = "Aktiviere eine Musikquelle, um ihre Songtexte anzuzeigen."
+spanish = "Activa una fuente de música para mostrar sus letras."
+french = "Activez une source musicale pour afficher ses paroles."
+brazilian_portuguese = "Ative uma fonte de música para mostrar as letras."
+portuguese = "Ative uma fonte de música para mostrar as letras."
+turkish = "Şarkı sözlerini göstermek için bir müzik kaynağını etkinleştirin."
+polish = "Włącz źródło muzyki, aby wyświetlić tekst utworu."
+
+[[message]]
 key = "Enable and calibrate controller input"
 [message.translations]
 simplified_chinese = "启用并校准控制器输入"
@@ -10371,6 +10403,11 @@ brazilian_portuguese = "Ativar o diagnóstico de travamentos do cliente na inici
 portuguese = "Ativar o diagnóstico de interrupções do cliente ao iniciar"
 turkish = "Başlangıçta istemci takılma tanılamasını etkinleştir"
 polish = "Włącz diagnostykę przycięć klienta przy uruchamianiu"
+
+[[message]]
+key = "Enable collision hitboxes"
+[message.translations]
+simplified_chinese = "启用碰撞箱"
 
 [[message]]
 key = "Enable dummy skin queue rotation"
@@ -12933,6 +12970,16 @@ turkish = "Serbest görünüm"
 polish = "Swobodny widok"
 
 [[message]]
+key = "Freeze and death borders"
+[message.translations]
+simplified_chinese = "冻结与死亡边界"
+
+[[message]]
+key = "Freeze and death check points"
+[message.translations]
+simplified_chinese = "角色冻结与死亡判定点"
+
+[[message]]
 key = "Freeze border color"
 [message.translations]
 simplified_chinese = "冻结边框颜色"
@@ -12981,6 +13028,11 @@ turkish = "Donduran kalp / can alma"
 polish = "Zamrażające serce / podniesienie zdrowia"
 
 [[message]]
+key = "Freeze hitbox color"
+[message.translations]
+simplified_chinese = "冻结判定颜色"
+
+[[message]]
 key = "Freeze laser collision volume"
 [message.translations]
 simplified_chinese = "冻结激光碰撞体积"
@@ -13027,6 +13079,11 @@ brazilian_portuguese = "Volume de colisão dos projéteis Freeze"
 portuguese = "Volume de colisão dos projéteis Freeze"
 turkish = "Freeze mermilerinin çarpışma hacmi"
 polish = "Objętość kolizji pocisków Freeze"
+
+[[message]]
+key = "Freeze projectiles and lasers"
+[message.translations]
+simplified_chinese = "冻结子弹与激光"
 
 [[message]]
 key = "Freeze tile outline width"
@@ -14030,6 +14087,11 @@ brazilian_portuguese = "Disparo de pistola"
 portuguese = "Disparo de pistola"
 turkish = "Tabanca ateşi"
 polish = "Strzał z pistoletu"
+
+[[message]]
+key = "Hammer and hook range"
+[message.translations]
+simplified_chinese = "锤击与钩索范围"
 
 [[message]]
 key = "Hammer hit"
@@ -15120,6 +15182,11 @@ turkish = "İsabet bildirimi"
 polish = "Potwierdzenie trafienia"
 
 [[message]]
+key = "Hitbox line opacity"
+[message.translations]
+simplified_chinese = "线条不透明度"
+
+[[message]]
 key = "Hitbox mode"
 [message.translations]
 simplified_chinese = "碰撞箱模式"
@@ -15230,6 +15297,11 @@ brazilian_portuguese = "Cor da interação com armas no modo Hitbox"
 portuguese = "Cor da interação de armas no modo de caixa de colisão"
 turkish = "Hitbox modu silah etkileşim rengi"
 polish = "Kolor interakcji broni w trybie hitboxów"
+
+[[message]]
+key = "Hitbox player scope: 0=self only, 1=self and dummy, 2=all players"
+[message.translations]
+simplified_chinese = "显示哪些玩家的碰撞箱：0=仅自己，1=自己与分身，2=所有玩家"
 
 [[message]]
 key = "HJ Assist"
@@ -18677,6 +18749,22 @@ turkish = "Uzun kareler"
 polish = "Długie klatki"
 
 [[message]]
+key = "Looks like an update is available"
+[message.translations]
+simplified_chinese = "貌似有可更新的版本呢"
+traditional_chinese = "好像有可更新的版本呢"
+japanese = "アップデートがあるようです"
+korean = "업데이트가 있는 것 같아요"
+russian = "Похоже, доступно обновление"
+german = "Es gibt wohl ein Update"
+spanish = "Parece que hay una actualización"
+french = "On dirait qu’une mise à jour est disponible"
+brazilian_portuguese = "Parece que há uma atualização"
+portuguese = "Parece que está disponível uma atualização"
+turkish = "Görünüşe göre bir güncelleme var"
+polish = "Wygląda na to, że jest aktualizacja"
+
+[[message]]
 key = "LRCLIB API base URL (can be changed to a mirror)"
 [message.translations]
 simplified_chinese = "LRCLIB API 基础 URL（可更改为镜像）"
@@ -20195,6 +20283,11 @@ brazilian_portuguese = "Margem reservada quando a barra de notificações está 
 portuguese = "Margem reservada quando a barra de notificações está encostada à borda"
 turkish = "Bildirim çubuğu kenara yaslandığında kenar boşluğu bırak"
 polish = "Margines przy krawędzi ekranu dla panelu powiadomień"
+
+[[message]]
+key = "Mark the freeze check at the center and the four death checks around each Tee"
+[message.translations]
+simplified_chinese = "用十字标出角色中心的冻结判定点和四角的死亡判定点"
 
 [[message]]
 key = "Marquee for long lyrics"
@@ -23509,6 +23602,11 @@ turkish = "Anahat opaklığı"
 polish = "Nieprzezroczystość konturu"
 
 [[message]]
+key = "Outline where freeze, deep freeze and death tiles take effect"
+[message.translations]
+simplified_chinese = "描出地图上冻结块、深冻块和死亡块生效的边缘"
+
+[[message]]
 key = "Output device"
 [message.translations]
 simplified_chinese = "输出设备"
@@ -26168,6 +26266,11 @@ brazilian_portuguese = "Alcance do projétil / explosão"
 portuguese = "Alcance do projétil / explosão"
 turkish = "Mermi / patlama menzili"
 polish = "Zasięg pocisku / eksplozji"
+
+[[message]]
+key = "Projectiles, explosions and regular lasers"
+[message.translations]
+simplified_chinese = "子弹、爆炸与普通激光"
 
 [[message]]
 key = "ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
@@ -29775,6 +29878,11 @@ turkish = "Seçim arka plan rengi"
 polish = "Kolor tła zaznaczenia"
 
 [[message]]
+key = "Self and dummy"
+[message.translations]
+simplified_chinese = "自己与分身"
+
+[[message]]
 key = "Self and friends"
 [message.translations]
 simplified_chinese = "自己和好友"
@@ -30433,8 +30541,8 @@ polish = "Ustaw punkt odrodzenia ćwiczeń"
 [[message]]
 key = "Set up Kugou lyrics"
 [message.translations]
-simplified_chinese = "设置酷狗歌词接入"
-traditional_chinese = "設定酷狗歌詞接入"
+simplified_chinese = "配置酷狗歌词"
+traditional_chinese = "設定酷狗歌詞"
 japanese = "Kugou 歌詞の接続設定"
 korean = "Kugou 가사 연결 설정"
 russian = "Настроить тексты Kugou"
@@ -30637,6 +30745,11 @@ brazilian_portuguese = "Migração do valor padrão de pré-aquecimento das conf
 portuguese = "Migração do valor predefinido de pré-aquecimento das configurações concluída"
 turkish = "Ayarlar ön ısıtma varsayılanı taşıması tamamlandı"
 polish = "Migracja domyślnej wartości wstępnego ładowania ustawień zakończona"
+
+[[message]]
+key = "Shield pickup range"
+[message.translations]
+simplified_chinese = "护盾拾取范围"
 
 [[message]]
 key = "Shimmer speed"
@@ -31385,6 +31498,22 @@ turkish = "Sonuç kartını dinamik adada göster"
 polish = "Pokaż kartę wyniku na dynamicznej wyspie"
 
 [[message]]
+key = "Show FPS, prediction time, and performance graphs"
+[message.translations]
+simplified_chinese = "显示 FPS、预测耗时和性能曲线"
+traditional_chinese = "顯示 FPS、預測耗時和效能曲線"
+japanese = "FPS、予測時間、パフォーマンスグラフを表示"
+korean = "FPS, 예측 시간 및 성능 그래프 표시"
+russian = "Показывать FPS, время предсказания и графики производительности"
+german = "FPS, Vorhersagezeit und Leistungsdiagramme anzeigen"
+spanish = "Mostrar FPS, tiempo de predicción y gráficas de rendimiento"
+french = "Afficher les FPS, le temps de prédiction et les graphiques de performances"
+brazilian_portuguese = "Mostrar FPS, tempo de previsão e gráficos de desempenho"
+portuguese = "Mostrar FPS, tempo de previsão e gráficos de desempenho"
+turkish = "FPS, tahmin süresi ve performans grafiklerini göster"
+polish = "Pokaż FPS, czas predykcji i wykresy wydajności"
+
+[[message]]
 key = "Show freeze tile outlines"
 [message.translations]
 simplified_chinese = "显示冻结块描边"
@@ -31534,6 +31663,11 @@ turkish = "Çekiç durumunu göster"
 polish = "Pokaż status młotka"
 
 [[message]]
+key = "Show hazard borders, character check points and weapon ranges"
+[message.translations]
+simplified_chinese = "显示地形危险边界、角色判定点与武器范围"
+
+[[message]]
 key = "Show hint at random top-left/right of player when main or dummy is hammered awake"
 [message.translations]
 simplified_chinese = "本体或分身被锤醒时，在对应玩家随机的左上或右上角显示提示"
@@ -31564,6 +31698,11 @@ brazilian_portuguese = "Mostrar modo de hitbox"
 portuguese = "Mostrar modo de caixa de colisão"
 turkish = "Hitbox modunu göster"
 polish = "Pokaż tryb hitboxów"
+
+[[message]]
+key = "Show hitboxes for"
+[message.translations]
+simplified_chinese = "显示对象"
 
 [[message]]
 key = "Show hookable tile outlines"
@@ -32625,6 +32764,11 @@ brazilian_portuguese = "Mostrar Tees no quadro de afogamentos da equipe Gores"
 portuguese = "Mostrar Tees no quadro de afogamentos da equipa Gores"
 turkish = "Gores takım boğulma panosunda Tee'leri göster"
 polish = "Pokaż Tees na tablicy utonięć drużyny Gores"
+
+[[message]]
+key = "Show the areas where freeze projectiles and lasers can freeze a Tee"
+[message.translations]
+simplified_chinese = "显示冰弹和冰激光能冻住角色的范围"
 
 [[message]]
 key = "Show the chat scrollbar on the right"
@@ -36083,6 +36227,16 @@ turkish = "Tee çarpışması (Tee ile Tee)"
 polish = "Kolizja Tee (Tee z Tee)"
 
 [[message]]
+key = "Tee collision circle"
+[message.translations]
+simplified_chinese = "角色碰撞圆"
+
+[[message]]
+key = "Tee collision color"
+[message.translations]
+simplified_chinese = "角色碰撞颜色"
+
+[[message]]
 key = "Tee cry"
 [message.translations]
 simplified_chinese = "Tee 哭声"
@@ -39159,6 +39313,22 @@ turkish = "Müzik kaynağında sözcük zamanlaması yoksa önbellekteki veya ç
 polish = "Używaj tekstów piosenek społeczności AMLL z pamięci podręcznej lub internetu, gdy źródło muzyki nie udostępnia znaczników czasu dla poszczególnych słów"
 
 [[message]]
+key = "Use cl_show_perf 1 to show the panel."
+[message.translations]
+simplified_chinese = "输入 cl_show_perf 1 显示面板。"
+traditional_chinese = "輸入 cl_show_perf 1 顯示面板。"
+japanese = "cl_show_perf 1 を入力するとパネルが表示されます。"
+korean = "cl_show_perf 1을 입력하면 패널이 표시됩니다."
+russian = "Введите cl_show_perf 1, чтобы показать панель."
+german = "Mit cl_show_perf 1 wird das Panel angezeigt."
+spanish = "Usa cl_show_perf 1 para mostrar el panel."
+french = "Utilisez cl_show_perf 1 pour afficher le panneau."
+brazilian_portuguese = "Use cl_show_perf 1 para mostrar o painel."
+portuguese = "Use cl_show_perf 1 para mostrar o painel."
+turkish = "Paneli göstermek için cl_show_perf 1 yazın."
+polish = "Wpisz cl_show_perf 1, aby wyświetlić panel."
+
+[[message]]
 key = "Use custom chat bubble colors"
 [message.translations]
 simplified_chinese = "使用自定义消息气泡颜色"
@@ -39451,6 +39621,22 @@ brazilian_portuguese = "Usar filtro público de palavras"
 portuguese = "Usar filtro público de palavras"
 turkish = "Ortak kelime filtresini kullan"
 polish = "Używaj publicznego filtra słów"
+
+[[message]]
+key = "Use qm_pref <0|1> [20-400] (milliseconds)"
+[message.translations]
+simplified_chinese = "用法：qm_pref <0|1> [20-400]（毫秒）"
+traditional_chinese = "用法：qm_pref <0|1> [20-400]（毫秒）"
+japanese = "使い方：qm_pref <0|1> [20-400]（ミリ秒）"
+korean = "사용법: qm_pref <0|1> [20-400] (밀리초)"
+russian = "Синтаксис: qm_pref <0|1> [20-400] (миллисекунды)"
+german = "Verwendung: qm_pref <0|1> [20-400] (Millisekunden)"
+spanish = "Uso: qm_pref <0|1> [20-400] (milisegundos)"
+french = "Utilisation : qm_pref <0|1> [20-400] (millisecondes)"
+brazilian_portuguese = "Uso: qm_pref <0|1> [20-400] (milissegundos)"
+portuguese = "Utilização: qm_pref <0|1> [20-400] (milissegundos)"
+turkish = "Kullanım: qm_pref <0|1> [20-400] (milisaniye)"
+polish = "Użycie: qm_pref <0|1> [20-400] (milisekundy)"
 
 [[message]]
 key = "Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active"
@@ -42524,6 +42710,12 @@ brazilian_portuguese = "Tecla de menu"
 portuguese = "Tecla de menu"
 turkish = "Menü tuşu"
 polish = "Klawisz menu"
+
+[[message]]
+key = "All players"
+context = "Collision hitbox"
+[message.translations]
+simplified_chinese = "所有玩家"
 
 [[message]]
 key = "Use style colors"

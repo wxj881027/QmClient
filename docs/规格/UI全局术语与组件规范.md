@@ -62,6 +62,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间按职责分组：`ui_token::color`（60 项，含搜索命中的 `SEARCH_MATCH_ON_DARK/SEARCH_MATCH_ON_LIGHT`）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/TEXT_WIDTH_SLACK/ResolveTextMaxWidth/ResolveIconTextRow/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/CARD_RADIUS/TAGS_*`，整页只认一套行制：行高 = `BODY_SIZE × ROW_HEIGHT_RATIO`、标签列 = `LABEL_WIDTH`，备注行与开关行不再自带 `NOTE_*` 度量）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::motd`（`DESIGN_WIDTH/DESIGN_HEIGHT/TITLE_HEIGHT_RATIO/TITLE_GAP/BOX_GLYPHS_PER_STEP/FONT_SIZE`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING/MARGIN/SURFACE_COLOR_SCALE`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::vote_hud`（`PANEL_*/PADDING/HEADER_*/REASON_*/BARS_*/BUTTON_*/TITLE_FONT_SIZE/REASON_FONT_SIZE/TIME_*/RADIUS`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
 - 禁止的反面写法：`Row.h - 2.0f` 这类就地魔数；为单个组件新开命名空间放通用色；用近似值复制已有 token（`PREVIEW_BACKDROP` 与 `SURFACE_OVERLAY` 二选一时必须复用）。
 
+#### 调试 HUD 字体（debug HUD font）
+
+- 定义：调试 HUD 的文字使用 HUD 小字档，字号随视口宽度和单行文字的可用宽度调整。
+- 唯一实现：`ui_token::hud::font::{DEBUG_PRESET, DEBUG_TEXT_REFERENCE_WIDTH, CAPTION}`（`src/game/client/QmUi/UiTokens.h`），由相关绘制入口计算可用宽度。
+- 禁止的反面写法：诊断字段各自写固定字号，或让图标字体状态泄漏到诊断字段。
+
 ### 2.1a 组件角色色（component role colors）
 
 - 定义：某块 UI 自己的身份色（不应随界面主题变化的部分）放在该组件自己的 `ui_token::` 命名空间；调用点只引用语义名，不写数字，也不把组件色塞进全局色表。
@@ -319,6 +325,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 - 定义：所有输入框共用的光标形态与闪烁相位，样式可配（竖线 / 下划线 / 方块），相位只由绝对时间推导。
 - 唯一实现：`qm_text_caret::ResolveShape` / `BlinkVisible` / `Render`（`src/game/client/QmUi/UiTextCaret.h`、`UiTextCaret.cpp`）；调用点 `CLineInput::RenderCaret`（`src/game/client/lineinput.cpp`）、`QmConsoleUi::DrawCaret`（`QmConsoleUi.h`）；相位与闪烁门控由 `qm_text_caret::NowSeconds` / `ShouldBlink` 统一给出；token `ui_token::text_caret::*`、`ui_token::motion::CARET_BLINK_*`；配置 `qm_text_caret_style`。
+- 控制台日志定位：`QmConsoleUi::LogTextLayout`（`QmConsoleUi.h`）给日志测量、正文绘制和字符命中提供相同的左内边距与换行宽度。点击和拖选沿用正文的滚动与筛选位移，避免鼠标尖指向的字符和光标落点错开。
 - 禁止的反面写法：调用点自己画光标方块（`Graphics()->QuadsDrawTL`）；保存「本框闪烁起点」导致两个输入框相位不同；把时间缓存成静态值或写死 `m_Blink = false` 让光标常亮；写死 0.5 秒闪烁或 2 像素线宽。
 
 ### 3.1 行级七词（继承自 2026-11-11 报告 §9.1，口径不变）
@@ -353,7 +360,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.4 个性调整（Personalization reveal）
 
 - 定义：整卡「个性调整」开关控制一整段内容的露头，不是单行从属关系。
-- 唯一实现：`CMenus::PersonalizationReveal`（`src/game/client/QmUi/cards/QmCardCatalog.h`）、渲染钩子版 `QmCardRenderHook::PersonalizationReveal`（`cards/QmCardCatalog.cpp`）。
+- 唯一实现：`CMenus::PersonalizationReveal`（`src/game/client/QmUi/cards/QmCardCatalog.h`）、渲染钩子版 `QmCardRenderHook::PersonalizationReveal`（`cards/QmCardCatalog.cpp`）。需要业务名称的折叠行可传入本地化标签，仍使用同一展开状态和显隐进度。
 - 禁止的反面写法：用它代替 `SettingsDependentRows` 写单行；展开状态不进 `qm_expanded_sections`。
 
 ### 3.4b 页面主标题组件（page title widget）
@@ -408,9 +415,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.10 开关（Toggle）
 
-- 定义：二值开关，轨道与旋钮尺寸按字号派生；开关行的标签列由行级布局决定；悬停描边与按钮同源，固定为白色。
+- 定义：二值开关，轨道尺寸按字号派生，标签列由行级布局决定。圆形滑块关闭时较小、开启时较大，按下时沿圆心放大并出现一层随滑块移动的光晕。轨道填充随位移混合，关闭态内描边随开启进度淡出，关闭态悬停沿用按钮的白色描边。
 - 唯一实现：`ui_widget::DrawToggle` / `ResolveToggleLayout` / `ResolveBooleanControlLayout` / `ResolveSwitchRowLabelColumn`（`UiForms.h`）、设置页包装 `DoSettingsButton_CheckBox`；尺寸 `ui_token::control::SwitchMinWidth` / `SwitchTrackAspect`；悬停描边走 `ResolveUiSecondaryButtonStyle` → `ui_token::feedback::HOVER_BORDER`。
-- 禁止的反面写法：自绘轨道与旋钮；开关行自己算右侧宽度（标签会压到开关）；描边取轨道的自动对比色（开着是亮轨道就描黑边、关着描白边，和按钮的悬停白边割裂）。
+- 禁止的反面写法：自绘轨道与滑块；开关行自己算右侧宽度（标签会压到开关）；为光晕扩大点击区域或用轨道轮廓裁光晕；描边取轨道的自动对比色。
 
 ### 3.10a 加载环（progress ring）
 

@@ -211,6 +211,21 @@ TEST_F(SettingsCardMeasureRevision, UnchangedLayoutAndNonLayoutValuesKeepMeasure
 	EXPECT_EQ(Revision, MeasureModuleCardsRevision());
 }
 
+TEST_F(SettingsCardMeasureRevision, SessionFollowStatusInvalidatesPieMenuAndSearchMeasurements)
+{
+	using namespace qm_card_catalog;
+	g_Config.m_QmPieMenuEnabled = 0;
+	SQmFunctionCardLayoutState Layout;
+	const uint64_t InactivePage = MeasureModuleCardRevision(qm_module::EQmModuleId::PieMenu, Layout);
+	const uint64_t InactiveSearch = MeasureModuleCardsRevision(Layout);
+	Layout.m_CrossServerFollowActive = true;
+	EXPECT_NE(InactivePage, MeasureModuleCardRevision(qm_module::EQmModuleId::PieMenu, Layout));
+	EXPECT_NE(InactiveSearch, MeasureModuleCardsRevision(Layout));
+	Layout.m_CrossServerFollowActive = false;
+	EXPECT_EQ(InactivePage, MeasureModuleCardRevision(qm_module::EQmModuleId::PieMenu, Layout));
+	EXPECT_EQ(InactiveSearch, MeasureModuleCardsRevision(Layout));
+}
+
 TEST_F(SettingsCardMeasureRevision, DynamicListChangesInvalidateSearchMeasurements)
 {
 	using namespace qm_card_catalog;

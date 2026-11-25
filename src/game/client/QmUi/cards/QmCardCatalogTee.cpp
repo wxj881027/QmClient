@@ -313,7 +313,7 @@ namespace
 	{
 		if(!gs_TeeListDrainPerfSession.m_Active)
 			return;
-		if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+		if(!g_Config.m_QmPerfEnabled)
 		{
 			if(FullListReady)
 				gs_TeeListDrainPerfSession.m_Active = false;
@@ -650,7 +650,8 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		CompactLabel.m_MaxWidth = PreviewLayout.m_Heading.w;
 		Ui()->DoLabel(&PreviewLayout.m_Heading, aHeading, BodySize, TEXTALIGN_ML, CompactLabel);
 		const CUIRect &Flag = PreviewLayout.m_Flag;
-		GameClient()->m_CountryFlags.Render(Dummy ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry, ui_token::color::NEUTRAL_WHITE, Flag.x, Flag.y, Flag.w, Flag.h, m_TeeEntranceStartTime);
+		if(!Ui()->DrawingSuppressed())
+			GameClient()->m_CountryFlags.Render(Dummy ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry, ui_token::color::NEUTRAL_WHITE, Flag.x, Flag.y, Flag.w, Flag.h, m_TeeEntranceStartTime);
 		CompactLabel.m_MaxWidth = PreviewLayout.m_SkinName.w;
 		Ui()->DoLabel(&PreviewLayout.m_SkinName, pPreviewSkin, BodySize, TEXTALIGN_MC, CompactLabel);
 
@@ -704,7 +705,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		const float Distance = length(Delta);
 		const vec2 Direction = Distance > 0.001f ? normalize(Delta) : vec2(1.0f, 0.0f);
 		const int Emote = gs_TeeEditorState.m_FrozenPreview ? EMOTE_PAIN : (Distance < 20.0f ? EMOTE_HAPPY : (Dummy ? g_Config.m_ClDummyDefaultEyes : g_Config.m_ClPlayerDefaultEyes));
-		if(TeeScale > 0.001f && TeeAlphaScale > 0.001f)
+		if(!Ui()->DrawingSuppressed() && TeeScale > 0.001f && TeeAlphaScale > 0.001f)
 		{
 			Current.m_Size *= TeeScale;
 			Current.m_BloodColor.a *= TeeAlphaScale;
@@ -849,9 +850,12 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		vec2 Offset;
 		CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &EyeInfo, Offset);
 		const float TeeAlpha = IsActive ? 1.0f : (IsHovered ? 0.90f : 0.78f);
-		Ui()->ClipEnable(&Slot);
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &EyeInfo, Emote, vec2(1.0f, 0.0f), Slot.Center() + Offset + vec2(SettingsSkinPreviewCenterOffset(EyeMinX, EyeMaxX) * EyeInfo.m_Size / EyeRequestedSize, 0.0f), TeeAlpha);
-		Ui()->ClipDisable();
+		if(!Ui()->DrawingSuppressed())
+		{
+			Ui()->ClipEnable(&Slot);
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &EyeInfo, Emote, vec2(1.0f, 0.0f), Slot.Center() + Offset + vec2(SettingsSkinPreviewCenterOffset(EyeMinX, EyeMaxX) * EyeInfo.m_Size / EyeRequestedSize, 0.0f), TeeAlpha);
+			Ui()->ClipDisable();
+		}
 		char aTooltip[128];
 		str_format(aTooltip, sizeof(aTooltip), "%s (%d) - %s", Localize(s_apEmoteNames[Emote]), Emote, Localize("Choose default eyes when joining a server"));
 		GameClient()->m_Tooltips.DoToolTip(&s_aEyes[Target][Emote], &Slot, aTooltip);
@@ -1424,7 +1428,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			++VisibleNonTerminalWaitingCount;
 		const CSkin *pSkin = pSkinContainer->Skin() != nullptr ? pSkinContainer->Skin().get() : pDefaultSkin;
 
-		if(EntryVisualReady)
+		if(EntryVisualReady && !Ui()->DrawingSuppressed())
 		{
 			CTeeRenderInfo Info;
 			Info.Apply(pSkin);
@@ -1453,7 +1457,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			RenderTools()->RenderTeeWithSkinChangeTransition(CAnimState::GetIdle(), Previous ? &*Previous : nullptr, &Info, *pEmote, vec2(1.0f, 0.0f), TeeRenderPos, PaletteTransition.Progress(PaletteNow));
 			Ui()->ClipDisable();
 		}
-		else
+		else if(!EntryVisualReady)
 		{
 			// 目标皮肤尚未就绪时显示默认 Tee，不铺骨架底色。
 			RenderDefaultSkinPlaceholder(Button);
@@ -1558,7 +1562,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			}
 		}
 
-		if(g_Config.m_Debug && EntryVisualReady)
+		if(g_Config.m_Debug && EntryVisualReady && !Ui()->DrawingSuppressed())
 		{
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
@@ -2600,7 +2604,8 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 			QueueInfo.Apply(pQueueSkin);
 			QueueInfo.ApplyColors(QueueEntry.m_UseCustomColor, QueueEntry.m_ColorBody, QueueEntry.m_ColorFeet);
 			QueueInfo.m_Size = TeeSize;
-			RenderTools()->RenderIdleTeeAtCenter(&QueueInfo, TeeRect.Center());
+			if(!Ui()->DrawingSuppressed())
+				RenderTools()->RenderIdleTeeAtCenter(&QueueInfo, TeeRect.Center());
 
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);

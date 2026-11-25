@@ -191,7 +191,7 @@ TEST_F(MusicWorldLyricsRenderer, NativePoolRefusalReturnsFalseAndTheSameRowRetri
 	// 保持唯一已分配槽位存活，使下一次领取必须经过真实pool的make_unique。
 	ASSERT_TRUE(Text().CreateTextContainer(Occupied, &Probe, ""));
 	ASSERT_EQ(Occupied.m_Index, 0);
-	g_Config.m_QmPerfDebug = 1;
+	g_Config.m_QmPerfEnabled = true;
 	Text().FlushQmTextRuntimeBudgetLog();
 	bool Triggered;
 	std::size_t Attempts;

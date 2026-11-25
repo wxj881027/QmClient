@@ -73,6 +73,7 @@
 #include <game/client/components/qmclient/browser_workspace_route.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
+#include <game/client/components/qmclient/favorite_map_note_input.h>
 #include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/tclient/menus_tclient_internal.h>
@@ -1546,8 +1547,9 @@ ColorRGBA CMenus::SettingsTabbarColor(float AlphaScale) const
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, const unsigned Flags)
 {
+	const int Clicked = Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
 	ui_widget::DrawToggle(ui_widget::ControlContext(Ui()), pId, Checked != 0, *pRect, Active);
-	return Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
+	return Clicked;
 }
 
 int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor)
@@ -2048,6 +2050,7 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	Ui()->DoConfigTooltip(pId, pRect, pId);
 	const bool HasLabel = pText != nullptr && pText[0] != '\0';
 	const bool HasCustomGlyph = MarkedControl || (pBoxText[0] != '\0' && pBoxText[0] != 'X');
+	const int Clicked = ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
 	const IUiContext Context = ui_widget::ControlContext(Ui());
 	// 标签字号就是这一行控件的正文字号：开关轨道宽与标签间距都按它取，
 	// 与文字实际绘制用同一个值，窄窗口下不会出现开关比文字缩得慢。
@@ -2080,7 +2083,7 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 		else
 			Ui()->DoLabel(&Label, pText, FontSize, TEXTALIGN_ML, Props);
 	}
-	return ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
+	return Clicked;
 }
 
 int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect)
@@ -2121,10 +2124,10 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	if(m_MenuTextPlanCollecting)
 		return 0;
 
-	bool ToggleValue = Checked != 0;
+	const int Clicked = ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, BUTTONFLAG_LEFT) : 0;
 	IUiContext Context = SettingsUiContext("settings-switch", CurrentSettingsContentMetrics().m_UiScale);
-	ui_widget::DrawToggle(Context, pId, ToggleValue, ToggleRect, true, ProcessInput, pRect);
-	return ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, BUTTONFLAG_LEFT) : 0;
+	ui_widget::DrawToggle(Context, pId, Checked != 0, ToggleRect, true, ProcessInput, pRect);
+	return Clicked;
 }
 
 int CMenus::DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float RowHeight, float RowSpacing, float BodySize)
@@ -6718,6 +6721,8 @@ void CMenus::SetActive(bool Active)
 		m_QmVoteMenu.m_Loader.Suspend();
 	if(Active != m_MenuActive)
 	{
+		if(!Active)
+			QmFinishFavoriteMapNoteFrame(*Ui(), GameClient()->m_TClient);
 		Ui()->CancelTouchInput();
 		if(Active)
 		{
@@ -6882,7 +6887,7 @@ int CMenus::IdleRenderFrameRate() const
 	if(Ui()->ActiveItem() != nullptr || CLineInput::GetActiveInput() != nullptr || GameClient()->m_KeyBinder.IsActive() || Ui()->IsPopupOpen())
 		return 0;
 	// 性能采样期间解除空闲节流，普通设置页空闲时仍限制功耗。
-	if(IsSettingsPageActive() && (g_Config.m_QmPerfDebug != 0 || m_SettingsPerfWindowTracker.HasActiveWindow()))
+	if(IsSettingsPageActive() && (g_Config.m_QmPerfEnabled || m_SettingsPerfWindowTracker.HasActiveWindow()))
 		return 0;
 
 	if(GameClient()->m_MenuBackground.IsLoading())
@@ -8817,7 +8822,7 @@ void CMenus::BuildSettingsMenuTextGlyphDemand()
 	std::vector<SSettingsTextPlanGlyphDemandInput> vInputs;
 	try
 	{
-		vInputs.reserve(m_vSettingsMenuTextPrebuildPlan.size());
+		vInputs.reserve(m_vSettingsMenuTextPrebuildPlan.size() + qm_search_header::NUM_SPLASHES + qm_search_header::NUM_SEARCH_PLACEHOLDERS);
 		for(size_t Index = 0; Index < m_vSettingsMenuTextPrebuildPlan.size(); ++Index)
 		{
 			const SMenuTextPlanItem &Item = m_vSettingsMenuTextPrebuildPlan[Index];
@@ -8844,6 +8849,18 @@ void CMenus::BuildSettingsMenuTextGlyphDemand()
 				Priority = FirstScreen ? 0 : 1;
 			}
 			vInputs.push_back({Item.m_Text.c_str(), *PixelSize, Priority});
+		}
+		if(!Ingame && VisibleViewport.w > 0.0f && m_SettingsMenuTextVisiblePlanContext[1] == SETTINGS_SEARCH)
+		{
+			const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(VisibleViewport.w);
+			const uint8_t Priority = 0;
+			const auto SplashPixelSize = SettingsGlyphPixelSize(14.0f * Metrics.m_UiScale, (float)(ScreenY1 - ScreenY0), (float)GraphicsHeight);
+			const auto PlaceholderPixelSize = SettingsGlyphPixelSize(Metrics.m_BodySize * 1.2f, (float)(ScreenY1 - ScreenY0), (float)GraphicsHeight);
+			qm_search_header::ForEachGlyphPrewarmText(
+				[&vInputs](const char *pText, int PixelSize, uint8_t TextPriority) {
+					vInputs.push_back({pText, PixelSize, TextPriority});
+				},
+				SplashPixelSize.value_or(0), PlaceholderPixelSize.value_or(0), Priority);
 		}
 	}
 	catch(...)
@@ -10227,6 +10244,7 @@ void CMenus::OnRender()
 	{
 		CPerfTimer StageTimer;
 		Render();
+		QmFinishFavoriteMapNoteFrame(*Ui(), GameClient()->m_TClient);
 		LogPerfStage(Client(), "render_body", StageTimer.ElapsedMs());
 	}
 

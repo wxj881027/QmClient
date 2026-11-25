@@ -34,6 +34,7 @@ try:
 		scenario_current_map_entity_background_during_loading,
 		scenario_http_map_download_enters_game,
 		scenario_map_change_during_resource_preparation,
+		scenario_quit_with_predicted_laser_doors,
 	)
 	from qmclient_scripts.integration.e2e_settings_language import scenario_settings_language_round_trip
 	from qmclient_scripts.integration.process_harness import ProcessEnvironment
@@ -55,6 +56,7 @@ except ModuleNotFoundError:
 		scenario_current_map_entity_background_during_loading,
 		scenario_http_map_download_enters_game,
 		scenario_map_change_during_resource_preparation,
+		scenario_quit_with_predicted_laser_doors,
 	)
 	from e2e_settings_language import scenario_settings_language_round_trip  # type: ignore[no-redef]
 	from process_harness import ProcessEnvironment  # type: ignore[no-redef]
@@ -262,7 +264,7 @@ def scenario_invalid_statistics_preserved(env: ProcessEnvironment) -> None:
 
 def scenario_perf_log_persistence(env: ProcessEnvironment) -> None:
 	"""验证开启性能调试后真实进程写出带 stage 字段的日志。"""
-	env.start_client(["qm_perf_debug 1", "qm_perf_logfile 1"], connect=False)
+	env.start_client(["qm_pref 1 50"], connect=False)
 	env.client.wait_for(lambda line: "writing performance log to" in line, "performance log setup", 15)
 	perf_path = _wait_for_perf_log(env)
 	_quit_client(env)
@@ -403,7 +405,7 @@ def scenario_window_close_during_asset_loading(env: ProcessEnvironment) -> None:
 		from screenshot_viewer_smoke import Windows, wait_for
 
 	client = env.start_client(
-		["cl_show_welcome 1", "qm_auto_update 0", "qm_steam_auto_launch 0", "qm_perf_debug 1"],
+		["cl_show_welcome 1", "qm_steam_auto_launch 0", "qm_pref 1 50"],
 		connect=False,
 		env={"QMCLIENT_TEST_ASSET_LOAD_DELAY_MS": "1000", "QMCLIENT_TEST_HIDE_DIALOG": "1"},
 		startup_timeout=None,
@@ -498,6 +500,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"online_replay_without_source": scenario_online_replay_without_source,
 	"invalid_statistics_preserved": scenario_invalid_statistics_preserved,
 	"map_change_during_resource_preparation": scenario_map_change_during_resource_preparation,
+	"quit_with_predicted_laser_doors": scenario_quit_with_predicted_laser_doors,
 	"http_map_download_enters_game": scenario_http_map_download_enters_game,
 	"current_map_entity_background_during_loading": scenario_current_map_entity_background_during_loading,
 	"menu_background_failed_switch_shutdown": scenario_menu_background_failed_switch_shutdown,

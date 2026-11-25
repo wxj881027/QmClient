@@ -54,7 +54,6 @@ PAGE_STABLE_IDS = {
 		"qm:coords",
 		"qm:player_stats",
 		"qm:debug_graph",
-		"qm:debug_mode",
 		"qm:input_overlay",
 		"qm:hud_notifications",
 		"qm:voice",

@@ -90,7 +90,6 @@ inline constexpr SKnownBindAction s_aKnownBindActions[] = {
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Scoreboard cursor"), "toggle_scoreboard_cursor"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Statboard"), "+statboard"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Pie menu"), "+pie_menu"},
-	{EBindOptionGroup::MISCELLANEOUS, Localizable("Fast practice"), "fast_practice_toggle"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Enter fast practice"), "fast_practice_enter"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Exit fast practice"), "fast_practice_exit"},
 	{EBindOptionGroup::MISCELLANEOUS, Localizable("Rewind practice world"), "practice_restart",

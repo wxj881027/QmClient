@@ -192,7 +192,8 @@ try
 		if(wcscmp(argv[Index], L"--kugou-setup") == 0 || wcscmp(argv[Index], L"--kugou-restore") == 0)
 		{
 			const auto Result = QmMusicHook::ConfigureKugou(wcscmp(argv[Index], L"--kugou-restore") == 0);
-			MessageBoxW(nullptr, Result.m_pMessage, L"QmClient 酷狗歌词", MB_OK | (Result.m_Code == 0 ? MB_ICONINFORMATION : MB_ICONWARNING));
+			if(Result.m_Code != ERROR_CANCELLED)
+				MessageBoxW(nullptr, Result.m_pMessage, L"QmClient 酷狗歌词", MB_OK | (Result.m_Code == 0 ? MB_ICONINFORMATION : MB_ICONWARNING));
 			return Result.m_Code;
 		}
 		if(wcscmp(argv[Index], L"--source") == 0 && Index + 1 < argc)

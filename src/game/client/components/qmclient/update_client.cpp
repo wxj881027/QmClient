@@ -40,16 +40,6 @@ static constexpr const char *QMCLIENT_PREVIEW_INFO_URL = "https://api.github.com
 static constexpr int64_t QMCLIENT_UPDATE_MAX_MANIFEST_SIZE = 32 * 1024 * 1024;
 #endif
 
-void CTClient::InitUpdateLifecycle()
-{
-	m_UpdateAutoEnabled = g_Config.m_QmAutoUpdate != 0;
-	if(g_Config.m_QmAutoUpdate)
-	{
-		m_QmClientAutoUpdateAfterCheck = true;
-		FetchQmClientUpdateInfo();
-	}
-}
-
 void CTClient::ShutdownUpdateLifecycle()
 {
 	ResetUpdateTasks();
@@ -79,27 +69,6 @@ void CTClient::RegisterUpdateCommands()
 
 void CTClient::TickUpdateLifecycle()
 {
-#if defined(CONF_FAMILY_WINDOWS)
-	const bool AutoUpdateEnabled = g_Config.m_QmAutoUpdate != 0;
-	if(AutoUpdateEnabled != m_UpdateAutoEnabled && !m_UpdateShutdownRequested)
-	{
-		m_UpdateAutoEnabled = AutoUpdateEnabled;
-		if(AutoUpdateEnabled)
-			m_UpdateNextCheck = 0;
-		else
-		{
-			ResetUpdateTasks();
-			RemoveUpdateTempFiles();
-			m_UpdateReady = false;
-			m_UpdateCheckFailed = false;
-			m_UpdateNetworkError = false;
-			m_UpdateFailureExitAt = 0;
-			m_FetchedQmClientUpdateInfo = false;
-			m_UpdatePopupRequested = false;
-			m_UpdateDownloadAttempt.Cancel();
-		}
-	}
-#endif
 	StartUpdateCheckIfDue();
 
 	PollUpdateProxyRequests();
@@ -113,7 +82,7 @@ void CTClient::TickUpdateLifecycle()
 			str_copy(g_Config.m_QmUpdateRecentSource, m_UpdateSources.Recent().c_str());
 			FinishQmClientUpdateInfo();
 			ResetQmClientUpdateInfoTask();
-			m_QmClientAutoUpdateAfterCheck = false;
+			m_UpdateDownloadAfterCheck = false;
 		}
 		else if(State == qm_update::CUpdateRequest::EState::FAILED)
 		{
@@ -171,11 +140,6 @@ void CTClient::TickUpdateLifecycle()
 	}
 }
 
-bool CTClient::NeedQmClientUpdate()
-{
-	return str_comp(m_aQmClientLatestVersionStr, "0") != 0;
-}
-
 void CTClient::RequestQmClientUpdateCheckAndUpdate()
 {
 	RequestQmClientUpdateCheck(true);
@@ -224,10 +188,15 @@ void CTClient::RequestQmClientUpdateDownload()
 
 void CTClient::RequestQmClientUpdateCheck(const bool UpdateAfterCheck)
 {
-	if(IsUpdateChecking() || IsUpdateDownloading() || m_UpdateReady || m_UpdateInstallerStarted)
+	if(IsUpdateChecking())
+	{
+		m_UpdateDownloadAfterCheck = m_UpdateDownloadAfterCheck || UpdateAfterCheck;
+		return;
+	}
+	if(IsUpdateDownloading() || m_UpdateReady || m_UpdateInstallerStarted)
 		return;
 
-	m_QmClientAutoUpdateAfterCheck = UpdateAfterCheck;
+	m_UpdateDownloadAfterCheck = UpdateAfterCheck;
 	m_FetchedQmClientUpdateInfo = false;
 	m_UpdateCheckFailed = false;
 	FetchQmClientUpdateInfo();
@@ -425,7 +394,7 @@ void CTClient::FailUpdateDownloadPreparation() noexcept
 	m_UpdateNetworkError = false;
 	m_UpdateFailureNoticeShown = false;
 	m_UpdatePopupRequested = true;
-	m_QmClientAutoUpdateAfterCheck = false;
+	m_UpdateDownloadAfterCheck = false;
 	const int64_t Now = time_get();
 	m_UpdateNextCheck = Now + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
 	m_UpdateFailureExitAt = m_UpdateShutdownRequested ? Now + 2 * time_freq() : 0;
@@ -496,8 +465,7 @@ void CTClient::FailUpdateMetadataCheck(const char *pMessage, bool NetworkError) 
 	m_UpdateCheckFailed = true;
 	m_UpdateNetworkError = NetworkError;
 	m_FetchedQmClientUpdateInfo = false;
-	m_UpdatePopupRequested = true;
-	m_QmClientAutoUpdateAfterCheck = false;
+	m_UpdateDownloadAfterCheck = false;
 	str_copy(m_aUpdateError, pMessage);
 	const int64_t Now = time_get();
 	m_UpdateNextCheck = Now + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
@@ -547,9 +515,7 @@ try
 	m_UpdateFailureExitAt = 0;
 	m_aUpdateError[0] = '\0';
 	m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_CHECK_INTERVAL;
-	m_UpdatePopupRequested = true;
 	m_UpdateRelease = {};
-	str_copy(m_aQmClientLatestVersionStr, "0");
 	m_UpdateSources.SetRecent(g_Config.m_QmUpdateRecentSource);
 	m_UpdateMetadataRequest.Begin(m_UpdateSources, QMCLIENT_IS_DEVELOPMENT_BUILD ? QMCLIENT_PREVIEW_INFO_URL : QMCLIENT_INFO_URL, qm_update::API, time_get() / static_cast<double>(time_freq()), [this](const std::string &Url) -> std::shared_ptr<IHttpRequest> { return CreateUpdateInfoRequest(Url); }, [](const IHttpRequest &Request) {
 			unsigned char *pResult = nullptr;
@@ -581,7 +547,7 @@ void CTClient::CancelQmClientUpdate()
 	m_UpdateDownloadAttempt.Cancel();
 	ResetUpdateTasks();
 	RemoveUpdateTempFiles();
-	m_QmClientAutoUpdateAfterCheck = false;
+	m_UpdateDownloadAfterCheck = false;
 	m_UpdateReady = false;
 	m_UpdatePopupRequested = false;
 	m_UpdateShutdownRequested = false;
@@ -699,26 +665,22 @@ void CTClient::FinishQmClientUpdateInfo()
 	char aSetupMarker[IO_MAX_PATH_LENGTH];
 	Storage()->GetBinaryPath("QmClient-Setup.ini", aSetupMarker, sizeof(aSetupMarker));
 	m_UpdateUseSetup = UseQmClientSetupUpdate(fs_is_file(aSetupMarker), Release, IsQmClientPortableBuild());
-	str_copy(m_aQmClientLatestVersionStr, Release.m_NewVersion ? Release.m_aVersion : "0", sizeof(m_aQmClientLatestVersionStr));
 	m_FetchedQmClientUpdateInfo = true;
 	m_UpdateCheckFailed = false;
 	m_UpdateNetworkError = false;
 	++m_UpdateInfoRevision;
 	log_info("qm-update", "release_info version=%s newer=%d package_available=%d", Release.m_aVersion, Release.m_NewVersion, Release.m_PackageAvailable);
-	if(Release.m_NewVersion && m_QmClientAutoUpdateAfterCheck)
+	if(Release.m_NewVersion && m_UpdateDownloadAfterCheck)
 		StartUpdateSourceSurvey();
 }
 
 void CTClient::StartUpdateCheckIfDue()
 {
-#if defined(CONF_FAMILY_WINDOWS)
-	if(!g_Config.m_QmAutoUpdate || m_UpdateShutdownRequested || m_UpdateReady || IsUpdateChecking() || IsUpdateDownloading())
+#if defined(CONF_FAMILY_WINDOWS) && defined(CONF_ARCH_AMD64) && !defined(CONF_QMCLIENT_TEST_STORAGE)
+	if(m_UpdateInstallerStarted || m_UpdateShutdownRequested || m_UpdateReady || IsUpdateChecking() || IsUpdateDownloading())
 		return;
 	if(m_UpdateNextCheck == 0 || time_get() >= m_UpdateNextCheck)
-	{
-		m_QmClientAutoUpdateAfterCheck = true;
 		FetchQmClientUpdateInfo();
-	}
 #endif
 }
 
@@ -987,28 +949,21 @@ bool CTClient::PrepareForShutdown(bool Force)
 #if defined(CONF_FAMILY_WINDOWS)
 	if(m_UpdateInstallerStarted)
 		return false;
-	if(Force && m_UpdateShutdownRequested && (m_UpdateReady || IsUpdateChecking() || IsUpdateDownloading()))
+
+	// 后台检查无需等到结束。用户已经开始更新时，才在退出流程中等待。
+	const bool Updating = IsUpdateDownloading() || (IsUpdateChecking() && m_UpdateDownloadAfterCheck);
+	if(Force && m_UpdateShutdownRequested && (m_UpdateReady || Updating))
 	{
 		ShutdownUpdateLifecycle();
 		return false;
 	}
-	if(m_UpdateReady)
+	if(m_UpdateReady || (Updating && !m_UpdateCheckFailed))
 	{
 		m_UpdateShutdownRequested = true;
 		return true;
-	}
-	if(!g_Config.m_QmAutoUpdate || m_UpdateCheckFailed)
-	{
-		// 手动下载仍可能在后台合包。先取消，再让引擎等待作业池收尾。
-		if(IsUpdateChecking() || IsUpdateDownloading())
-			ShutdownUpdateLifecycle();
-		return false;
 	}
 	if(IsUpdateChecking() || IsUpdateDownloading())
-	{
-		m_UpdateShutdownRequested = true;
-		return true;
-	}
+		ShutdownUpdateLifecycle();
 #else
 	(void)Force;
 #endif

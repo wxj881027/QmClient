@@ -29,74 +29,32 @@ TEST(QmDummyDistanceLink, FallbackSnapshotRejectsAgeOutsideSignedTickRange)
 TEST(QmDummyDistanceLink, MissingEitherEndpointHidesLinkUntilBothArePresent)
 {
 	const SEndpoint Dummy{vec2(100, 0), false};
-	EXPECT_FALSE(MakeLink(MAIN, std::nullopt, 380));
-	EXPECT_FALSE(MakeLink(std::nullopt, Dummy, 380));
-	ASSERT_TRUE(MakeLink(MAIN, Dummy, 380));
-	EXPECT_EQ(MakeLink(MAIN, Dummy, 380)->m_Dummy, Dummy.m_Pos);
-}
-
-TEST(QmDummyDistanceLink, HookCanCatchTheNearEdgeOutsideCenterRange)
-{
-	const SEndpoint Dummy{vec2(409, 0), false};
-	const auto Inside = MakeLink(MAIN, Dummy, 380);
-	const auto Outside = MakeLink(MAIN, Dummy, 379);
-	ASSERT_TRUE(Inside);
-	ASSERT_TRUE(Outside);
-	EXPECT_TRUE(Inside->m_InHookRange);
-	EXPECT_FALSE(Outside->m_InHookRange);
-	EXPECT_FLOAT_EQ(Inside->m_Alpha, Outside->m_Alpha);
-}
-
-TEST(QmDummyDistanceLink, ControlledTeeAimsAtSnapshotPositionButLineJoinsRenderedCenters)
-{
-	const SEndpoint Dummy{vec2(415, 0), false, vec2(407, 0)};
-	const auto FromMain = MakeLink(MAIN, Dummy, 380);
-	const auto FromDummy = MakeLink(MAIN, Dummy, 380, true);
-	ASSERT_TRUE(FromMain && FromDummy);
-	EXPECT_TRUE(FromMain->m_InHookRange);
-	EXPECT_FALSE(FromDummy->m_InHookRange);
-	EXPECT_EQ(FromMain->LineEnd(), Dummy.m_Pos);
-}
-
-TEST(QmDummyDistanceLink, SoloAtEitherEndSuppressesHighlightWithoutHidingLink)
-{
-	for(const bool MainSolo : {false, true})
-	{
-		for(const bool DummySolo : {false, true})
-		{
-			SCOPED_TRACE(::testing::Message() << "main solo=" << MainSolo << ", dummy solo=" << DummySolo);
-			const auto Link = MakeLink(SEndpoint{vec2(0, 0), MainSolo}, SEndpoint{vec2(100, 0), DummySolo}, 380);
-			ASSERT_TRUE(Link);
-			EXPECT_EQ(Link->m_InHookRange, !MainSolo && !DummySolo);
-			EXPECT_FLOAT_EQ(Link->m_Distance, 100.0f);
-		}
-	}
+	EXPECT_FALSE(MakeLink(MAIN, std::nullopt));
+	EXPECT_FALSE(MakeLink(std::nullopt, Dummy));
+	ASSERT_TRUE(MakeLink(MAIN, Dummy));
+	EXPECT_EQ(MakeLink(MAIN, Dummy)->m_Dummy, Dummy.m_Pos);
 }
 
 TEST(QmDummyDistanceLink, BothTeesFrozenHideLinkUntilEitherWakes)
 {
 	SEndpoint Main = MAIN;
 	SEndpoint Dummy{vec2(100, 0), false};
-	for(const bool ControlDummy : {false, true})
-	{
-		SCOPED_TRACE(ControlDummy);
-		Main.m_Frozen = true;
-		Dummy.m_Frozen = true;
-		EXPECT_FALSE(MakeLink(Main, Dummy, 380, ControlDummy));
-		Main.m_Frozen = false;
-		EXPECT_TRUE(MakeLink(Main, Dummy, 380, ControlDummy));
-		Main.m_Frozen = true;
-		Dummy.m_Frozen = false;
-		EXPECT_TRUE(MakeLink(Main, Dummy, 380, ControlDummy));
-		Main.m_Frozen = false;
-		EXPECT_TRUE(MakeLink(Main, Dummy, 380, ControlDummy));
-	}
+	Main.m_Frozen = true;
+	Dummy.m_Frozen = true;
+	EXPECT_FALSE(MakeLink(Main, Dummy));
+	Main.m_Frozen = false;
+	EXPECT_TRUE(MakeLink(Main, Dummy));
+	Main.m_Frozen = true;
+	Dummy.m_Frozen = false;
+	EXPECT_TRUE(MakeLink(Main, Dummy));
+	Main.m_Frozen = false;
+	EXPECT_TRUE(MakeLink(Main, Dummy));
 }
 
 TEST(QmDummyDistanceLink, OpacityStaysConstantThroughFifteenTiles)
 {
-	const auto Near = MakeLink(MAIN, SEndpoint{vec2(32.0f, 0.0f), false}, 380);
-	const auto AtFadeStart = MakeLink(MAIN, SEndpoint{vec2(288.0f, 384.0f), false}, 380);
+	const auto Near = MakeLink(MAIN, SEndpoint{vec2(32.0f, 0.0f), false});
+	const auto AtFadeStart = MakeLink(MAIN, SEndpoint{vec2(288.0f, 384.0f), false});
 	ASSERT_TRUE(Near && AtFadeStart);
 	EXPECT_FLOAT_EQ(Near->m_Alpha, 0.9f);
 	EXPECT_FLOAT_EQ(AtFadeStart->m_Alpha, Near->m_Alpha);
@@ -104,8 +62,8 @@ TEST(QmDummyDistanceLink, OpacityStaysConstantThroughFifteenTiles)
 
 TEST(QmDummyDistanceLink, OpacityFadesLinearlyAfterFifteenTiles)
 {
-	const auto Midway = MakeLink(MAIN, SEndpoint{vec2(720.0f, 0.0f), false}, 380);
-	const auto BeforeFadeEnd = MakeLink(MAIN, SEndpoint{vec2(959.0f, 0.0f), false}, 380);
+	const auto Midway = MakeLink(MAIN, SEndpoint{vec2(720.0f, 0.0f), false});
+	const auto BeforeFadeEnd = MakeLink(MAIN, SEndpoint{vec2(959.0f, 0.0f), false});
 	ASSERT_TRUE(Midway && BeforeFadeEnd);
 	EXPECT_FLOAT_EQ(Midway->m_Alpha, 0.45f);
 	EXPECT_GT(BeforeFadeEnd->m_Alpha, 0.0f);
@@ -114,15 +72,15 @@ TEST(QmDummyDistanceLink, OpacityFadesLinearlyAfterFifteenTiles)
 
 TEST(QmDummyDistanceLink, LinkIsHiddenAtThirtyTilesAndBeyond)
 {
-	EXPECT_FALSE(MakeLink(MAIN, SEndpoint{vec2(960.0f, 0.0f), false}, 380));
-	EXPECT_FALSE(MakeLink(MAIN, SEndpoint{vec2(961.0f, 0.0f), false}, 380));
+	EXPECT_FALSE(MakeLink(MAIN, SEndpoint{vec2(960.0f, 0.0f), false}));
+	EXPECT_FALSE(MakeLink(MAIN, SEndpoint{vec2(961.0f, 0.0f), false}));
 }
 
 TEST(QmDummyDistanceLink, LineConnectsOpposingTipsAndLengthensAsDropsRecede)
 {
 	const SEndpoint Main{vec2(42, 10), false};
 	const SEndpoint Dummy{vec2(42, -200), false};
-	auto Link = MakeLink(Main, Dummy, 380);
+	auto Link = MakeLink(Main, Dummy);
 	ASSERT_TRUE(Link);
 	qm_dummy_link::CDropletMotion Motion;
 	Link->m_Shape = Motion.Advance(Link->m_Distance, 1.0f, 0);

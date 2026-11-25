@@ -656,7 +656,6 @@ void CSpectator::OnRender()
 	float ObjWidth = Density.m_HalfWidth;
 	float FontSize = Density.m_FontSize;
 	float BigFontSize = 20.0f;
-	float StartY = -190.0f;
 	float LineHeight = Density.m_RowHeight;
 	float TeeSizeMod = Density.m_TeeSizeMod;
 	float RoundRadius = Density.m_Radius;
@@ -669,6 +668,7 @@ void CSpectator::OnRender()
 	// 整块等比放大（行距、字号、Tee、列宽、行点击框、面板高度一起放大），
 	// 列数与每列行数保持桌面同一套规则，只改变大小，不改变排布。
 	const float LayoutScale = QmUiMobilePlatform() ? 1.35f : 1.0f;
+	const float StartY = qm_spectator_layout::PlayerListStart(LayoutScale);
 	if(LayoutScale != 1.0f)
 	{
 		LineHeight *= LayoutScale;
@@ -679,20 +679,16 @@ void CSpectator::OnRender()
 		BoxMove *= LayoutScale;
 		BoxOffset *= LayoutScale;
 		ObjWidth *= LayoutScale;
-		// 首行起点也按比例上移，否则放大后的行会从面板底部溢出去。
-		StartY *= LayoutScale;
 	}
 	const float ColumnStep = 290.0f * LayoutScale;
 	const float RowWidth = 270.0f * LayoutScale;
 	const float RowHitInset = 10.0f * LayoutScale;
-	const float RowHitWidth = 260.0f * LayoutScale;
 	const float TeeOffsetX = 20.0f * LayoutScale;
 	const float NameOffsetX = 50.0f * LayoutScale;
 
 	const vec2 ScreenSize = vec2(Width, Height);
 	const float CenterX = Width / 2.0f;
-	const float CenterY = Height / 2.0f + PanelOffsetY;
-	const vec2 ScreenCenter = vec2(CenterX, CenterY);
+	const vec2 ScreenCenter = vec2(CenterX, Height / 2.0f + PanelOffsetY);
 	// 分组标题高度也随行高走：上限跟着 LayoutScale 放大，否则手机上标题永远卡在 15。
 	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f * LayoutScale, 15.0f * LayoutScale);
 	const float TitleFontSize = TitleHeight * 0.8f;
@@ -704,6 +700,7 @@ void CSpectator::OnRender()
 	const auto SelectorLayout = qm_spectator_layout::Build(ScreenCenter, ObjWidth, !ViewModeActive, PlayersBottom, 300.0f * LayoutScale);
 	const CUIRect &SpectatorRect = SelectorLayout.m_Panel;
 	const CUIRect &SpectatorMouseRect = SelectorLayout.m_Mouse;
+	const float ContentY = SelectorLayout.m_ContentCenter.y;
 
 	const bool WasTouchPressed = m_TouchState.m_AnyPressed;
 	if(WantActive)
@@ -740,6 +737,7 @@ void CSpectator::OnRender()
 
 	// clamp mouse position to selector area
 	m_SelectorMouse = qm_spectator_layout::ClampMouse(SelectorLayout, ScreenCenter, m_SelectorMouse);
+	const vec2 Mouse = ScreenCenter + m_SelectorMouse;
 
 	const bool TouchTap = WantActive && Ui()->DirectTouchInput() && m_TouchState.m_TapReleased;
 	const bool TouchInside = SpectatorMouseRect.Inside(m_TouchState.m_PrimaryPosition * ScreenSize);
@@ -747,16 +745,9 @@ void CSpectator::OnRender()
 							(Ui()->DirectTouchInput() ? TouchTap && TouchInside : m_TouchState.m_PrimaryPressed));
 	bool CloseTouchSelection = false;
 
-	// 顶部三个标签（自由视角 / 多人同框 / 跟随）跟面板同一套缩放，否则放大面板后这一行会
-	// 顶到边框外面、看起来像掉出了背景板。
-	const float TabTop = CenterY - 280.0f * LayoutScale;
-	const float TabHeight = 60.0f * LayoutScale;
-	const float TabPadX = 20.0f * LayoutScale;
-	const float TabInner = 40.0f * LayoutScale;
-	const float TabWidth = ((ObjWidth * 2.0f) / 3.0f) - TabInner;
-	const CUIRect FreeViewRect{CenterX - (ObjWidth - TabPadX), TabTop, TabWidth, TabHeight};
-	const CUIRect MultiViewRect{FreeViewRect.x + ObjWidth * 2.0f / 3.0f, TabTop, TabWidth, TabHeight};
-	const CUIRect FollowRect{FreeViewRect.x + ObjWidth * 2.0f * 2.0f / 3.0f, TabTop, TabWidth, TabHeight};
+	const CUIRect FreeViewRect = qm_spectator_layout::ViewTab(SelectorLayout, 0, LayoutScale);
+	const CUIRect MultiViewRect = qm_spectator_layout::ViewTab(SelectorLayout, 1, LayoutScale);
+	const CUIRect FollowRect = qm_spectator_layout::ViewTab(SelectorLayout, 2, LayoutScale);
 
 	// draw selections
 	if(SelectedId() == SPEC_FREEVIEW)
@@ -790,8 +781,7 @@ void CSpectator::OnRender()
 	}
 
 	bool FreeViewSelected = false;
-	if(WantActive && m_SelectorMouse.x >= -(ObjWidth - TabPadX) && m_SelectorMouse.x <= -(ObjWidth - TabPadX) + TabWidth &&
-		m_SelectorMouse.y >= TabTop - CenterY && m_SelectorMouse.y <= TabTop - CenterY + TabHeight)
+	if(WantActive && FreeViewRect.Inside(Mouse))
 	{
 		m_SelectedSpectatorId = SPEC_FREEVIEW;
 		FreeViewSelected = true;
@@ -806,8 +796,7 @@ void CSpectator::OnRender()
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, (FreeViewSelected ? 1.0f : 0.5f) * ContentAlpha);
 	Ui()->DoLabel(&FreeViewRect, Localize("Free-View"), BigFontSize, TEXTALIGN_MC);
 
-	if(WantActive && m_SelectorMouse.x >= -(ObjWidth - TabPadX) + (ObjWidth * 2.0f / 3.0f) && m_SelectorMouse.x <= -(ObjWidth - TabPadX) + (ObjWidth * 2.0f / 3.0f) + TabWidth &&
-		m_SelectorMouse.y >= TabTop - CenterY && m_SelectorMouse.y <= TabTop - CenterY + TabHeight)
+	if(WantActive && MultiViewRect.Inside(Mouse))
 	{
 		m_SelectedSpectatorId = MULTI_VIEW;
 		MultiViewSelected = true;
@@ -825,8 +814,7 @@ void CSpectator::OnRender()
 	if((ViewModeActive || (Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_LocalClientId >= 0)))
 	{
 		bool FollowSelected = false;
-		if(WantActive && m_SelectorMouse.x >= -(ObjWidth - TabPadX) + (ObjWidth * 2.0f * 2.0f / 3.0f) && m_SelectorMouse.x <= -(ObjWidth - TabPadX) + (ObjWidth * 2.0f * 2.0f / 3.0f) + TabWidth &&
-			m_SelectorMouse.y >= TabTop - CenterY && m_SelectorMouse.y <= TabTop - CenterY + TabHeight)
+		if(WantActive && FollowRect.Inside(Mouse))
 		{
 			m_SelectedSpectatorId = SPEC_FOLLOW;
 			FollowSelected = true;
@@ -845,7 +833,7 @@ void CSpectator::OnRender()
 	float x = -(ObjWidth - 35.0f * LayoutScale), y = StartY;
 
 	const auto DrawGroupTitle = [&](const char *pTitle, const ColorRGBA &TitleColor) {
-		const auto TitleLayout = qm_spectator_layout::GroupTitle(vec2(CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove), RowWidth - BoxOffset, TitleHeight, LayoutScale);
+		const auto TitleLayout = qm_spectator_layout::GroupTitle(vec2(CenterX + x - RowHitInset + BoxOffset, ContentY + y + BoxMove), RowWidth - BoxOffset, TitleHeight, LayoutScale);
 		TextRender()->TextColor(TitleColor.WithMultipliedAlpha(ContentAlpha));
 		Ui()->DoLabel(&TitleLayout.m_Label, pTitle, TitleFontSize, TEXTALIGN_ML);
 		Graphics()->DrawRect(TitleLayout.m_Divider.x, TitleLayout.m_Divider.y, TitleLayout.m_Divider.w, TitleLayout.m_Divider.h,
@@ -854,7 +842,8 @@ void CSpectator::OnRender()
 		y += TitleLayout.m_Height;
 	};
 
-	int OldDDTeam = -1;
+	int TeamBandEnd = 0;
+	const auto TeamAt = [&](int Row) { return aDisplayPlayers[aDisplayOrder[Row]].m_DDTeam; };
 	int ColumnRow = 0;
 	for(int i = 0; i < DisplayCount; ++i)
 	{
@@ -882,19 +871,23 @@ void CSpectator::OnRender()
 		const SDisplayPlayer *pInfo = &aDisplayPlayers[aDisplayOrder[i]];
 		const int DDTeam = pInfo->m_DDTeam;
 		const bool IsGhost = pInfo->m_IsGhost;
-		const bool StartsGroup = ColumnRow == 0 || (FriendCount > 0 && FriendCount < GhostStartOrder && i == FriendCount) || (GhostCount > 0 && i == GhostStartOrder);
-		const bool EndsGroup = i + 1 == DisplayCount || ColumnRow + 1 >= PerLine ||
-				       (FriendCount > 0 && FriendCount < GhostStartOrder && i + 1 == FriendCount) ||
-				       (GhostCount > 0 && i + 1 == GhostStartOrder);
-		const int NextDDTeam = EndsGroup ? 0 : aDisplayPlayers[aDisplayOrder[i + 1]].m_DDTeam;
+		const CUIRect RowRect{CenterX + x - RowHitInset + BoxOffset, ContentY + y + BoxMove, RowWidth - BoxOffset, LineHeight};
 
-		if(DDTeam != TEAM_FLOCK)
+		if(DDTeam != TEAM_FLOCK && i >= TeamBandEnd)
 		{
+			int GroupEnd = minimum(DisplayCount, i + PerLine - ColumnRow);
+			if(i < FriendCount)
+				GroupEnd = minimum(GroupEnd, FriendCount);
+			if(i < GhostStartOrder)
+				GroupEnd = minimum(GroupEnd, GhostStartOrder);
+			TeamBandEnd = qm_spectator_layout::TeamBandEnd(i, GroupEnd, TeamAt);
+
+			// 整段共用一个表面，队内行之间不再叠加两道抗锯齿边缘。
 			const ColorRGBA Color = GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ContentAlpha);
-			const auto TeamSurface = qm_spectator_layout::TeamRowSurface(RoundRadius, StartsGroup || OldDDTeam != DDTeam, EndsGroup || NextDDTeam != DDTeam);
-			DrawRoundedSurface(Ui(), CUIRect{CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight}, Color, ColorRGBA(), TeamSurface);
+			CUIRect Band = RowRect;
+			Band.h *= TeamBandEnd - i;
+			DrawRoundedSurface(Ui(), Band, Color, ColorRGBA(), minimum(RoundRadius, LineHeight * 0.5f));
 		}
-		OldDDTeam = DDTeam;
 
 		if((IsGhost ? ViewModeActive : !ViewModeActive) && SelectedId() == pInfo->m_Id)
 		{
@@ -902,14 +895,13 @@ void CSpectator::OnRender()
 				SRoundedSurfaceParams SelectionSurface;
 				SelectionSurface.m_Radius = RoundRadius;
 				SelectionSurface.m_Corners = IGraphics::CORNER_ALL;
-				DrawRoundedSurface(Ui(), CUIRect{CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight}, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), ColorRGBA(), SelectionSurface);
+				DrawRoundedSurface(Ui(), RowRect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), ColorRGBA(), SelectionSurface);
 			}
 		}
 
 		bool PlayerSelected = false;
 		const bool CanSelectRow = IsGhost ? ViewModeActive : !ViewModeActive;
-		if(WantActive && m_SelectorMouse.x >= x - RowHitInset && m_SelectorMouse.x < x + RowHitWidth &&
-			m_SelectorMouse.y >= y + BoxMove && m_SelectorMouse.y < y + BoxMove + LineHeight)
+		if(WantActive && RowRect.Inside(Mouse))
 		{
 			if(CanSelectRow)
 			{
@@ -975,7 +967,7 @@ void CSpectator::OnRender()
 		NameAlpha *= ContentAlpha;
 		TeeAlpha *= ContentAlpha;
 		CTextCursor NameCursor;
-		NameCursor.SetPosition(vec2(CenterX + x + NameOffsetX, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f));
+		NameCursor.SetPosition(vec2(CenterX + x + NameOffsetX, RowRect.y + (LineHeight - FontSize) / 2.f));
 		NameCursor.m_FontSize = FontSize;
 		NameCursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 		NameCursor.m_LineWidth = 180.0f * LayoutScale;
@@ -1045,7 +1037,7 @@ void CSpectator::OnRender()
 			if(LineHeight >= FontSize + TeamFontSize + 2.0f * LayoutScale)
 			{
 				TextRender()->TextColor(TeamColor);
-				TextRender()->Text(CenterX + x + NameOffsetX, CenterY + y + BoxMove + LineHeight - TeamFontSize - 2.0f * LayoutScale, TeamFontSize, aTeamBuf, -1.0f);
+				TextRender()->Text(CenterX + x + NameOffsetX, RowRect.y + LineHeight - TeamFontSize - 2.0f * LayoutScale, TeamFontSize, aTeamBuf, -1.0f);
 			}
 		}
 		if(IsGhost && ViewModeActive)
@@ -1053,12 +1045,12 @@ void CSpectator::OnRender()
 			if(GameClient()->m_RankGhost.ViewMultiMemberSelected(pInfo->m_Id))
 			{
 				TextRender()->TextColor(0.1f, 1.0f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
-				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
+				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, RowRect.y + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
 			}
 			else
 			{
 				TextRender()->TextColor(1.0f, 0.1f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
-				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
+				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, RowRect.y + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
 			}
 		}
 		else if(!IsGhost && !ViewModeActive && MultiViewActive())
@@ -1066,12 +1058,12 @@ void CSpectator::OnRender()
 			if(GameClient()->m_aMultiViewId[pInfo->m_Id])
 			{
 				TextRender()->TextColor(0.1f, 1.0f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
-				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
+				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, RowRect.y + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
 			}
 			else if(GameClient()->m_MultiViewTeam == DDTeam)
 			{
 				TextRender()->TextColor(1.0f, 0.1f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
-				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
+				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, RowRect.y + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
 			}
 		}
 
@@ -1089,7 +1081,7 @@ void CSpectator::OnRender()
 
 			float Size = LineHeight;
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, ContentAlpha);
-			IGraphics::CQuadItem QuadItem(CenterX + x - LineHeight / 5.0f, CenterY + y - LineHeight / 3.0f, Size / 2.0f, Size);
+			IGraphics::CQuadItem QuadItem(CenterX + x - LineHeight / 5.0f, ContentY + y - LineHeight / 3.0f, Size / 2.0f, Size);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1103,10 +1095,10 @@ void CSpectator::OnRender()
 		TeeInfo.m_Size *= TeeSizeMod;
 		qm_spectator_layout::FitTeeToRow(TeeInfo, LineHeight);
 
-		RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(CenterX + x + TeeOffsetX, CenterY + y + BoxMove + LineHeight / 2.0f), EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeAlpha);
+		RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(CenterX + x + TeeOffsetX, RowRect.y + LineHeight / 2.0f), EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeAlpha);
 
 		float IconX = CenterX + x - TeeInfo.m_Size / 2.0f;
-		const float IconY = CenterY + y + BoxMove + (LineHeight - FontSize) / 2.0f;
+		const float IconY = RowRect.y + (LineHeight - FontSize) / 2.0f;
 		const float IconSize = FontSize >= 10.0f ? FontSize - 2.0f : FontSize;
 		if(IsFriend)
 		{
@@ -1135,7 +1127,7 @@ void CSpectator::OnRender()
 		RenderTeleSearch(ScreenCenter, SelectorLayout.m_SearchRow, SelectorLayout.m_Status, ContentAlpha, MousePressed);
 	// 手机是手指直接点，不画鼠标箭头；桌面上高亮框仍跟着光标走。
 	if(!QmUiMobilePlatform())
-		RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
+		RenderTools()->RenderCursor(Mouse, 48.0f, ContentAlpha);
 	if(CloseTouchSelection)
 		OnRelease();
 }

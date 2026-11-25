@@ -47,6 +47,7 @@
 #include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/browser_workspace_route.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
+#include <game/client/components/qmclient/favorite_map_note_input.h>
 #include <game/client/components/qmclient/favorite_map_vote.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
 #include <game/client/components/qmclient/local_save_display.h>
@@ -2282,10 +2283,8 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 	s_StatusScrollRegion.End();
 }
 
-void CMenus::Connect(const char *pAddress, EConnectIntent Intent)
+void CMenus::Connect(const char *pAddress)
 {
-	if(Intent == EConnectIntent::Manual)
-		StopFriendAutoFollow(m_FriendAutoFollowState);
 	if(Client()->State() == IClient::STATE_ONLINE && GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
 	{
 		str_copy(m_aNextServer, pAddress);
@@ -3387,32 +3386,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	bool OpenRemovePopup = false;
 	static CScrollRegion s_FriendsMoveCategoryPopupScrollRegion;
 	static CScrollRegion s_FriendsActionPopupScrollRegion;
-	bool FollowTargetOnline = false;
-	const char *pFollowTargetAddress = "";
-	if(GameClient()->m_PieMenu.IsFollowing())
-		StopFriendAutoFollow(m_FriendAutoFollowState);
-	for(const auto &vFriends : vvFriends)
-	{
-		for(const auto &Friend : vFriends)
-		{
-			if(Friend.ServerInfo() == nullptr)
-				continue;
-			if(str_comp(Friend.Name(), m_FriendAutoFollowState.m_aName) == 0 && str_comp(Friend.Clan(), m_FriendAutoFollowState.m_aClan) == 0)
-			{
-				FollowTargetOnline = true;
-				pFollowTargetAddress = Friend.ServerInfo()->m_aAddress;
-				break;
-			}
-		}
-		if(FollowTargetOnline)
-			break;
-	}
-	char aFollowConnectAddress[NETADDR_MAXSTRSIZE];
-	if(FriendAutoFollowStep(m_FriendAutoFollowState, FollowTargetOnline, pFollowTargetAddress, Client()->GlobalTime(), g_Config.m_QmFriendAutoFollowDelay, 2, aFollowConnectAddress, sizeof(aFollowConnectAddress)))
-	{
-		str_copy(g_Config.m_UiServerAddress, aFollowConnectAddress);
-		Connect(g_Config.m_UiServerAddress, EConnectIntent::AutoFollow);
-	}
 
 	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedServerIndex);
 	int TotalFriendItems = 0;
@@ -3750,8 +3723,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				}
 				++FriendTooltipIndex;
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
-				const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
-								 (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
+				const bool CanFollow = Friend.Name()[0] != '\0';
+				const bool FollowingThisFriend = GameClient()->m_CrossServerFollow.IsFollowing(Friend.Name(), Friend.Clan());
 				const bool InSelectedServer = pSelectedServer != nullptr && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == pSelectedServer->m_ServerIndex;
 				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), InSelectedServer, Inside);
 				// 只看动效档位：该面板在部分渲染通道里 AnimationsBlocked 为真，
@@ -3960,7 +3933,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 						EQmIcon::STOP, FONT_ICON_STOP,
 						FollowingThisFriend ? 1.0f : 0.0f, str_quickhash("friend-follow-icon"), pFollowButtonId, 0.24f, true);
 					ui_widget::SIconButtonIconDraw FollowDraw{&ui_widget::DrawIconSwapBinding, &FollowBinding};
-					const bool FollowPressed = Friend.ServerInfo() && ui_widget::DoIconButton(Context, pFollowButtonId, EQmIcon::COUNT, nullptr, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit, &FollowDraw) != 0;
+					const bool FollowPressed = CanFollow && ui_widget::DoIconButton(Context, pFollowButtonId, EQmIcon::COUNT, nullptr, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit, &FollowDraw) != 0;
 					const bool CopyPressed = ui_widget::DoIconButton(Context, pCopyButtonId, EQmIcon::COPY, FONT_ICON_COPY, 0, CopyButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &CopyHit) != 0;
 					const bool RemovePressed = ui_widget::DoIconButton(Context, pRemoveButtonId, EQmIcon::TRASH, FONT_ICON_TRASH, 0, RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &RemoveHit) != 0;
 					if(Inside)
@@ -3973,19 +3946,10 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 						GameClient()->m_Tooltips.DoToolTip(pCopyButtonId, &CopyButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to copy this player's name to clipboard") : Localize("Click to copy this clan's name to clipboard"));
 						if(FollowPressed)
 						{
-							if(FollowingThisFriend)
-							{
-								GameClient()->m_PieMenu.CancelFollow();
-								StopFriendAutoFollow(m_FriendAutoFollowState);
-							}
-							else
-							{
-								GameClient()->m_PieMenu.CancelFollow();
-								StartFriendAutoFollow(m_FriendAutoFollowState, Friend.Name(), Friend.Clan(), Friend.ServerInfo()->m_aAddress);
-							}
+							GameClient()->m_CrossServerFollow.Toggle(Friend.Name(), Friend.Clan(), Friend.ServerInfo());
 							ButtonResult = 0;
 						}
-						if(Friend.ServerInfo())
+						if(CanFollow)
 							GameClient()->m_Tooltips.DoToolTip(pFollowButtonId, &FollowButton, FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
 						if(RemovePressed)
 						{
@@ -4004,7 +3968,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					const CUIRect Hit = FriendActionHitRect(Icon);
 					return Ui()->MouseHovered(&Hit);
 				};
-				const bool InsideFriendAction = (IsPlayerFriend && Ui()->MouseHovered(&PinButton)) || HoverFriendAction(CopyButton) || HoverFriendAction(RemoveButton) || (Friend.ServerInfo() && HoverFriendAction(FollowButton));
+				const bool InsideFriendAction = (IsPlayerFriend && Ui()->MouseHovered(&PinButton)) || HoverFriendAction(CopyButton) || HoverFriendAction(RemoveButton) || (CanFollow && HoverFriendAction(FollowButton));
 				if(IsPlayerFriend && Ui()->MouseButtonClicked(0) && Inside && !InsideFriendAction && !Ui()->IsPopupOpen() && (Ui()->IsActiveItem(pListItemId) || Ui()->ActiveItem() == nullptr))
 				{
 					s_FriendDragState.Begin(pListItemId, Friend.FriendState(), Friend.Name(), Friend.Clan(), GameClient()->Friends()->GetFriendCategory(Friend.Name(), Friend.Clan()), FriendRow, vec2(Ui()->MouseX(), Ui()->MouseY()));
@@ -4039,7 +4003,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 						}
 					}
 
-					if(Friend.ServerInfo())
+					if(CanFollow)
 					{
 						m_FriendsActionPopupContext.m_vEntries.emplace_back(FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
 						m_vFriendsActionEntries.push_back(FollowingThisFriend ? FRIEND_ACTION_STOP_FOLLOW : FRIEND_ACTION_FOLLOW);
@@ -4052,7 +4016,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					{
 						str_copy(m_aFriendActionName, Friend.Name(), sizeof(m_aFriendActionName));
 						str_copy(m_aFriendActionClan, Friend.Clan(), sizeof(m_aFriendActionClan));
-						str_copy(m_aFriendActionAddress, Friend.ServerInfo() != nullptr ? Friend.ServerInfo()->m_aAddress : "", sizeof(m_aFriendActionAddress));
+						m_FriendActionServerAddress = Friend.ServerInfo() ? Friend.ServerInfo()->m_aAddress : "";
 						m_FriendActionState = Friend.FriendState();
 						m_HasFriendAction = true;
 						Ui()->ShowPopupSelection(Ui()->MouseX(), Ui()->MouseY(), &m_FriendsActionPopupContext);
@@ -4311,13 +4275,28 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			}
 			else if(Action == FRIEND_ACTION_FOLLOW)
 			{
-				GameClient()->m_PieMenu.CancelFollow();
-				StartFriendAutoFollow(m_FriendAutoFollowState, m_aFriendActionName, m_aFriendActionClan, m_aFriendActionAddress);
+				const CServerInfo *pHint = nullptr;
+				if(!m_FriendActionServerAddress.empty())
+				{
+					for(const auto &vGroup : vvFriends)
+					{
+						const auto Friend = std::find_if(vGroup.begin(), vGroup.end(), [&](const auto &Item) {
+							return Item.ServerInfo() && m_FriendActionServerAddress == Item.ServerInfo()->m_aAddress &&
+							       str_comp(Item.Name(), m_aFriendActionName) == 0 && str_comp(Item.Clan(), m_aFriendActionClan) == 0;
+						});
+						if(Friend != vGroup.end())
+						{
+							pHint = Friend->ServerInfo();
+							break;
+						}
+					}
+				}
+				GameClient()->m_CrossServerFollow.Start(m_aFriendActionName, m_aFriendActionClan, pHint);
 			}
 			else if(Action == FRIEND_ACTION_STOP_FOLLOW)
 			{
-				GameClient()->m_PieMenu.CancelFollow();
-				StopFriendAutoFollow(m_FriendAutoFollowState);
+				if(GameClient()->m_CrossServerFollow.IsFollowing(m_aFriendActionName, m_aFriendActionClan))
+					GameClient()->m_CrossServerFollow.Stop();
 			}
 			else if(Action == FRIEND_ACTION_REMOVE)
 			{
@@ -4334,7 +4313,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		m_HasFriendAction = false;
 		m_aFriendActionName[0] = '\0';
 		m_aFriendActionClan[0] = '\0';
-		m_aFriendActionAddress[0] = '\0';
+		m_FriendActionServerAddress.clear();
 		m_FriendActionState = IFriends::FRIEND_NO;
 	}
 	else if(m_HasFriendAction && !Ui()->IsPopupOpen(&m_FriendsActionPopupContext))
@@ -4344,7 +4323,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		m_HasFriendAction = false;
 		m_aFriendActionName[0] = '\0';
 		m_aFriendActionClan[0] = '\0';
-		m_aFriendActionAddress[0] = '\0';
+		m_FriendActionServerAddress.clear();
 		m_FriendActionState = IFriends::FRIEND_NO;
 	}
 
@@ -4819,6 +4798,26 @@ namespace
 	// 从统计数据切回收藏地图时仍停在上次看的工作区。
 	int s_FavoriteMapsWorkspaceTab = 0;
 	CButtonContainer s_aFavoriteMapsWorkspaceTabButtons[4];
+	CQmFavoriteMapNoteInput s_FavoriteMapNoteInput;
+	bool s_FavoriteMapNotesRendered = false;
+
+	void SaveFavoriteMapNote(CTClient &TClient, const std::optional<SQmFavoriteMapNoteChange> &Change)
+	{
+		if(Change)
+			TClient.SetMapNote(Change->m_Map.c_str(), Change->m_Note.c_str());
+	}
+}
+
+void QmFinishFavoriteMapNoteFrame(CUi &Ui, CTClient &TClient)
+{
+	if(std::exchange(s_FavoriteMapNotesRendered, false))
+		return;
+	s_FavoriteMapNoteInput.ResetClicks();
+	if(s_FavoriteMapNoteInput.IsEditing())
+	{
+		s_FavoriteMapNoteInput.PruneIfRemoved(Ui, TClient.GetFavoriteMaps());
+		SaveFavoriteMapNote(TClient, s_FavoriteMapNoteInput.Commit(Ui));
+	}
 }
 
 int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab, float FontSize)
@@ -4858,7 +4857,8 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
-	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
+	CTClient &TClient = GameClient()->m_TClient;
+	const std::set<std::string> &FavoriteMaps = TClient.GetFavoriteMaps();
 	const std::vector<QmMapHistory::SMapHistoryRecord> &HistoryEntries = GameClient()->m_TClient.GetMapHistory().Entries();
 	const ColorRGBA TabInactiveColor = BrowserPanelColor(0.68f);
 
@@ -4866,7 +4866,14 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	// 反推值比设置页大一档，两页并排看得出差别。
 	CUIRect WorkspaceTabs;
 	View.HSplitTop(Layout.m_TabHeight, &WorkspaceTabs, &View);
-	DoMapWorkspaceTabs(WorkspaceTabs, Layout.m_TabHeight * 0.20f, s_FavoriteMapsWorkspaceTab, ui_token::settings::TAB_FONT_SIZE);
+	if(!Ui()->RenderOnly())
+	{
+		s_FavoriteMapNoteInput.PruneIfRemoved(*Ui(), FavoriteMaps);
+		s_FavoriteMapNoteInput.CancelOnEscape(*Ui());
+	}
+	const int WorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, Layout.m_TabHeight * 0.20f, s_FavoriteMapsWorkspaceTab, ui_token::settings::TAB_FONT_SIZE);
+	if(WorkspaceTab == 0 && !Ui()->RenderOnly())
+		s_FavoriteMapNotesRendered = true;
 	const auto &vSaveEntries = m_LocalSaveDisplay.Entries();
 	const bool SaveFileExists = m_LocalSaveDisplay.FileExists();
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
@@ -5021,6 +5028,7 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 		{
 			int m_RowId = 0;
 			int m_NameId = 0;
+			int m_NoteId = 0;
 			CButtonContainer m_RemoveButton;
 		};
 		static std::map<std::string, SFavoriteMapRow> s_MapRows;
@@ -5052,6 +5060,11 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 			static std::string s_CopiedMap;
 			static float s_CopiedAt = 0.0f;
 			std::string RemoveMapName;
+			IUiContext NoteContext = TabBarUiContext();
+			NoteContext.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
+			NoteContext.m_pTooltips = &GameClient()->m_Tooltips;
+			NoteContext.m_pTextRender = TextRender();
+			NoteContext.m_ScopeHash = MakeUiScopeHash("favorite_maps_note_edit");
 			s_FavoriteMapsListBox.DoStart(34.0f, NumFavoriteMaps, 1, 3, -1, &FavoritePanel, false, IGraphics::CORNER_NONE);
 
 			for(const std::string &MapName : FavoriteMaps)
@@ -5073,7 +5086,7 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 
 					char aDifficulty[32];
 					GetFavoriteMapDifficulty(MapName.c_str(), aDifficulty, sizeof(aDifficulty));
-					const char *pNote = GameClient()->m_TClient.GetMapNote(MapName.c_str());
+					const char *pNote = TClient.GetMapNote(MapName.c_str());
 					const char *pSaved = !m_LocalSaveDisplay.Ready() ? Localize("Loading") : (HasLocalSaveForMap(MapName.c_str()) ? Localize("Yes") : Localize("No"));
 
 					if(Ui()->DoButtonLogic(&RowState.m_NameId, 0, &MapColumn, BUTTONFLAG_LEFT))
@@ -5096,6 +5109,8 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 					{
 						RemoveMapName = MapName;
 						s_LastClickedMap.clear();
+						if(s_FavoriteMapNoteInput.IsEditing(MapName))
+							s_FavoriteMapNoteInput.Cancel(*Ui());
 					}
 					GameClient()->m_Tooltips.DoToolTip(&RowState.m_RemoveButton, &RemoveButton, Localize("Remove from favorites"));
 
@@ -5104,14 +5119,47 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 					DoFavoriteMapColumnLabel(CategoryColumn, GetFavoriteMapCategory(MapName.c_str()), 11.0f);
 					DoFavoriteMapColumnLabel(DifficultyColumn, aDifficulty, 11.0f);
-					DoFavoriteMapColumnLabel(NoteColumn, pNote && pNote[0] != '\0' ? pNote : Localize("None"), 11.0f);
+					constexpr float NoteFontSize = 11.0f;
+					if(WorkspaceTab == 0 && NoteColumn.w > 8.0f && !s_FavoriteMapNoteInput.IsEditing(MapName))
+						SaveFavoriteMapNote(TClient, s_FavoriteMapNoteInput.Click(*Ui(), &RowState.m_NoteId, NoteColumn, MapName, pNote));
+					if(WorkspaceTab == 0 && NoteColumn.w > 8.0f && s_FavoriteMapNoteInput.IsEditing(MapName))
+					{
+						CUIRect EditRect;
+						NoteColumn.VMargin(2.0f, &EditRect);
+						EditRect.HMargin(std::max(0.0f, (EditRect.h - 22.0f) * 0.5f), &EditRect);
+						if(s_FavoriteMapNoteInput.Render(NoteContext, EditRect, &RowState.m_RemoveButton, Localize("Map note")))
+							SaveFavoriteMapNote(TClient, s_FavoriteMapNoteInput.Commit(*Ui()));
+					}
+					else
+					{
+						if(WorkspaceTab == 0 && NoteColumn.w > 8.0f && Ui()->MouseHovered(&NoteColumn))
+						{
+							NoteColumn.Draw(BrowserOpacityColor(ui_token::color::SURFACE_HIGHLIGHT), IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
+							const char *pHint = Localize("Double-click to edit note");
+							if(pNote && TextRender()->TextWidth(NoteFontSize, pNote) > NoteColumn.w - 8.0f)
+							{
+								const std::string Tooltip = std::string(pNote) + "\n" + pHint;
+								GameClient()->m_Tooltips.DoToolTipForRect(&RowState.m_NoteId, &NoteColumn, Tooltip.c_str(), 280.0f);
+							}
+							else
+								GameClient()->m_Tooltips.DoToolTipForRect(&RowState.m_NoteId, &NoteColumn, pHint);
+						}
+						if(!pNote)
+							TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ui_token::color::TEXT_SECONDARY.a));
+						DoFavoriteMapColumnLabel(NoteColumn, pNote ? pNote : Localize("None"), NoteFontSize);
+						TextRender()->TextColor(TextRender()->DefaultTextColor());
+						if(WorkspaceTab == 0 && !Ui()->RenderOnly() && s_FavoriteMapNoteInput.IsEditing(MapName))
+							SaveFavoriteMapNote(TClient, s_FavoriteMapNoteInput.Commit(*Ui()));
+					}
 					DoFavoriteMapColumnLabel(SavedColumn, pSaved, 11.0f, TEXTALIGN_MR);
 				}
+				else if(!Ui()->RenderOnly() && s_FavoriteMapNoteInput.IsEditing(MapName))
+					SaveFavoriteMapNote(TClient, s_FavoriteMapNoteInput.Commit(*Ui()));
 			}
 			s_FavoriteMapsListBox.DoEnd();
 			// 遍历完成后再删除，避免使收藏集合的迭代器失效。
 			if(!RemoveMapName.empty())
-				GameClient()->m_TClient.RemoveFavoriteMap(RemoveMapName.c_str());
+				TClient.RemoveFavoriteMap(RemoveMapName.c_str());
 		}
 		return;
 	}

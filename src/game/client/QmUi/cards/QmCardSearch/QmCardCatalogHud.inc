@@ -114,28 +114,11 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_debug_graph[] = {
-		{Localizable("Global toggle key"), nullptr, "全局开关键"},
+		{nullptr, "cl_show_perf", "性能曲线"},
 		{Localizable("Panel opacity"), nullptr, "面板不透明度"},
 		{nullptr, "qm_monitoring_hud_opacity", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("qm:debug_graph", qm_debug_graph);
-}
-
-// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
-namespace
-{
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_debug_mode[] = {
-		{Localizable("Debug mode"), nullptr, "调试模式"},
-		{Localizable("Enable client stutter diagnostics at startup"), nullptr, "启动时启用客户端卡顿诊断"},
-		{Localizable("Enable main thread and render stage performance debug logging"), nullptr, "启用主线程与渲染阶段性能调试日志"},
-		{Localizable("Performance debug log threshold (ms)"), nullptr, "性能调试日志阈值（毫秒）"},
-		{Localizable("Write performance debug logs to dedicated file"), nullptr, "将性能调试日志写入专用文件"},
-		{nullptr, "qm_perf_debug", nullptr},
-		{nullptr, "qm_perf_debug_threshold_ms", nullptr},
-		{nullptr, "qm_perf_logfile", nullptr},
-		{nullptr, "qm_perf_stutter_diagnostics", nullptr},
-	};
-	QM_CARD_SEARCH_REGISTER("qm:debug_mode", qm_debug_mode);
 }
 
 // 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
@@ -302,7 +285,6 @@ namespace
 		{nullptr, "qm_humming", nullptr},
 		{Localizable("Enable Kugou Music lyrics"), nullptr, "启用酷狗音乐歌词"},
 		{Localizable("Enable LX Music lyrics"), nullptr, "启用 LX Music 歌词"},
-		{Localizable("Enable lyrics"), nullptr, "启用歌词"},
 		{Localizable("Enable Netease music Hook"), nullptr, "启用网易云音乐 Hook"},
 		{Localizable("Enable QQ Music lyrics"), nullptr, "启用 QQ 音乐歌词"},
 		{Localizable("Enable SodaMusic Hook"), nullptr, "启用汽水音乐 Hook"},

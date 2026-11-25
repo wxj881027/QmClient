@@ -3,7 +3,6 @@
 
 #include <engine/shared/config.h>
 
-#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/render.h>
@@ -76,6 +75,7 @@ namespace qm_spectator_layout
 
 	struct SSelectorLayout
 	{
+		vec2 m_ContentCenter;
 		CUIRect m_Panel;
 		CUIRect m_Mouse;
 		CUIRect m_SearchRow;
@@ -101,40 +101,49 @@ namespace qm_spectator_layout
 		return Layout;
 	}
 
-	inline SRoundedSurfaceParams TeamRowSurface(float Radius, bool StartsTeam, bool EndsTeam)
+	template<typename F>
+	int TeamBandEnd(int FirstRow, int GroupEnd, F &&TeamAt)
 	{
-		SRoundedSurfaceParams Surface;
-		Surface.m_Corners = IGraphics::CORNER_NONE;
-		if(StartsTeam)
-			Surface.m_Corners |= IGraphics::CORNER_T;
-		if(EndsTeam)
-			Surface.m_Corners |= IGraphics::CORNER_B;
-		// 中间行必须给零半径，否则公共表面会把 CORNER_NONE 解析为四角圆角。
-		Surface.m_Radius = Surface.m_Corners == IGraphics::CORNER_NONE ? 0.0f : Radius;
-		return Surface;
+		const int Team = TeamAt(FirstRow);
+		int End = FirstRow + 1;
+		while(End < GroupEnd && TeamAt(End) == Team)
+			++End;
+		return End;
 	}
 
 	// HalfHeight 默认 300（桌面 600 高的面板）；手机放大整块时传入按比例加高的半高。
 	inline SSelectorLayout Build(vec2 Center, float HalfWidth, bool HasTeleSearch, float PlayersBottom = 0.0f, float HalfHeight = 300.0f)
 	{
 		constexpr float Padding = 20.0f;
+		constexpr float SearchHeight = 40.0f;
+		constexpr float StatusGap = 10.0f;
+		constexpr float StatusHeight = 20.0f;
+		const float PanelWidth = HalfWidth * 2.0f;
+		const float SearchTop = std::max(310.0f, PlayersBottom + Padding);
+		const float PanelBottom = HasTeleSearch ? SearchTop + SearchHeight + StatusGap + StatusHeight + Padding : std::max(HalfHeight, PlayersBottom + Padding);
+		const float PanelHeight = HalfHeight + PanelBottom;
 		SSelectorLayout Layout{};
-		Layout.m_Panel = {Center.x - HalfWidth, Center.y - HalfHeight, HalfWidth * 2.0f, HalfHeight * 2.0f};
+		Layout.m_Panel = {Center.x - HalfWidth, Center.y - PanelHeight * 0.5f, PanelWidth, PanelHeight};
+		Layout.m_ContentCenter = {Center.x, Layout.m_Panel.y + HalfHeight};
+		Layout.m_Panel.Margin(Padding, &Layout.m_Mouse);
 		if(HasTeleSearch)
 		{
-			const float SearchWidth = std::max(0.0f, std::min(560.0f, Layout.m_Panel.w - Padding * 2.0f));
-			const float SearchTop = std::max(310.0f, PlayersBottom + Padding);
-			Layout.m_SearchRow = {Center.x - SearchWidth * 0.5f, Center.y + SearchTop, SearchWidth, 40.0f};
-			Layout.m_Status = {Layout.m_SearchRow.x, Layout.m_SearchRow.y + Layout.m_SearchRow.h + 10.0f, SearchWidth, 20.0f};
-			// 背景、鼠标和触摸统一包含 CP 行与提示，不各自维护独立的底边。
-			Layout.m_Panel.h = Layout.m_Status.y + Layout.m_Status.h + Padding - Layout.m_Panel.y;
+			const float SearchWidth = std::max(0.0f, std::min(560.0f, PanelWidth - Padding * 2.0f));
+			Layout.m_SearchRow = {Center.x - SearchWidth * 0.5f, Layout.m_ContentCenter.y + SearchTop, SearchWidth, SearchHeight};
+			Layout.m_Status = {Layout.m_SearchRow.x, Layout.m_SearchRow.y + SearchHeight + StatusGap, SearchWidth, StatusHeight};
 		}
-		else
-		{
-			Layout.m_Panel.h = std::max(Layout.m_Panel.h, Center.y + PlayersBottom + Padding - Layout.m_Panel.y);
-		}
-		Layout.m_Panel.Margin(Padding, &Layout.m_Mouse);
 		return Layout;
+	}
+
+	inline CUIRect ViewTab(const SSelectorLayout &Layout, int Index, float Scale)
+	{
+		const float Step = Layout.m_Panel.w / 3.0f;
+		return {Layout.m_Panel.x + 20.0f * Scale + Step * Index, Layout.m_Panel.y + 20.0f * Scale, Step - 40.0f * Scale, 60.0f * Scale};
+	}
+
+	inline float PlayerListStart(float Scale)
+	{
+		return -190.0f * Scale;
 	}
 
 	inline vec2 ClampMouse(const SSelectorLayout &Layout, vec2 Center, vec2 Mouse)

@@ -145,29 +145,27 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 		CUIRect Row;
 		// 行距由行自己声明，行后不再补 Space。
 		const bool HasRow = Flow.Control("qm-hitbox-enabled", LineHeight, Row, ui_token::settings::RowGap(LineSpacing));
-		if(HasRow && DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, &g_Config.m_QmHitboxMode, "Show hitbox mode", Localize("Show hitbox mode"), HitboxModeEnabled, &Row))
+		if(HasRow && DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, &g_Config.m_QmHitboxMode, "Enable collision hitboxes", Localize("Enable collision hitboxes"), HitboxModeEnabled, &Row))
 		{
 			HitboxModeEnabled ^= 1;
 			g_Config.m_QmHitboxMode = HitboxModeEnabled;
 			g_Config.m_QmShowCollisionHitbox = 0;
 		}
 	}
-	if(!HitboxModeEnabled)
+	static SettingsDependentRows s_HitboxRows;
+	const auto HitboxRows = s_HitboxRows.Reveal(Ui(), Flow, HitboxModeEnabled, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel);
+	if(!HitboxRows)
 		return;
 
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
 		{
-			{&g_Config.m_QmHitboxShowMap, "Map danger border", Localize("Map danger border")},
-			{&g_Config.m_QmHitboxShowTeeCollision, "Tee collision (Tee to Tee)", Localize("Tee collision (Tee to Tee)")},
-			{&g_Config.m_QmHitboxShowTeeFreeze, "Tee freeze probe (Tee to Freeze)", Localize("Tee freeze probe (Tee to Freeze)")},
-			{&g_Config.m_QmHitboxShowTeeDeath, "Tee death probe", Localize("Tee death probe")},
-			{&g_Config.m_QmHitboxShowPickups, "Pickup range", Localize("Pickup range")},
-			{&g_Config.m_QmHitboxShowHammer, "Hammer interaction", Localize("Hammer interaction")},
-			{&g_Config.m_QmHitboxShowProjectiles, "Projectile / explosion range", Localize("Projectile / explosion range")},
-			{&g_Config.m_QmHitboxShowFreezeProjectiles, "Freeze projectile collision volume", Localize("Freeze projectile collision volume")},
-			{&g_Config.m_QmHitboxShowLasers, "Laser / shotgun interaction", Localize("Laser / shotgun interaction")},
-			{&g_Config.m_QmHitboxShowFreezeLasers, "Freeze laser collision volume", Localize("Freeze laser collision volume")},
-			{&g_Config.m_QmHitboxShowHook, "Hook interaction", Localize("Hook interaction")},
+			{&g_Config.m_QmHitboxShowMap, "Freeze and death borders", Localize("Freeze and death borders")},
+			{&g_Config.m_QmHitboxShowFreezeProjectiles, "Freeze projectiles and lasers", Localize("Freeze projectiles and lasers")},
+			{&g_Config.m_QmHitboxShowTeeCollision, "Tee collision circle", Localize("Tee collision circle")},
+			{&g_Config.m_QmHitboxShowTeeFreeze, "Freeze and death check points", Localize("Freeze and death check points")},
+			{&g_Config.m_QmHitboxShowPickups, "Shield pickup range", Localize("Shield pickup range")},
+			{&g_Config.m_QmHitboxShowHammer, "Hammer and hook range", Localize("Hammer and hook range")},
+			{&g_Config.m_QmHitboxShowProjectiles, "Projectiles, explosions and regular lasers", Localize("Projectiles, explosions and regular lasers")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 
@@ -175,12 +173,12 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 	if(Flow.Control("qm-hitbox-scope", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		static std::vector<const char *> s_HitboxScopeDropDownNames;
-		s_HitboxScopeDropDownNames = {Localize("Local only"), Localize("Local + Dummy"), Localize("All players")};
+		s_HitboxScopeDropDownNames = {Localize("Self only"), Localize("Self and dummy"), Localize("All players", "Collision hitbox")};
 		static CUi::SDropDownState s_HitboxScopeDropDownState;
 		static CScrollRegion s_HitboxScopeDropDownScrollRegion;
 		s_HitboxScopeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_HitboxScopeDropDownScrollRegion;
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, "qmclient-hitbox-player-range", &LabelColumn, Localize("Player range"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, "Show hitboxes for", &LabelColumn, Localize("Show hitboxes for"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 		const int HitboxScope = std::clamp(g_Config.m_QmHitboxPlayerScope, 0, 2);
 		const int HitboxScopeNew = DoSettingsDropDown(&ControlColumn, HitboxScope, s_HitboxScopeDropDownNames.data(), s_HitboxScopeDropDownNames.size(), s_HitboxScopeDropDownState, {}, &g_Config.m_QmHitboxPlayerScope, nullptr, &Row);
 		if(g_Config.m_QmHitboxPlayerScope != HitboxScopeNew)
@@ -197,14 +195,14 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 	if(Flow.Control("s_FreezeColorId", LineHeight, s_FreezeColorIdRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect ColorRow = s_FreezeColorIdRow;
-		DoLine_ColorPicker(&s_FreezeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Freeze border color"), &g_Config.m_QmHitboxColorFreeze, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHitboxColorFreeze)), false);
+		DoLine_ColorPicker(&s_FreezeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Freeze hitbox color"), &g_Config.m_QmHitboxColorFreeze, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHitboxColorFreeze)), false);
 	}
 	static CButtonContainer s_TeeColorId;
 	CUIRect s_TeeColorIdRow;
 	if(Flow.Control("s_TeeColorId", LineHeight, s_TeeColorIdRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		CUIRect ColorRow = s_TeeColorIdRow;
-		DoLine_ColorPicker(&s_TeeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Tee hitbox color"), &g_Config.m_QmHitboxColorTee, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHitboxColorTee)), false);
+		DoLine_ColorPicker(&s_TeeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Tee collision color"), &g_Config.m_QmHitboxColorTee, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmHitboxColorTee)), false);
 	}
 	static CButtonContainer s_WeaponColorId;
 	CUIRect s_WeaponColorIdRow;
@@ -217,7 +215,7 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 	if(Flow.Control("qm-hitbox-opacity", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, "qmclient-hitbox-opacity", &LabelColumn, Localize("Opacity"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, "Hitbox line opacity", &LabelColumn, Localize("Hitbox line opacity"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 		static int s_QmHitboxAlphaInputId;
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmHitboxAlphaInputId, &Row, &g_Config.m_QmHitboxAlpha, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_QmHitboxAlphaInputId, ControlColumn, &g_Config.m_QmHitboxAlpha, 0, 100, "%", PrewarmOnly);

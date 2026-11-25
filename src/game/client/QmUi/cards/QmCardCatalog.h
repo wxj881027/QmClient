@@ -66,6 +66,7 @@ namespace qm_card_catalog
 		uint64_t m_KeywordRulesRevision = 1;
 		size_t m_KeywordRulesCount = 0;
 		bool m_KeywordRulesHalfFilled = false;
+		bool m_CrossServerFollowActive = false;
 	};
 
 	void FillKeywordReplyLayoutState(SQmFunctionCardLayoutState &State);
@@ -135,10 +136,10 @@ namespace qm_card_catalog
 	// 这里显式列出“卡片可以调用哪些渲染/输入助手”，避免把整类成员公开出去。
 	struct QmCardRenderHook
 	{
-		static bool Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly = false, bool DrawDivider = true);
+		static bool Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly = false, bool DrawDivider = true, const char *pLabel = nullptr);
 		// 同上，另给出内容显隐进度：返回值在收起过渡播完前仍为 true，调用方据此
 		// 继续声明内容，配合 CSettingsContentRevealScope 做高度+淡入过渡。
-		static bool PersonalizationReveal(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, float *pRevealOut, bool ReadOnly = false, bool DrawDivider = true);
+		static bool PersonalizationReveal(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, float *pRevealOut, bool ReadOnly = false, bool DrawDivider = true, const char *pLabel = nullptr);
 		static STClientCardResult RunTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, ETClientCardPass Pass);
 		static uint64_t PrepareTClientCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vIds);
 		static bool BuildTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
@@ -198,7 +199,6 @@ namespace qm_card_catalog
 		static void RenderQmHudCoordsContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudPlayerStatsContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudDebugGraphContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-		static void RenderQmHudDebugModeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudInputOverlayContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudNotificationsBasicContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudNotificationsAdvancedContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);

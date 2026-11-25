@@ -430,7 +430,7 @@ namespace
 
 		const float TeeSize = g_Config.m_QmFrozenHudTeeSize;
 		int MaxTees = (int)(8.3f * (HudWidth / HudHeight) * 13.0f / TeeSize);
-		if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred && !g_Config.m_ClShowPacketLoss)
+		if(!g_Config.m_ClShowPerf && !g_Config.m_ClShowPacketLoss)
 			MaxTees = (int)(9.5f * (HudWidth / HudHeight) * 13.0f / TeeSize);
 		const int MaxRows = g_Config.m_QmFrozenMaxRows;
 		float StartPos = HudWidth / 2.0f + 38.0f * (HudWidth / HudHeight) / 1.78f;
@@ -2310,12 +2310,12 @@ void CHud::RenderDummyMiniMap()
 
 void CHud::RenderTextInfo()
 {
-	int Showfps = g_Config.m_ClShowfps;
+	int Showfps = g_Config.m_ClShowPerf;
 #if defined(CONF_VIDEORECORDER)
 	if(IVideo::Current())
 		Showfps = 0;
 #endif
-	const bool Showpred = g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK;
+	const bool Showpred = g_Config.m_ClShowPerf && Client()->State() != IClient::STATE_DEMOPLAYBACK;
 	const bool ShowLoss = g_Config.m_ClShowPacketLoss && Client()->State() != IClient::STATE_DEMOPLAYBACK;
 
 	float MiniX = 0.0f;
@@ -2593,7 +2593,7 @@ void CHud::RenderTextInfo()
 			float progressiveOffset = 0.0f;
 			float TeeSize = g_Config.m_QmFrozenHudTeeSize;
 			int MaxTees = (int)(8.3f * (m_Width / m_Height) * 13.0f / TeeSize);
-			if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred && !g_Config.m_ClShowPacketLoss)
+			if(!g_Config.m_ClShowPerf && !g_Config.m_ClShowPacketLoss)
 				MaxTees = (int)(9.5f * (m_Width / m_Height) * 13.0f / TeeSize);
 			int MaxRows = g_Config.m_QmFrozenMaxRows;
 			float StartPos = m_Width / 2.0f + 38.0f * (m_Width / m_Height) / 1.78f;
@@ -7785,7 +7785,7 @@ void CHud::RenderRecord()
 
 void CHud::RenderLyricsIsland()
 {
-	if(!g_Config.m_QmLyricsSeparateIsland || !g_Config.m_QmLyrics || !g_Config.m_QmLyricsInMediaIsland ||
+	if(!g_Config.m_QmLyricsSeparateIsland || !g_Config.m_QmLyricsInMediaIsland ||
 		(g_Config.m_QmLyricsIslandFollowWidth && !m_LyricsIslandAnchorValid))
 		return;
 	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();

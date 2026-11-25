@@ -482,13 +482,13 @@ void CInfoMessages::OnRender()
 	Graphics()->MapScreen(0, 0, Width, Height);
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-	int Showfps = g_Config.m_ClShowfps;
+	int Showfps = g_Config.m_ClShowPerf;
 #if defined(CONF_VIDEORECORDER)
 	if(IVideo::Current())
 		Showfps = 0;
 #endif
 	const float StartX = Width - 10.0f;
-	const bool HasTopRightTextInfo = (g_Config.m_ClShowpred || g_Config.m_ClShowPacketLoss) && Client()->State() != IClient::STATE_DEMOPLAYBACK;
+	const bool HasTopRightTextInfo = (g_Config.m_ClShowPerf || g_Config.m_ClShowPacketLoss) && Client()->State() != IClient::STATE_DEMOPLAYBACK;
 	float StartY = 30.0f + (Showfps ? 100.0f : 0.0f) + (HasTopRightTextInfo ? 100.0f : 0.0f);
 
 	float y = StartY;

@@ -64,7 +64,7 @@ TEST(IosRuntime, ResumeRecreatesSocketsBeforeRestoringMainAndDummyConnections)
 	EXPECT_NE(ClientHeader.find("bool ResetSocket();"), std::string::npos);
 	EXPECT_NE(ClientHeader.find("void RecreateBrokenSockets();"), std::string::npos);
 	EXPECT_NE(RecreateBody.find("NetClient.SocketIsBroken()"), std::string::npos);
-	EXPECT_NE(RecreateBody.find("Disconnect();"), std::string::npos);
+	EXPECT_NE(RecreateBody.find("DisconnectInternal();"), std::string::npos);
 	EXPECT_NE(RecreateBody.find("NetClient.Close();"), std::string::npos);
 	const size_t ResetResult = RecreateBody.find("if(!ResetSocket())");
 	ASSERT_NE(ResetResult, std::string::npos);

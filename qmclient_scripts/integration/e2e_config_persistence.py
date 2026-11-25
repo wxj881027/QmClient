@@ -28,7 +28,7 @@ def start_client(binary: Path, root: Path, name: str, *overrides: str) -> Proces
 	args = [
 		str(binary), "gfx_fullscreen 0", "gfx_screen_width 960", "gfx_screen_height 540",
 		"gfx_backend OpenGL", "qm_graphics_mode 0", "cl_show_welcome 0",
-		"qm_auto_update 0", "qm_steam_auto_launch 0", "cl_save_settings 1",
+		"qm_steam_auto_launch 0", "cl_save_settings 1",
 		*overrides,
 	]
 	return Process(

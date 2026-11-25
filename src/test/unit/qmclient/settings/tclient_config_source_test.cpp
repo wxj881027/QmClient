@@ -12,6 +12,6 @@ TEST(TClientConfigSource, RecognizesRenamedTClientVariables)
 TEST(TClientConfigSource, DoesNotClassifyOtherQmOrDDNetVariablesAsTClient)
 {
 	EXPECT_FALSE(IsTClientConfigVariable("qm_nonexistent_setting"));
-	EXPECT_FALSE(IsTClientConfigVariable("cl_showfps"));
+	EXPECT_FALSE(IsTClientConfigVariable("cl_show_perf"));
 	EXPECT_FALSE(IsTClientConfigVariable(""));
 }

@@ -628,7 +628,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			if(Modified && pVar->m_Type != SConfigVariable::VAR_COLOR)
 			{
 				CButtonContainer &ResetBtn = s_ResetBtns[pVar];
-				if(DoTClientSettingsButton_Menu(&ResetBtn, "tclient-config-reset", Localize("Reset"), 0, &ResetRect))
+				GameClient()->m_Tooltips.DoToolTip(&ResetBtn, &ResetRect, Localize("Reset"));
+				if(Ui()->DoButton_QmIcon(&ResetBtn, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetRect, BUTTONFLAG_LEFT))
 				{
 					if(pVar->m_Type == SConfigVariable::VAR_INT)
 					{

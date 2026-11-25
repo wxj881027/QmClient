@@ -314,7 +314,7 @@ bool CSectionLoader::Process(bool RenderSections)
 	ClearSectionCallbacks(m_vSections);
 
 	// Profiling: log when budget is exceeded and perf-debug is enabled
-	if(g_Config.m_QmPerfDebug && m_TotalFrameTimeMs > 1.0)
+	if(g_Config.m_QmPerfEnabled && m_TotalFrameTimeMs > 1.0)
 	{
 		char aPayload[320];
 		str_format(aPayload, sizeof(aPayload),

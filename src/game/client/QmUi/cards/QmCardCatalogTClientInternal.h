@@ -127,7 +127,7 @@ namespace qm_tclient_cards
 
 	inline bool PerfDebugEnabled()
 	{
-		return g_Config.m_QmPerfDebug != 0;
+		return g_Config.m_QmPerfEnabled;
 	}
 
 	inline void LogTClientPerfStage(const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)

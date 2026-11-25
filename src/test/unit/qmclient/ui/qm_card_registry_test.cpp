@@ -110,9 +110,9 @@ TEST(QmCardRegistry, CoversAllCardsNoDuplicates)
 	}
 }
 
-TEST(QmCardRegistry, RemovedTranslateAndMediaCardsStayUnregistered)
+TEST(QmCardRegistry, RemovedTranslateUiCardStaysUnregistered)
 {
-	for(const char *pStableId : {"qm:translate_ui", "qm:system_media_controls"})
+	for(const char *pStableId : {"qm:translate_ui"})
 	{
 		SCOPED_TRACE(pStableId);
 		EXPECT_EQ(qm_card_registry::FindByStableId(pStableId), nullptr);
@@ -1273,23 +1273,6 @@ TEST(QmCardRegistry, LyricsCardRegisteredForSidebarModuleMigration)
 	EXPECT_STREQ(pPlacement->m_pDefaultTab, "hud");
 	EXPECT_GT(pPlacement->m_Column, 0);
 	EXPECT_GE(RegistryModelAfterRoundTrip().StateIndexForStableId("qm:lyrics"), 0);
-}
-
-// 意图：调试模式卡片必须挂在 HUD 页，携带可搜索的中文/拼音关键词，且模块枚举可反查。
-TEST(QmCardRegistry, DebugModeCardRegisteredInHudTab)
-{
-	const auto *pDefault = qm_card_registry::FindByStableId("qm:debug_mode");
-	ASSERT_NE(pDefault, nullptr);
-	EXPECT_STREQ(pDefault->m_pDefaultTab, "hud");
-	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:debug_mode");
-	ASSERT_NE(pPlacement, nullptr);
-	EXPECT_STREQ(pPlacement->m_pDefaultTab, "hud");
-	EXPECT_GT(pPlacement->m_Column, 0);
-	ASSERT_NE(pDefault->m_pSearchKeywords, nullptr);
-	EXPECT_NE(std::string(pDefault->m_pSearchKeywords).find("调试模式"), std::string::npos);
-	qm_module::EQmModuleId Id;
-	ASSERT_TRUE(qm_module::QmModuleIdFromStableId("qm:debug_mode", &Id));
-	EXPECT_EQ(Id, qm_module::EQmModuleId::DebugMode);
 }
 
 // 意图：全局卡片的默认 placement 必须包含 tab，否则搜索结果和按 tab 筛选没有稳定落点。

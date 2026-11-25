@@ -804,28 +804,50 @@ namespace ui_widget
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
 		const SUiTheme Theme = ThemeFor(Ctx);
 		const ColorRGBA Backdrop = CUiScopedSurfaceText::CurrentSurface();
-		const SUiToggleStyle Style = ResolveUiToggleStyle(Theme, ResolveConfiguredControlSurface(), Backdrop, Value, Enabled);
-		ColorRGBA Track = Style.m_Track;
-		float Progress = Value ? 1.0f : 0.0f;
-		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
-		if(Animate && Enabled && pAnim != nullptr && !Ctx.m_pUi->AnimationsBlocked())
-		{
-			const uint64_t TrackKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xA5A5ull, reinterpret_cast<uint64_t>(pId));
-			Track = ResolveUiAnimValueColor(*pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
-			const uint64_t KnobKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x5A5Aull, reinterpret_cast<uint64_t>(pId));
-			// 开关首次出现时用当前状态初始化滑块，避免一露面就自己左右滑一段。
-			if(!pAnim->HasValue(KnobKey, EUiAnimProperty::COLOR_MIX))
-				SetUiPresentationStateValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress);
-			Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress, ui_token::motion::TOGGLE);
-		}
-		// 滑块离目标档位越远拉伸越多：中段最像液体，落位时随弹簧回弹收圆。
-		const float KnobStretch = Animate && Enabled && !Ctx.m_pUi->AnimationsBlocked() ? std::clamp(std::abs(Progress - (Value ? 1.0f : 0.0f)), 0.0f, 1.0f) * 2.0f : 0.0f;
-		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress, KnobStretch);
 		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->VisualSurfaceHovered(pHitRect != nullptr ? pHitRect : &Rect);
-		const bool Pressed = Hovered && Ctx.m_pUi->CheckActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
+		const bool Pressed = Hovered && pId != nullptr && Ctx.m_pUi->IsActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
+		float Progress = Value ? 1.0f : 0.0f;
+		float Press = Pressed ? 1.0f : 0.0f;
+		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
+		if(Animate && Enabled && pId != nullptr && pAnim != nullptr)
+		{
+			const uint64_t KnobKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x5A5Aull, reinterpret_cast<uint64_t>(pId));
+			if(!Ctx.m_pUi->AnimationsBlocked())
+			{
+				Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::POS_X, Progress, ui_token::motion::TOGGLE);
+				const auto &Transition = ui_token::motion::TOGGLE_PRESS;
+				Press = ResolveUiAnimValue(*pAnim, KnobKey, EUiAnimProperty::ALPHA, Press, Transition.m_DurationSec, Transition.m_Easing);
+			}
+			else if(g_Config.m_QmUiMotionLevel > 0)
+			{
+				// 纯背景趟只读当前画面，不能用被挡住的指针重定向动画。
+				Progress = pAnim->GetValue(KnobKey, EUiAnimProperty::POS_X, Progress);
+				Press = pAnim->GetValue(KnobKey, EUiAnimProperty::ALPHA, Press);
+			}
+		}
+		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress, Press);
+		const float ColorProgress = std::clamp(Progress, 0.0f, 1.0f);
+		const ColorRGBA ControlSurface = ResolveConfiguredControlSurface();
+		const SUiToggleStyle Style = ResolveUiToggleStyle(Theme, ControlSurface, Backdrop, ColorProgress == 1.0f, Enabled);
+		ColorRGBA Track = Style.m_Track;
+		if(ColorProgress > 0.0f && ColorProgress < 1.0f)
+		{
+			const auto On = ResolveUiToggleStyle(Theme, ControlSurface, Backdrop, true, Enabled);
+			Track = ResolveUiAnimInterpolatedColor(Style.m_Track, On.m_Track, ColorProgress);
+		}
 		const auto Feedback = ResolveUiToggleFeedbackStyle(Style, Track, Backdrop, Enabled, Hovered, Pressed);
-		DrawControlSurface(Ctx, Layout.m_Track, Feedback.m_Track, Feedback.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
-		DrawControlSurface(Ctx, Layout.m_Knob, Feedback.m_Knob, ColorRGBA(), ui_token::radius::PILL);
+		const float OutlineAlpha = Feedback.m_Border.a * (1.0f - ColorProgress);
+		const float OutlineWidth = OutlineAlpha > 0.0f ? Layout.m_Track.h * ui_token::control::SWITCH_OUTLINE_RATIO : 0.0f;
+		// 圆角表面将描边和填充画在各自区域。让描边淡到轨道底色，边缘不会透出底层页面。
+		const ColorRGBA Border = BlendUiButtonSurface(Feedback.m_Track, Feedback.m_Border.WithAlpha(OutlineAlpha));
+		DrawControlSurface(Ctx, Layout.m_Track, Feedback.m_Track, Border, ui_token::radius::PILL, OutlineWidth);
+		// 光晕单独画在轨道外，沿用宿主裁剪。滑块和光晕用小数坐标，避免移动时跳像素。
+		if(Press > 0.0f)
+		{
+			const ColorRGBA Halo = Feedback.m_Knob.WithAlpha(Feedback.m_Knob.a * ui_token::control::SWITCH_HALO_PRESS_ALPHA * std::clamp(Press, 0.0f, 1.0f));
+			DrawRoundedSurface(Ctx, Layout.m_Halo, Ctx.m_pUi->ScaleControlAlpha(Halo), ColorRGBA(), ui_token::radius::PILL, 0.0f, IGraphics::CORNER_ALL, false);
+		}
+		DrawRoundedSurface(Ctx, Layout.m_Knob, Ctx.m_pUi->ScaleControlAlpha(Feedback.m_Knob), ColorRGBA(), ui_token::radius::PILL, 0.0f, IGraphics::CORNER_ALL, false);
 	}
 
 	// 两端渐隐的细分隔线：分组标题下用它，比整块背景板轻，不会把标题读成按钮。

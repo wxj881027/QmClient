@@ -59,7 +59,7 @@ namespace
 		bool m_Ready = false;
 		explicit CIconRenderFixture() : m_pKernel(IKernel::Create()), m_pConsole(CreateConsole(CFGFLAG_CLIENT))
 		{
-			g_Config.m_QmPerfDebug = g_Config.m_QmPerfLogfile = g_Config.m_QmPerfStutterDiagnostics = 0;
+			g_Config.m_QmPerfEnabled = false;
 			// 该基准没有作业池，测的是主线程字形与绘制成本，固定同步模式。
 			g_Config.m_QmTextRasterMode = 0;
 			g_Config.m_QmUiIconWeight = 0;

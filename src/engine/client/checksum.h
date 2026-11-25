@@ -37,6 +37,11 @@ union CChecksum
 {
 	char m_aBytes[sizeof(CChecksumData)];
 	CChecksumData m_Data;
+
+	CChecksum() :
+		m_Data{}
+	{
+	}
 };
 
 inline bool ChecksumAppendFileRange(SHA256_CTX &Context, IOHANDLE File, int64_t Offset, unsigned Length)

@@ -34,7 +34,6 @@ private:
 
 	float HitboxAlpha() const;
 	bool HitboxModeEnabled() const;
-	bool LegacyModeEnabled() const;
 	bool ShouldRenderClient(int ClientId) const;
 	bool IsOnScreen(vec2 Position, float Margin = 0.0f) const;
 	bool IsLineOnScreen(vec2 From, vec2 To, float Margin = 0.0f) const;
@@ -48,12 +47,12 @@ private:
 	bool GetProjectileRenderPosition(const class CProjectileData &Projectile, vec2 &Position, vec2 &PreviousPosition) const;
 
 	void RenderTileHitboxes();
-	void RenderTeeHitboxes();
+	void RenderTeeHitboxes(const SQmCollisionHitboxVisibility &Visibility);
 	void RenderPickupHitboxes();
-	void RenderWeaponHitboxes();
+	void RenderWeaponHitboxes(const SQmCollisionHitboxVisibility &Visibility);
 	void RenderHammerHitboxes();
-	void RenderProjectileHitboxes();
-	void RenderLaserHitboxes();
+	void RenderProjectileHitboxes(const SQmCollisionHitboxVisibility &Visibility);
+	void RenderLaserHitboxes(const SQmCollisionHitboxVisibility &Visibility);
 	void RenderHookHitboxes();
 
 public:

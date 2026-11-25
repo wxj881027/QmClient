@@ -135,7 +135,7 @@ class Scenario:
 		env.update({"NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost", "QMCLIENT_TEST_STORAGE_ROOT": str(self.artifacts), "QMCLIENT_TEST_HIDE_DIALOG": "1"})
 		if self.default_sources:
 			env["QMCLIENT_TEST_SERVERLIST_ORIGIN"] = self.http.url
-		config = ["gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_skip_start_menu 1", "cl_save_settings 0", "cl_menu_map \"\"", "qm_auto_update 0", "qm_steam_auto_launch 0", "http_allow_insecure 1", f"qm_websocket_url ws://127.0.0.1:{self.http.server.server_port}/ws", "minimize"]
+		config = ["gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_skip_start_menu 1", "cl_save_settings 0", "cl_menu_map \"\"", "qm_steam_auto_launch 0", "http_allow_insecure 1", f"qm_websocket_url ws://127.0.0.1:{self.http.server.server_port}/ws", "minimize"]
 		self.client = Process(f"serverlist-{len(self.clients)}", [str(self.build / f"DDNet{EXE_SUFFIX}"), *config], self.artifacts, fifo_command="cl_input_fifo", pipe_prefix="serverlist_e2e_", env=env)
 		self.clients.append(self.client)
 		self.client.wait_for(lambda line: line.startswith("client: version"), "client startup", 45)
@@ -261,6 +261,31 @@ def scenario_failed_refresh_retains_consumer(s: Scenario):
 	s.quit()
 
 
+def scenario_cross_server_follow_uses_cached_players_during_failed_refresh(s: Scenario):
+	s.sources("/list")
+	payload = json.loads(s.payload("Follow destination"))
+	payload["servers"][0]["info"]["clients"] = [
+		{"name": "Follow Target", "clan": "Clan", "country": 0, "score": 0, "is_player": True}
+	]
+	s.http.set("/list", 200, json.dumps(payload).encode(), Age="0")
+	s.start()
+	s.list("Follow destination")
+	assert s.client
+	s.client.command("qm_friend_online_auto_refresh 0")
+	s.client.command("qm_friend_auto_follow_delay 30")
+	s.http.set("/list", 503, b"master unavailable")
+	s.client.command("qm_serverlist_refresh")
+	s.until(lambda state: state["error"] == 1 and state["count"] == 1)
+
+	s.client.command('qm_follow "Follow Target" Clan')
+	address = f"127.0.0.1:{s.udp.getsockname()[1]}"
+	s.client.wait_for(lambda line: f"connecting to '{address}'" in line, "immediate follow from the cached roster", 10)
+	assert not any("Cross-server following stopped" in line for line in s.client._lines), "automatic connection cancelled following"
+	s.client.command("disconnect")
+	s.client.wait_for(lambda line: "Cross-server following stopped" in line, "manual disconnect stops following", 5)
+	s.quit()
+
+
 def scenario_older_refresh_retains_fresher_consumer(s: Scenario):
 	s.sources("/list")
 	s.http.set("/list", 200, s.payload("Fresh"), Age="0")
@@ -343,6 +368,7 @@ SCENARIOS = {
 	"failed_sources_publish_age_only": scenario_failed_sources_publish_age_only,
 	"automatic_retry_recovers_without_refresh": scenario_automatic_retry_recovers_without_refresh,
 	"failed_refresh_retains_consumer": scenario_failed_refresh_retains_consumer,
+	"cross_server_follow_uses_cached_players_during_failed_refresh": scenario_cross_server_follow_uses_cached_players_during_failed_refresh,
 	"older_refresh_retains_fresher_consumer": scenario_older_refresh_retains_fresher_consumer,
 	"restart_loads_cache_when_network_fails": scenario_restart_loads_cache_when_network_fails,
 	"valid_source_publishes_while_other_source_pending": scenario_valid_source_publishes_while_other_source_pending,

@@ -44,6 +44,8 @@
 
 constexpr auto SAVES_FILE = "ddnet-saves.txt";
 
+struct SQmFocusModeDecisions;
+
 class CChat : public CComponent
 {
 public:
@@ -110,9 +112,16 @@ public:
 		EPresentationState m_State = EPresentationState::COLLAPSED;
 	};
 
+	struct SRecallTiming
+	{
+		float m_StaggerSeconds = CHAT_RECALL_STAGGER_SECONDS;
+		float m_DurationSeconds = CHAT_RECALL_DURATION;
+	};
+
 	static void ResetPresentationState(SPresentationState &Presentation);
 	static void BeginLinePresentation(SPresentationState &Presentation, int64_t Now, bool GentleRefresh);
-	static void UpdateLinePresentation(SPresentationState &Presentation, int64_t LineTime, int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, float RecallDelaySeconds, bool ExtraAnimations = true, int ClientId = SERVER_MSG);
+	static SRecallTiming ResolveRecallTiming(int RecallLineCount);
+	static void UpdateLinePresentation(SPresentationState &Presentation, int64_t LineTime, int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, float RecallDelaySeconds, bool ExtraAnimations = true, int ClientId = SERVER_MSG, float RecallDurationSeconds = CHAT_RECALL_DURATION);
 	static float SmoothPresentationY(float CurrentY, float TargetY, float DeltaSeconds);
 	static bool CanMergePlayerMessages(int PreviousClientId, int PreviousTeam, const char *pPreviousText, int64_t PreviousTime, int ClientId, int Team, const char *pText, int64_t Now, bool Highlighted = false);
 	// echo 合并的窗口判定：上一次同文本 echo 发生在 LastTime，当前时间为 Now，
@@ -149,6 +158,8 @@ private:
 	static constexpr float CHAT_MESSAGE_VISIBLE_DURATION = 14.0f;
 	static constexpr float CHAT_PRESENTATION_MAX_DELTA_SECONDS = 0.20f;
 	static constexpr float CHAT_RENDER_Y_SMOOTHING = 24.0f;
+
+	static bool ShouldRecallLine(bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, int64_t LineTime, int ClientId);
 
 	enum
 	{
@@ -435,8 +446,8 @@ private:
 		// 从最旧一端量出的屏幕容量：滚到顶时这组消息必须完整可见。
 		int m_FittingLines = 1;
 	};
-	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, bool IsScoreBoardOpen, bool ShowLargeArea, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
-	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations);
+	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, bool ShowLargeArea, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
+	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations, const SQmFocusModeDecisions &Focus);
 	bool UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed);
 
 	friend class CBindChat;
@@ -660,7 +671,7 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	void OnRender() override;
-	bool OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea);
+	bool OnPrepareLines(float y, bool ShowLargeArea);
 	void Reset();
 	void OnRelease() override;
 	void OnNewSnapshot() override;
@@ -863,6 +874,27 @@ inline void CChat::BeginLinePresentation(SPresentationState &Presentation, int64
 	Presentation.m_RenderScale = 1.0f;
 }
 
+inline CChat::SRecallTiming CChat::ResolveRecallTiming(int RecallLineCount)
+{
+	constexpr int BASELINE_LINE_COUNT = 4;
+	constexpr float MIN_DURATION_SECONDS = 0.045f;
+	if(RecallLineCount <= BASELINE_LINE_COUNT)
+		return {};
+
+	const int LineCount = std::min(RecallLineCount, static_cast<int>(MAX_LINES));
+	const float Density = static_cast<float>(LineCount - BASELINE_LINE_COUNT) / (MAX_LINES - BASELINE_LINE_COUNT);
+	const float DurationSpeed = 1.0f + Density * (CHAT_RECALL_DURATION / MIN_DURATION_SECONDS - 1.0f);
+	const float DurationSeconds = CHAT_RECALL_DURATION / DurationSpeed;
+	// 只把缩短的单行时长中的一部分分给交错跨度，让整批动画也提前结束。
+	const float StaggerSpanSeconds = (BASELINE_LINE_COUNT - 1) * CHAT_RECALL_STAGGER_SECONDS + 0.8f * (CHAT_RECALL_DURATION - DurationSeconds);
+	return {StaggerSpanSeconds / (LineCount - 1), DurationSeconds};
+}
+
+inline bool CChat::ShouldRecallLine(bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, int64_t LineTime, int ClientId)
+{
+	return ShowLargeArea && !(ForceVisible && ClientId != CLIENT_MSG) && LargeAreaOpenTick > 0 && LineTime < LargeAreaOpenTick;
+}
+
 inline void CChat::UpdateLinePresentation(
 	SPresentationState &Presentation,
 	int64_t LineTime,
@@ -873,8 +905,10 @@ inline void CChat::UpdateLinePresentation(
 	int64_t LargeAreaOpenTick,
 	float RecallDelaySeconds,
 	bool ExtraAnimations,
-	int ClientId)
+	int ClientId,
+	float RecallDurationSeconds)
 {
+	const bool HistoricalRecall = ShouldRecallLine(ShowLargeArea, ForceVisible, LargeAreaOpenTick, LineTime, ClientId);
 	// 强制显示仍可绕过专注模式过滤；客户端 echo 的展示时长保持有限。
 	ForceVisible = ForceVisible && ClientId != CLIENT_MSG;
 	DeltaSeconds = std::clamp(DeltaSeconds, 0.0f, CHAT_PRESENTATION_MAX_DELTA_SECONDS);
@@ -904,9 +938,8 @@ inline void CChat::UpdateLinePresentation(
 	if(Presentation.m_AnimationsSuppressed)
 	{
 		Presentation.m_PresentationBirthTick = Now - (int64_t)(CHAT_ENTRY_DURATION * time_freq());
-		const bool HistoricalRecallPending = ShowLargeArea && !ForceVisible && LargeAreaOpenTick > 0 && LineTime < LargeAreaOpenTick;
 		ApplySettledState();
-		if((VisibleWithoutAnimations && !HistoricalRecallPending) || (!VisibleWithoutAnimations && LineAge >= CHAT_MESSAGE_VISIBLE_DURATION + CHAT_EXIT_DURATION))
+		if((VisibleWithoutAnimations && !HistoricalRecall) || (!VisibleWithoutAnimations && LineAge >= CHAT_MESSAGE_VISIBLE_DURATION + CHAT_EXIT_DURATION))
 			Presentation.m_AnimationsSuppressed = false;
 		return;
 	}
@@ -919,11 +952,14 @@ inline void CChat::UpdateLinePresentation(
 	Presentation.m_RenderOffsetY = 0.0f;
 	Presentation.m_RenderScale = 1.0f;
 
-	if(ShowLargeArea && !ForceVisible && LargeAreaOpenTick > 0 && LineTime < LargeAreaOpenTick)
+	if(HistoricalRecall)
 	{
 		const float RecallAge = ChatPresentationTicksToSeconds(Now - LargeAreaOpenTick) - std::max(0.0f, RecallDelaySeconds);
-		const float RecallProgress = ChatPresentationClamp(RecallAge / CHAT_RECALL_DURATION);
-		const float RecallEase = ChatPresentationEaseOut(RecallProgress);
+		const float RecallProgress = ChatPresentationClamp(RecallAge / std::max(0.001f, RecallDurationSeconds));
+		const float RecallEase = RecallProgress > 0.0f && RecallProgress < 1.0f ? ChatPresentationEaseOut(RecallProgress) : RecallProgress;
+		// 首次占据布局时按当前堆叠对齐，避免从折叠前或等待期间缓存的 Y 滑入。
+		if(RecallProgress > 0.0f && Presentation.m_LayoutVisibility <= 0.0f)
+			Presentation.m_RenderYInitialized = false;
 		Presentation.m_LayoutVisibility = RecallProgress > 0.0f ? 1.0f : 0.0f;
 		Presentation.m_RenderOffsetX = CHAT_ENTRY_OFFSET_X * (1.0f - RecallEase);
 		Presentation.m_RenderOffsetY = 0.0f;

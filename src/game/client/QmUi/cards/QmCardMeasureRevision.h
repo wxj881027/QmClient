@@ -59,7 +59,7 @@ namespace qm_card_catalog
 			return Revision;
 		}
 		case EQmModuleId::QiaFen: return Layout.m_KeywordRulesRevision;
-		case EQmModuleId::PieMenu: return g_Config.m_QmPieMenuEnabled ? 1u : 0u;
+		case EQmModuleId::PieMenu: return (g_Config.m_QmPieMenuEnabled ? 1u : 0u) | (Layout.m_CrossServerFollowActive ? 2u : 0u);
 		case EQmModuleId::MapUpload: return 1u;
 		case EQmModuleId::HJAssist: return (g_Config.m_QmAutoTeamLock ? 1u : 0u) | (g_Config.m_QmPausedSpectatorFade ? 2u : 0u) | (g_Config.m_QmDummyDistanceLink ? 4u : 0u);
 		case EQmModuleId::ChatBubble: return (g_Config.m_QmChatBubble ? 1u : 0u) | (g_Config.m_QmChatBubbleCustomColors ? 2u : 0u);
@@ -71,19 +71,7 @@ namespace qm_card_catalog
 		case EQmModuleId::WeaponAnimation:
 			return (g_Config.m_QmWeaponSwitchAnim ? 1u : 0u) |
 			       (g_Config.m_QmWeaponReloadAnim ? 2u : 0u);
-		case EQmModuleId::CollisionHitbox:
-			return (g_Config.m_QmHitboxMode || g_Config.m_QmShowCollisionHitbox ? 1u : 0u) |
-			       (g_Config.m_QmHitboxShowMap ? 1u << 1 : 0u) |
-			       (g_Config.m_QmHitboxShowTeeCollision ? 1u << 2 : 0u) |
-			       (g_Config.m_QmHitboxShowTeeFreeze ? 1u << 3 : 0u) |
-			       (g_Config.m_QmHitboxShowTeeDeath ? 1u << 4 : 0u) |
-			       (g_Config.m_QmHitboxShowPickups ? 1u << 5 : 0u) |
-			       (g_Config.m_QmHitboxShowHammer ? 1u << 6 : 0u) |
-			       (g_Config.m_QmHitboxShowProjectiles ? 1u << 7 : 0u) |
-			       (g_Config.m_QmHitboxShowLasers ? 1u << 8 : 0u) |
-			       (g_Config.m_QmHitboxShowFreezeLasers ? 1u << 9 : 0u) |
-			       (g_Config.m_QmHitboxShowHook ? 1u << 10 : 0u) |
-			       (g_Config.m_QmHitboxShowFreezeProjectiles ? 1u << 11 : 0u);
+		case EQmModuleId::CollisionHitbox: return g_Config.m_QmHitboxMode || g_Config.m_QmShowCollisionHitbox ? 1u : 0u;
 		case EQmModuleId::DummyMiniView: return DummyMiniViewExpanded ? 1u : 0u;
 		case EQmModuleId::Ime: return (g_Config.m_QmNewIme != 0 ? 1u : 0u) | (g_Config.m_QmImeAutoManage != 0 ? 2u : 0u);
 		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (static_cast<uint64_t>(g_Config.m_QmPlayerStatsMapProgressStyle) << 1);

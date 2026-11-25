@@ -55,15 +55,9 @@ void CPieMenu::OnReset()
 	m_VisibleOptionCount = 0;
 }
 
-void CPieMenu::OnInit()
-{
-	qm_pie_menu::StartFollow(m_FollowState, g_Config.m_QmPieFollowName, g_Config.m_QmPieFollowClan);
-}
-
 void CPieMenu::OnConsoleInit()
 {
 	Console()->Register("+pie_menu", "", CFGFLAG_CLIENT, ConKeyPieMenu, this, "Open pie menu");
-	Console()->Register("qm_pie_menu_stop_follow", "", CFGFLAG_CLIENT, ConStopFollow, this, "Stop following a player across servers");
 }
 
 void CPieMenu::OnRelease()
@@ -79,7 +73,6 @@ void CPieMenu::OnUpdate()
 	if(m_Lifecycle.IsVisible() && !g_Config.m_QmPieMenuEnabled)
 		CloseMenu();
 	UpdatePointsRequest();
-	UpdateFollowState();
 }
 
 void CPieMenu::ConKeyPieMenu(IConsole::IResult *pResult, void *pUserData)
@@ -815,6 +808,11 @@ bool CPieMenu::HasTargetPlayer() const
 		return false;
 	const auto &Player = GameClient()->m_aClients[m_TargetClientId];
 	return Player.m_Active && qm_pie_menu::MatchesPlayer(Player.m_aName, Player.m_aClan, m_TargetName.c_str(), m_TargetClan.c_str());
+}
+
+bool CPieMenu::IsFollowingTarget() const
+{
+	return GameClient()->m_CrossServerFollow.IsFollowing(m_TargetName.c_str(), m_TargetClan.c_str());
 }
 
 int CPieMenu::GetHoveredOption() const

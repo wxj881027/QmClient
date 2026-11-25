@@ -3521,6 +3521,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogTClientGameplay.cpp
     QmUi/cards/QmCardCatalogTClientInternal.h
     QmUi/cards/QmTClientDeclaredRegions.h
+    QmUi/cards/QmWarListCardModel.h
     QmUi/cards/TClientConfigSource.h
     QmUi/cards/QmCardCatalogControls.cpp
     QmUi/cards/QmCardCatalogVisualContent.cpp
@@ -3656,6 +3657,9 @@ if(CLIENT)
     components/menus.h
     components/menus_assets_editor.cpp
     components/menus_browser.cpp
+    components/qmclient/favorite_map_note_edit.h
+    components/qmclient/favorite_map_note_input.cpp
+    components/qmclient/favorite_map_note_input.h
     components/menus_credits.cpp
     components/menus_demo.cpp
     components/menus_demo_screenshots.cpp
@@ -3766,6 +3770,7 @@ if(CLIENT)
     components/qmclient/emoticon_commands.h
     components/qmclient/dummy_distance_link.cpp
     components/qmclient/dummy_distance_link.h
+    components/qmclient/dummy_distance_link_hook.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
     components/qmclient/qm_hook_coll_geometry.h
@@ -3888,7 +3893,9 @@ if(CLIENT)
     components/qmclient/chat_bubble_geometry.h
     components/qmclient/pie_menu_actions.cpp
     components/qmclient/pie_menu_friend_action.h
-    components/qmclient/pie_menu_follow.cpp
+    components/qmclient/cross_server_follow.cpp
+    components/qmclient/cross_server_follow.h
+    components/qmclient/cross_server_follow_logic.h
     components/qmclient/pie_menu_points.h
     components/qmclient/pie_menu_settings.cpp
     components/qmclient/pending_hammer_hits.h
@@ -5303,6 +5310,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp
     src/test/unit/qmclient/client/qm_credits_layout_test.cpp
     src/test/unit/qmclient/client/qm_favorite_map_vote_test.cpp
+    src/test/unit/qmclient/client/qm_favorite_map_note_edit_test.cpp
     src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
     src/test/unit/base/aio_buffer_test.cpp
     src/test/unit/base/future_logger_test.cpp
@@ -5604,6 +5612,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_finish_summary_layout_test.cpp
     src/test/unit/qmclient/ui/qm_finish_summary_presentation_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
+    src/test/integration/qmclient/client/qm_dummy_distance_link_hook_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_render_test.cpp
@@ -6126,6 +6135,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_screenshot_thumbnail_upload_test.cpp
     src/test/unit/qmclient/client/qm_image_view_test.cpp
     src/test/unit/qmclient/client/qm_friend_menu_policy_test.cpp
+    src/test/unit/qmclient/client/qm_cross_server_follow_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_render_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_matrix_test.cpp
@@ -6966,6 +6976,8 @@ src/game/client/components/settings_runtime_cache.cpp
       src/test/integration/qmclient/ui/qm_popup_callback_lifetime_test.cpp
       src/test/integration/qmclient/ui/qm_measurement_clip_failure_test.cpp
       src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
+      src/test/integration/qmclient/ui/qm_favorite_map_note_input_test.cpp
+      src/game/client/components/qmclient/favorite_map_note_input.cpp
       src/test/integration/qmclient/ui/qm_map_preview_draw_scope_test.cpp
       src/test/integration/client/map_preview_download_state_test.cpp
       src/test/unit/client/map_preview_allocation_test.cpp
@@ -7141,6 +7153,7 @@ src/game/client/components/settings_runtime_cache.cpp
   if(CLIENT)
     # 客户端与服务端有同名的预测/实体类，独立目标只链接客户端实现。
     add_executable(qm-prediction-tests EXCLUDE_FROM_ALL
+      src/test/unit/qmclient/client/qm_favorite_map_note_edit_test.cpp
       src/test/support/prediction_allocation_main.cpp
       src/test/support/allocation_failure_new.cpp
       src/test/support/prediction_allocation_failure.h
@@ -7306,6 +7319,8 @@ src/game/client/components/settings_runtime_cache.cpp
       src/engine/client/sqlite.cpp
       src/test/unit/engine/recent_glyph_cache_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp
+      src/test/integration/qmclient/settings/qm_warlist_card_form_test.cpp
+      src/test/unit/qmclient/settings/qm_warlist_card_layout_test.cpp
       src/game/client/components/qmclient/warlist_model.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp

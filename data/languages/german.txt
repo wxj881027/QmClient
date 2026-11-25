@@ -73,6 +73,9 @@
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == X-Ausrichtungshinweis bei Übereinstimmung färbt das X eines anderen Spielers, wenn es für die eingestellte Erkennungszeit mit deinem übereinstimmt.
 
+%.0f Bps
+== %.0f Blöcke/s
+
 %.2f KiB
 == %.2f KiB
 
@@ -3263,6 +3266,9 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Legt fest, was neben den Namen anderer Spieler erscheint, etwa Clan-Tags, Freund-Markierungen und Client-Kennungen.
 
+Convenience options for chat, the scoreboard and tune zones.
+== Zusatzoptionen für Chat, Punktetabelle und Tuning-Zonen.
+
 Converse
 == Weiter privat chatten
 
@@ -4298,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == Tür-Laser-Konturfarbe
 
+Double-click to edit note
+== Notiz per Doppelklick bearbeiten
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == Drücke die belegte Taste innerhalb von 400 ms zweimal, um die aktuelle Liedzeile in den öffentlichen Chat zu senden
 
@@ -4894,6 +4903,9 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 3D-Hintergrundpartikel aktivieren
+
+Enable a music source to display its lyrics.
+== Aktiviere eine Musikquelle, um ihre Songtexte anzuzeigen.
 
 Enable absolute controller aiming in game
 == Absolutes Controller-Zielen im Spiel aktivieren
@@ -7082,6 +7094,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 == Horizontale Position
 
+Horizontal speed × ramp
+== Horizontalgeschwindigkeit × Faktor
+
 Hostname of DNSBL provider for IP verification
 == Hostname des DNSBL-Anbieters für IP-Überprüfung
 
@@ -7544,6 +7559,9 @@ Internet (From online source)
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == Intervall für das automatische Speichern der aktuellen Editor-Kartenkopie im Ordner „auto“ (0=aus)
 
+Invalid
+== Ungültig
+
 Invalid Axiom API response
 == Ungültige Antwort der Axiom-API
 
@@ -8000,6 +8018,9 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 == Deine Laser können dich nicht treffen und ziehen andere zum Schützen
 
+Last corrected field
+== Zuletzt korrigiertes Feld
+
 Last entered
 == Zuletzt eingegeben
 
@@ -8452,6 +8473,9 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == Protokolliert langsame Frames und Ruckler beim Start, damit du melden kannst, warum sich das Spiel träge anfühlte.
+
+Looks like an update is available
+== Es gibt wohl ein Update
 
 Lose weapons when teleporting (useful for race maps)
 == Waffen beim Teleportieren verlieren (nützlich für Rennkarten)
@@ -9491,6 +9515,9 @@ Network
 Network compensation
 == Network compensation
 
+Network object corrections
+== Korrekturen von Netzwerkobjekten
+
 Network timeout
 == Netzwerk-Timeout
 
@@ -10418,6 +10445,9 @@ Particle glow
 Particle pulse
 == Partikelpuls
 
+Particle skin
+== Partikel-Skin
+
 Particle speed
 == Partikelgeschwindigkeit
 
@@ -11065,6 +11095,12 @@ Position jump hint
 
 Position jump tip
 == Positionssprung-Tipp
+
+Position X
+== X-Koordinate
+
+Position Y
+== Y-Koordinate
 
 Position:
 == Position:
@@ -13835,6 +13871,9 @@ Show flag on name plate
 Show FPS
 == FPS anzeigen
 
+Show FPS, prediction time, and performance graphs
+== FPS, Vorhersagezeit und Leistungsdiagramme anzeigen
+
 Show freeze bar under frozen players indicating thaw time
 == Gefrierbalken unter gefrorenen Spielern anzeigen, der die Auftauzeit angibt
 
@@ -15071,6 +15110,18 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Spamschutz: verhindert Spammen von Teamwechsel, Chat, Skinwechsel, Emotes, Abstimmungen
 
+Spawn effects filtered
+== Herausgefilterte Spawn-Effekte
+
+Spawn events received
+== Empfangene Spawn-Ereignisse
+
+Spawn particle failures
+== Fehler beim Erzeugen von Spawn-Partikeln
+
+Spawn particles dispatched
+== Erzeugte Spawn-Partikel
+
 Speaker
 == Lautsprecher
 
@@ -15557,6 +15608,9 @@ Switch team
 Switch tile overlay alpha (0-100)
 == Alpha der Überdeckungsentitäten von Schaltblöcken (0-100)
 
+Switch tile: type=%d delay=%d number=%d (x=%d y=%d)
+== Schalterkachel: Typ=%d Verzögerung=%d Nummer=%d (x=%d y=%d)
+
 Switch to grenade
 == Zu Granate wechseln
 
@@ -15877,6 +15931,9 @@ Teleport back to the practice respawn point
 
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == Teleportiert zum Übungs-Respawn-Punkt zurück und stellt den dort gespeicherten Tee-Zustand wieder her. Nur der Tee wird zurückgesetzt, die Welt läuft weiter.
+
+Teleport checkpoint
+== Teleport-Kontrollpunkt
 
 Teleport dummy to cursor
 == Dummy zum Cursor teleportieren
@@ -16877,6 +16934,9 @@ Tune variable to value
 Tune variable to value or show current value
 == Variable auf Wert tunen oder aktuellen Wert anzeigen
 
+Tune zone (map / override)
+== Tuning-Zone (Karte / Überschreibung)
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == Auf schwächeren Rechnern ausschalten: Karten öffnen und scrollen dann sofort. Die Cursorform ist rein optisch: alle drei Stile belegen dieselbe Zeichenzelle.
 
@@ -17408,6 +17468,9 @@ Use animated title style (overrides qm_title_color_mode)
 Use cached or online AMLL community lyrics when the music source has no word timing
 == Zwischengespeicherte oder online verfügbare Liedtexte der AMLL-Community verwenden, wenn die Musikquelle keine Zeitangaben für einzelne Wörter liefert
 
+Use cl_show_perf 1 to show the panel.
+== Mit cl_show_perf 1 wird das Panel angezeigt.
+
 Use colored skins for frozen tees
 == Farbige Skins für gefrorene Tees verwenden
 
@@ -17513,6 +17576,9 @@ Use procedural ring pipeline
 Use public word filter
 == Öffentlichen Wortfilter verwenden
 
+Use qm_pref <0|1> [20-400] (milliseconds)
+== Verwendung: qm_pref <0|1> [20-400] (Millisekunden)
+
 Use server defaults
 == Servervorgaben verwenden
 
@@ -17582,6 +17648,9 @@ VAD release delay (ms)
 VAD threshold (percent)
 == VAD-Schwellwert (Prozent)
 
+Valid
+== Gültig
+
 Vanilla skins only
 == Nur Vanilla-Skins
 
@@ -17594,6 +17663,9 @@ Variable custom font weight for Latin text
 Velocity
 == Geschwindigkeit
 
+Velocity ramp
+== Geschwindigkeitsfaktor
+
 Verifying downloaded update...
 == Heruntergeladenes Update wird überprüft…
 
@@ -17605,6 +17677,9 @@ Version performing the analysis
 
 Vertical position
 == Vertikale Position
+
+Vertical speed
+== Vertikalgeschwindigkeit
 
 Vertical sync (may cause lag)
 == Vertikale Synchronisation (kann Verzögerung verursachen)

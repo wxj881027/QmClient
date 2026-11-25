@@ -196,6 +196,18 @@ namespace QmMusicHook
 		return true;
 	}
 
+	std::wstring_view KugouSharedPatchReleaseSeries(std::wstring_view Version)
+	{
+		constexpr std::wstring_view Prefix = L"20.1.";
+		const auto Series = Version.substr(0, Version.find(L'.', Prefix.size()));
+		for(const std::wstring_view Supported : {L"20.1.17", L"20.1.18", L"20.1.19", L"20.1.20", L"20.1.21", L"20.1.22"})
+		{
+			if(Series == Supported)
+				return Series;
+		}
+		return {};
+	}
+
 	const std::vector<SKugouPatch> &KugouPatches()
 	{
 		static const std::vector<SKugouPatch> Patches = {

@@ -42,7 +42,6 @@
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
 #include <game/client/components/qmclient/streamer_word_filter.h>
-#include <game/client/components/scoreboard.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
@@ -773,7 +772,7 @@ static bool SkipChatHistoryLine(const SQmFocusModeDecisions &Focus, int ClientId
 	return true;
 }
 
-CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, bool IsScoreBoardOpen, bool ShowLargeArea, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight) const
+CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, bool ShowLargeArea, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight) const
 {
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const float Fallback = maximum(0.0f, FallbackLineHeight);
@@ -792,7 +791,7 @@ CChat::SQmChatHistoryExtent CChat::MeasureVisibleHistory(int BacklogLine, bool I
 		++Extent.m_Lines;
 		// 行高来自上一次排版（消息首次出现在可见区时量到的），与绘制用的是同一个值；
 		// 还没量过的行按一行高估，宁可让滑块略长也不让它凭空缩短。
-		const float MeasuredHeight = Line.m_Layout.HeightFor(IsScoreBoardOpen, ShowLargeArea);
+		const float MeasuredHeight = Line.m_Layout.HeightFor(ShowLargeArea);
 		const float RowExtent = (MeasuredHeight >= 0.0f ? MeasuredHeight : Fallback) + Spacing;
 		Extent.m_Height += RowExtent;
 		if(RowCount < MAX_LINES)
@@ -868,7 +867,7 @@ bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit,
 	return true;
 }
 
-void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations)
+void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations, const SQmFocusModeDecisions &Focus)
 {
 	if(ShowLargeArea && !m_LastPresentationShowLargeArea)
 		m_LargeAreaOpenTick = Now;
@@ -876,6 +875,23 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 		m_LargeAreaOpenTick = 0;
 	m_LastPresentationShowLargeArea = ShowLargeArea;
 
+	bool aRecallLines[MAX_LINES] = {};
+	int RecallLineCount = 0;
+	if(ExtraAnimations && m_LargeAreaOpenTick > 0)
+	{
+		for(int i = 0; i < MAX_LINES; ++i)
+		{
+			const CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
+			if(!Line.m_Initialized)
+				break;
+			aRecallLines[i] = !Line.m_Presentation.m_AnimationsSuppressed &&
+					  ShouldRecallLine(ShowLargeArea, Line.m_ForceVisible, m_LargeAreaOpenTick, Line.m_Time, Line.m_ClientId) &&
+					  ChatLinePassesFocusFilter(Focus, Line.m_ClientId, Line.m_ForceVisible, Line.m_ServerMessageClass);
+			if(aRecallLines[i])
+				++RecallLineCount;
+		}
+	}
+	const SRecallTiming RecallTiming = ResolveRecallTiming(RecallLineCount);
 	int RecallIndex = 0;
 	for(int i = 0; i < MAX_LINES; ++i)
 	{
@@ -883,7 +899,7 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 		if(!Line.m_Initialized)
 			break;
 
-		const float RecallDelaySeconds = ShowLargeArea ? RecallIndex++ * CHAT_RECALL_STAGGER_SECONDS : 0.0f;
+		const float RecallDelaySeconds = aRecallLines[i] ? RecallIndex++ * RecallTiming.m_StaggerSeconds : 0.0f;
 		UpdateLinePresentation(
 			Line.m_Presentation,
 			Line.m_Time,
@@ -894,7 +910,8 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 			m_LargeAreaOpenTick,
 			RecallDelaySeconds,
 			ExtraAnimations,
-			Line.m_ClientId);
+			Line.m_ClientId,
+			RecallTiming.m_DurationSeconds);
 
 		if(Line.m_ClientId == SERVER_MSG && QmMacosGraphicsDiagnosticsEnabled())
 		{
@@ -1281,7 +1298,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 		const CUIRect ChatRect = {0.0f, 50.0f, std::min(Width, std::max(190.0f, g_Config.m_ClChatWidth + 32.0f)), 250.0f};
 		float HistoryBottom = Height - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f));
 		HistoryBottom -= FontSize() * (8.0f / 6.0f);
-		const float HeightLimit = GameClient()->m_Scoreboard.IsActive() ? 180.0f : (m_PrevShowChat ? 50.0f : 200.0f);
+		const float HeightLimit = m_PrevShowChat ? CHAT_HEIGHT_MIN : CHAT_HEIGHT_FULL;
 		const vec2 MousePos = PointerLocalPos();
 		const bool InsideHistory = MousePos.x >= ChatRect.x && MousePos.x <= ChatRect.x + ChatRect.w && MousePos.y >= HeightLimit && MousePos.y <= HistoryBottom;
 		const bool InsideTranslateButton =
@@ -2896,7 +2913,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		GameClient()->m_Translate.AutoTranslate(CurrentLine);
 }
 
-bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
+bool CChat::OnPrepareLines(float y, bool ShowLargeArea)
 {
 	bool EmojiLayoutChanged = false;
 	float x = HistoryStartX();
@@ -2944,12 +2961,9 @@ bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
 		RealMsgPaddingTee = 0;
 	}
 
-	float LineWidth = (IsScoreBoardOpen ? maximum(85.0f, (FontSize * 85.0f / 6.0f)) : g_Config.m_ClChatWidth) - (RealMsgPaddingX * 1.5f) - RealMsgPaddingTee;
+	const float LineWidth = g_Config.m_ClChatWidth - (RealMsgPaddingX * 1.5f) - RealMsgPaddingTee;
 
-	const float HeightLimit =
-		IsScoreBoardOpen ?
-			CHAT_HEIGHT_MIN + 130.0f :
-			(ShowLargeArea ? CHAT_HEIGHT_MIN : CHAT_HEIGHT_FULL);
+	const float HeightLimit = ShowLargeArea ? CHAT_HEIGHT_MIN : CHAT_HEIGHT_FULL;
 
 	float Begin = x;
 	float TextBegin = Begin + RealMsgPaddingX / 2.0f;
@@ -3025,7 +3039,7 @@ bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
 			Line.m_Layout.m_Height = -1.0f;
 			Line.m_QmTitleBobPadding = TitleBobPadding;
 		}
-		Line.m_Layout.SelectView(IsScoreBoardOpen, ShowLargeArea);
+		Line.m_Layout.SelectView(ShowLargeArea);
 		if(Line.m_ColorPreparationPending)
 			Line.m_Layout.m_Height = -1.0f;
 		const bool LinePrepared = !Line.m_ColorPreparationPending && (RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f);
@@ -3074,7 +3088,7 @@ bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
 		};
 		const bool MultipleAuthors = Line.m_vMergedAuthors.size() > 1;
 		// 多人合并的续行只保留第一个人的前缀占位。
-		const bool IndentMessage = MultipleAuthors || (!IsScoreBoardOpen && !g_Config.m_ClChatOld);
+		const bool IndentMessage = MultipleAuthors || !g_Config.m_ClChatOld;
 		float FirstAuthorPrefixWidth = 0.0f;
 		if(MultipleAuthors)
 		{
@@ -3607,7 +3621,7 @@ void CChat::OnRender()
 	if(HudEditorPreview)
 		DeltaSeconds = 0.0f;
 	else
-		UpdatePresentationStates(Now, DeltaSeconds, ShowLargeArea, ExtraAnimations);
+		UpdatePresentationStates(Now, DeltaSeconds, ShowLargeArea, ExtraAnimations, Focus);
 
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
@@ -3920,8 +3934,7 @@ void CChat::OnRender()
 
 	y -= ScaledFontSize;
 
-	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
-	const float HeightLimit = IsScoreBoardOpen ? CHAT_HEIGHT_MIN + 130.0f : (ShowLargeArea ? CHAT_HEIGHT_MIN : CHAT_HEIGHT_FULL);
+	const float HeightLimit = ShowLargeArea ? CHAT_HEIGHT_MIN : CHAT_HEIGHT_FULL;
 	const ColorRGBA ConfigBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
 	const ColorRGBA BackgroundBaseColor = g_Config.m_ClChatOld ? ConfigBackgroundColor : ConfigBackgroundColor.Multiply(ColorRGBA(0.78f, 0.86f, 1.0f, 1.0f));
 	const ColorRGBA DefaultTextColor = TextRender()->DefaultTextColor();
@@ -3958,7 +3971,7 @@ void CChat::OnRender()
 	//   行数 → 滚轮推进、行号夹取、滑块进度（0 = 顶部/最旧）；
 	//   总高度 → 滑块长度。消息会换行，"条数"并不等于"高度"，用条数算比例会把
 	//   滑块虚长成几乎整条轨道（本次要修的就是这个观感）。
-	const SQmChatHistoryExtent HistoryExtent = MeasureVisibleHistory(0, IsScoreBoardOpen, ShowLargeArea, FontSize() + RealMsgPaddingY, ExtraLineSpacing, HistoryHeight);
+	const SQmChatHistoryExtent HistoryExtent = MeasureVisibleHistory(0, ShowLargeArea, FontSize() + RealMsgPaddingY, ExtraLineSpacing, HistoryHeight);
 	const int TotalVisibleLines = HistoryExtent.m_Lines;
 	const float HistoryContentHeight = HistoryExtent.m_Height;
 	// 可见容量按最旧一侧的实际行高量出：把末尾几条高消息算进来，
@@ -4014,7 +4027,7 @@ void CChat::OnRender()
 				continue;
 			if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 				continue;
-			const float MeasuredHeight = Line.m_Layout.HeightFor(IsScoreBoardOpen, ShowLargeArea);
+			const float MeasuredHeight = Line.m_Layout.HeightFor(ShowLargeArea);
 			return (MeasuredHeight >= 0.0f ? MeasuredHeight : RowHeight) + ExtraLineSpacing;
 		}
 		return HistoryFallbackStepExtent;
@@ -4164,7 +4177,7 @@ void CChat::OnRender()
 		m_MouseIsPress = false;
 	}
 
-	const bool EmojiLayoutChanged = OnPrepareLines(y, IsScoreBoardOpen, ShowLargeArea);
+	const bool EmojiLayoutChanged = OnPrepareLines(y, ShowLargeArea);
 	const SQmChatInputPixelClip HistoryPixelClip = QmChatInputPixelClip(HistoryClipRect,
 		m_ChatInputMapRect, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
 	Graphics()->ClipEnable(HistoryPixelClip.m_X, HistoryPixelClip.m_Y, HistoryPixelClip.m_W, HistoryPixelClip.m_H);
@@ -4187,7 +4200,7 @@ void CChat::OnRender()
 			continue;
 		}
 
-		const float MeasuredHeight = Line.m_Layout.HeightFor(IsScoreBoardOpen, ShowLargeArea);
+		const float MeasuredHeight = Line.m_Layout.HeightFor(ShowLargeArea);
 		const bool LineHeightValid = MeasuredHeight >= 0.0f;
 		const float LineHeight = LineHeightValid ? MeasuredHeight : FontSize() + RealMsgPaddingY;
 		const float LayoutVisibility = ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
@@ -4788,7 +4801,6 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 bool CChat::TranslateVisibleChatLines()
 {
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
-	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool InputActive = m_Mode != MODE_NONE;
 	const bool ShowLargeArea = ShouldShowLargeArea(m_Show, InputActive, g_Config.m_ClShowChat);
 
@@ -4806,7 +4818,7 @@ bool CChat::TranslateVisibleChatLines()
 			continue;
 		if(!ShowLargeArea && Line.m_Presentation.m_LayoutVisibility <= 0.001f && Line.m_Presentation.m_RenderAlpha <= 0.001f)
 			continue;
-		if(Line.m_Layout.HeightFor(IsScoreBoardOpen, ShowLargeArea) < 0.0f)
+		if(Line.m_Layout.HeightFor(ShowLargeArea) < 0.0f)
 			continue;
 		if(!QmChatEmojiShouldTranslate(Line.m_ChatEmoji))
 			continue;

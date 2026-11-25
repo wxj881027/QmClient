@@ -60,8 +60,9 @@ TEST(QmPerfDiagnostics, SensitiveConfigIsDetectedByAnyKeywordPart)
 	// 非敏感配置不得被误判（否则日志会失去诊断价值）。
 	const char *apPlain[] = {
 		"qm_perf_debug",
-		"cl_showfps",
 		"qm_ui_corner_curve",
+		"qm_monitoring_hud_opacity",
+		"cl_show_perf",
 		"tc_hook_coll_alpha",
 	};
 	for(const char *pName : apPlain)
@@ -77,8 +78,8 @@ TEST(QmPerfDiagnostics, SensitiveConfigMatchingIsCaseInsensitive)
 
 TEST(QmPerfDiagnostics, ConfigOwnerSplitsQmClientTClientAndDdnet)
 {
-	EXPECT_STREQ(QmPerfConfigOwner("qm_perf_debug"), "qmclient");
-	EXPECT_STREQ(QmPerfConfigOwner("cl_showfps"), "ddnet");
+	EXPECT_STREQ(QmPerfConfigOwner("qm_monitoring_hud_opacity"), "qmclient");
+	EXPECT_STREQ(QmPerfConfigOwner("cl_show_perf"), "ddnet");
 	// 未知名字归为 ddnet，而不是留空。
 	EXPECT_STREQ(QmPerfConfigOwner("qm_definitely_not_a_real_variable"), "ddnet");
 }

@@ -77,9 +77,7 @@ namespace
 
 		void SetUp() override
 		{
-			g_Config.m_QmPerfDebug = 0;
-			g_Config.m_QmPerfLogfile = 0;
-			g_Config.m_QmPerfStutterDiagnostics = 1;
+			g_Config.m_QmPerfEnabled = true;
 			m_Manager.m_vVariables = {&m_TcVar, &m_ModeVar, &m_ClVar, &m_DisabledVar, &m_SignedVar, &m_GfxVar, &m_SecretVar};
 			ASSERT_TRUE(m_Capture.PrepareComponents(2));
 		}
@@ -323,7 +321,7 @@ TEST_F(QmStutterCaptureLogging, ExceptionAfterCompleteSnapshotStillKeepsOldOwned
 TEST_F(QmStutterCaptureLogging, DisablingUsesForcedOutputWhenAllPerformanceFlagsAreOff)
 {
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(1, 6.0)));
-	g_Config.m_QmPerfStutterDiagnostics = 0;
+	g_Config.m_QmPerfEnabled = false;
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(2, 0.0, false)));
 	ASSERT_EQ(m_Log.m_vMessages.size(), 8u);
 	const auto Summary = Parse(0);

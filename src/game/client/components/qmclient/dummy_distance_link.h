@@ -1,8 +1,6 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_DUMMY_DISTANCE_LINK_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_DUMMY_DISTANCE_LINK_H
 
-#include "qm_hook_coll_intersection.h"
-
 #include <base/vmath.h>
 
 #include <engine/client/enums.h>
@@ -30,8 +28,13 @@ namespace qm_dummy_link
 		bool m_Solo;
 		vec2 m_HookTargetPos = m_Pos;
 		bool m_Frozen = false;
+		bool m_HookHitDisabled = false;
+		bool m_Super = false;
+		bool m_HookInputDisabled = false;
 	};
 
+	constexpr float TILE_SIZE = 32.0f;
+	constexpr float LINK_FADE_END = 30.0f * TILE_SIZE;
 	constexpr float HAMMER_REACH = CCharacterCore::PhysicalSize() * (0.75f + 0.5f + 1.0f);
 
 	struct SShape
@@ -102,22 +105,18 @@ namespace qm_dummy_link
 		}
 	};
 
-	inline std::optional<SLink> MakeLink(std::optional<SEndpoint> Main, std::optional<SEndpoint> Dummy, float HookLength, bool FromDummy = false)
+	inline std::optional<SLink> MakeLink(std::optional<SEndpoint> Main, std::optional<SEndpoint> Dummy)
 	{
 		if(!Main || !Dummy || (Main->m_Frozen && Dummy->m_Frozen))
 			return std::nullopt;
-		constexpr float TileSize = 32.0f;
-		constexpr float FadeStart = 15.0f * TileSize;
-		constexpr float FadeEnd = 30.0f * TileSize;
+		constexpr float FadeStart = 15.0f * TILE_SIZE;
 		const vec2 Delta = Dummy->m_Pos - Main->m_Pos;
 		const float Distance = length(Delta);
-		if(Distance >= FadeEnd)
+		if(Distance >= LINK_FADE_END)
 			return std::nullopt;
-		const float Alpha = 0.9f * std::min(1.0f, (FadeEnd - Distance) / (FadeEnd - FadeStart));
-		const float HookDistance = FromDummy ? distance(Dummy->m_Pos, Main->m_HookTargetPos) : distance(Main->m_Pos, Dummy->m_HookTargetPos);
+		const float Alpha = 0.9f * std::min(1.0f, (LINK_FADE_END - Distance) / (LINK_FADE_END - FadeStart));
 		return SLink{Main->m_Pos, Dummy->m_Pos, Distance > 0.0f ? Delta / Distance : vec2(0, 0),
-			Distance, Alpha,
-			!Main->m_Solo && !Dummy->m_Solo && HookLength > 0.0f && HookDistance < HookLength + QmHookCollTargetRadius};
+			Distance, Alpha, false};
 	}
 
 	class CView

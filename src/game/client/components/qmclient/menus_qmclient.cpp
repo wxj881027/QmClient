@@ -29,7 +29,7 @@ namespace
 {
 	bool PerfDebugEnabled()
 	{
-		return g_Config.m_QmPerfDebug != 0;
+		return g_Config.m_QmPerfEnabled;
 	}
 
 	void LogQmPerfStage(IClient *pClient, const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)
@@ -163,12 +163,8 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 			return;
 		s_aCollapsed[Index] = Collapsed;
 	};
-	auto MeasureContentRevision = [this](EQmModuleId Id) -> uint64_t {
-		return qm_card_catalog::MeasureModuleCardRevision(Id, ResolveFunctionCardLayoutState());
-	};
 	// 卡片改由全局卡片目录构造（N3）：页面只声明「这一页有哪些卡片」，测量与渲染都在目录里。
-	// 内容量状态（词条过滤/关键词回复）经 m_pFunctionLayout 注入，目录测量依赖它。
-	const qm_card_catalog::SQmFunctionCardLayoutState FunctionCardLayout = ResolveFunctionCardLayoutState();
+	const auto FunctionCardLayout = ResolveFunctionCardLayoutState(GameClient()->m_CrossServerFollow.IsActive());
 	auto BuildDefinitions = [&](std::vector<SSettingsCardDefinition> &vCards) {
 		qm_card_catalog::SQmCardBuildContext CardBuild;
 		CardBuild.m_pMenus = this;
@@ -189,7 +185,7 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 	uint64_t CardLayoutRevision = 0;
 	for(int ModuleIndex = 0; ModuleIndex < (int)QmModuleCount; ++ModuleIndex)
 	{
-		CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ MeasureContentRevision((EQmModuleId)ModuleIndex);
+		CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ qm_card_catalog::MeasureModuleCardRevision((EQmModuleId)ModuleIndex, FunctionCardLayout);
 		CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (s_aCollapsed[ModuleIndex] ? 1u : 0u);
 	}
 	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, CardLayoutRevision);

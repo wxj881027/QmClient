@@ -63,7 +63,10 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	if(!ReadOnly && !Ui()->DrawingSuppressed() && m_GlobalSearchHeaderSession.NeedsEntry(m_SettingsCardDeckDisplayCycle))
-		m_GlobalSearchHeaderSession.Enter(m_SettingsCardDeckDisplayCycle, secure_rand_below(m_GlobalSearchHeaderSession.ChoiceCount()), secure_rand_below(qm_search_header::NUM_LOGOS));
+		m_GlobalSearchHeaderSession.Enter(m_SettingsCardDeckDisplayCycle,
+			secure_rand_below(m_GlobalSearchHeaderSession.ChoiceCount()),
+			secure_rand_below(qm_search_header::NUM_LOGOS),
+			secure_rand_below(m_GlobalSearchHeaderSession.PlaceholderChoiceCount()));
 	IUiContext SearchCtx = SettingsUiContext("settings_global_search", UiScale);
 	if(ReadOnly)
 	{
@@ -106,7 +109,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		{
 			pSearchResults = &s_GlobalSearchCache.Results();
 			const auto &vVisibleCards = pSearchResults->m_vAllVisibleCards;
-			s_GlobalSearchFunctionCardLayout = ResolveFunctionCardLayoutState();
+			s_GlobalSearchFunctionCardLayout = ResolveFunctionCardLayoutState(GameClient()->m_CrossServerFollow.IsActive());
 			qm_card_catalog::SQmCardBuildContext StandardPrepare;
 			StandardPrepare.m_pMenus = this;
 			StandardPrepare.m_ReadOnly = ResultsReadOnly;
@@ -328,7 +331,9 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		s_GlobalSearchInputCollapsed = false;
 	const float SearchInputHeight = LineHeight * 1.2f;
 	const float SearchInputFontSize = BodySize * 1.2f;
-	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : SearchInputHeight + LineHeight + LineSpacing;
+	const bool ShowMatchCount = HasSearchQuery && HasSnapshot;
+	const float MatchCountGap = LineSpacing * 0.65f;
+	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : SearchInputHeight + (ShowMatchCount ? MatchCountGap + LineHeight : 0.0f);
 	const SSettingsCardSpec InputSpec{"deck:global-search-input", Localize("Feature Search"), qm_card_registry::ResolveLocalizedDescription("deck:global-search-input")};
 	const float InputChromeHeight = BuildSettingsCardFrame({0.0f, 0.0f, Page.m_ContentViewport.w, 0.0f}, InputSpec, InputContentHeight, UiScale).m_Rect.h;
 	const float SubtitleWidth = qm_search_header::SubtitleWidth(Page.m_ContentViewport);
@@ -377,7 +382,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		SSettingsCardVisualState InputVisualState;
 		InputVisualState.m_Collapsed = s_GlobalSearchInputCollapsed;
 		InputVisualState.m_ClipContent = true;
-		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, LineSpacing, SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount, HasSearchQuery, HasSnapshot, ReadOnly](CUIRect Content) {
+		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, MatchCountGap, SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount, ShowMatchCount, ReadOnly](CUIRect Content) {
 			if(Content.h <= 0.0f || Content.w <= 0.0f)
 				return;
 			CUIRect Row;
@@ -388,20 +393,24 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				InputCtx.m_pAnim = nullptr;
 				InputCtx.m_pTree = nullptr;
 			}
-			ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Row, SearchInputFontSize, !ReadOnly && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
-			if(HasSearchQuery && !HasSnapshot)
+			ui_widget::SInputFieldOptions InputOptions;
+			InputOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+			InputOptions.m_Clearable = true;
+			InputOptions.m_SearchHotkeyEnabled = !ReadOnly && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive();
+			InputOptions.m_FontSize = SearchInputFontSize;
+			InputOptions.m_pPlaceholder = m_GlobalSearchHeaderSession.Placeholder();
+			ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Row, InputOptions);
+			if(!ShowMatchCount)
 				return;
-			Content.HSplitTop(LineSpacing * 0.65f, nullptr, &Content);
+			Content.HSplitTop(MatchCountGap, nullptr, &Content);
 			Content.HSplitTop(LineHeight, &Row, &Content);
-			char aSearchHint[192];
-			if(!HasSearchQuery)
-				str_copy(aSearchHint, "搜索功能或提问，例如：截图在哪里");
-			else if(WikiMatchCount > 0)
-				str_format(aSearchHint, sizeof(aSearchHint), "%d 个设置卡片 · %d 个常见问题 · %d 篇 DDNet Wiki", SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount);
+			char aMatchCount[192];
+			if(WikiMatchCount > 0)
+				str_format(aMatchCount, sizeof(aMatchCount), "%d 个设置卡片 · %d 个常见问题 · %d 篇 DDNet Wiki", SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount);
 			else
-				str_format(aSearchHint, sizeof(aSearchHint), "%d 个设置卡片 · %d 个常见问题", SearchMatchedGlobalCardCount, SearchAnswerCount);
+				str_format(aMatchCount, sizeof(aMatchCount), "%d 个设置卡片 · %d 个常见问题", SearchMatchedGlobalCardCount, SearchAnswerCount);
 			TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
-			Ui()->DoLabel(&Row, aSearchHint, SmallSize, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, aMatchCount, SmallSize, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 		};
 		const auto InputHeaderAction = [this, ReadOnly, UiScale, SearchCtx](const SSettingsCardFrame &Frame, bool) mutable {

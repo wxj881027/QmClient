@@ -1,3 +1,4 @@
+#include <game/client/QmUi/QmSearchHeader.h>
 #include <game/client/components/qmclient/search_answers.h>
 
 #include <gtest/gtest.h>
@@ -5,6 +6,15 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+
+TEST(QmSearchAnswers, EverySearchPlaceholderResolvesToAnAnswer)
+{
+	for(const char *pPlaceholder : qm_search_header::SEARCH_PLACEHOLDERS)
+	{
+		SCOPED_TRACE(pPlaceholder);
+		EXPECT_NE(qm_search_answers::Search(pPlaceholder).m_pAnswer, nullptr);
+	}
+}
 
 TEST(QmSearchAnswers, CommonPhrasingsResolveToTheirAnswer)
 {

@@ -37,10 +37,6 @@ MACRO_CONFIG_COL(QmConsoleLinkColor, qm_console_link_color, 0x95FFB6, CFGFLAG_CL
 MACRO_CONFIG_INT(QmConsoleLinkHoverHueShift, qm_console_link_hover_hue_shift, 45, -180, 180, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console link hover hue shift in degrees")
 MACRO_CONFIG_COL(QmConsoleSearchColor, qm_console_search_color, 0x07DAB2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console search match color")
 MACRO_CONFIG_COL(QmConsoleSearchSelectedColor, qm_console_search_selected_color, 0x26DFCF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console selected search match color")
-MACRO_CONFIG_INT(QmPerfDebug, qm_perf_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable main thread and render stage performance debug logging")
-MACRO_CONFIG_INT(QmPerfLogfile, qm_perf_logfile, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Write performance debug logs to dedicated file")
-MACRO_CONFIG_INT(QmPerfDebugThresholdMs, qm_perf_debug_threshold_ms, 4, 1, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Performance debug log threshold (ms)")
-MACRO_CONFIG_INT(QmPerfStutterDiagnostics, qm_perf_stutter_diagnostics, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable client stutter diagnostics at startup")
 MACRO_CONFIG_INT(QmGraphicsTrace, qm_graphics_trace, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace")
 MACRO_CONFIG_INT(QmMacosGraphicsDiagnostics, qm_macos_graphics_diagnostics, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Deprecated compatibility alias for qm_graphics_trace (macOS signposts)")
 MACRO_CONFIG_INT(QmGraphicsMode, qm_graphics_mode, 1, -1, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)")
@@ -191,9 +187,7 @@ MACRO_CONFIG_INT(QmScreenshotWatermarkTimestamp, qm_screenshot_watermark_timesta
 MACRO_CONFIG_INT(QmScreenshotWatermarkMap, qm_screenshot_watermark_map, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include map name")
 MACRO_CONFIG_INT(QmScreenshotWatermarkPosition, qm_screenshot_watermark_position, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right")
 MACRO_CONFIG_STR(QmScreenshotWatermarkText, qm_screenshot_watermark_text, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark custom text")
-MACRO_CONFIG_INT(QmShowOutdatedVersionWarning, qm_show_outdated_version_warning, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show outdated version warning")
 MACRO_CONFIG_STR(QmUpdateRecentSource, qm_update_recent_source, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last verified approved update source")
-MACRO_CONFIG_INT(QmAutoUpdate, qm_auto_update, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically check for stable updates and install them on exit")
 MACRO_CONFIG_INT(QmImeAutoManage, qm_ime_auto_manage, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto enable/disable IME on text focus")
 MACRO_CONFIG_INT(QmNewIme, qm_new_ime, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable new IME candidate bar")
 MACRO_CONFIG_COL(QmImeBgColor, qm_ime_bg_color, 0x1C1C1E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "New IME candidate bar background color")
@@ -344,29 +338,25 @@ MACRO_CONFIG_INT(QmLaserAlpha, qm_laser_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFG
 MACRO_CONFIG_INT(QmShowCollisionHitbox, qm_show_collision_hitbox, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Collision Borders")
 MACRO_CONFIG_COL(QmCollisionHitboxColorFreeze, qm_collision_hitbox_color_freeze, 16711935, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze Collision Border Color")
 MACRO_CONFIG_INT(QmCollisionHitboxAlpha, qm_collision_hitbox_alpha, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Collision Line Opacity")
-MACRO_CONFIG_INT(QmHitboxMode, qm_hitbox_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox Mode Override")
-MACRO_CONFIG_INT(QmHitboxShowMap, qm_hitbox_show_map, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Danger Tiles in Hitbox Mode")
+MACRO_CONFIG_INT(QmHitboxMode, qm_hitbox_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable collision hitboxes")
+MACRO_CONFIG_INT(QmHitboxShowMap, qm_hitbox_show_map, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Outline where freeze, deep freeze and death tiles take effect")
 MACRO_CONFIG_INT(QmHitboxShowTees, qm_hitbox_show_tees, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Tee Collision in Hitbox Mode")
-MACRO_CONFIG_INT(QmHitboxShowPickups, qm_hitbox_show_pickups, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Pickup Ranges in Hitbox Mode")
+MACRO_CONFIG_INT(QmHitboxShowPickups, qm_hitbox_show_pickups, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Shield pickup range")
 MACRO_CONFIG_INT(QmHitboxShowWeapons, qm_hitbox_show_weapons, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Weapon Interactions in Hitbox Mode")
 // 语义化碰撞箱显示开关。旧的 ShowTees/ShowWeapons 保留用于配置迁移。
-MACRO_CONFIG_INT(QmHitboxShowTeeCollision, qm_hitbox_show_tee_collision, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee collision (Tee to Tee)")
-MACRO_CONFIG_INT(QmHitboxShowTeeFreeze, qm_hitbox_show_tee_freeze, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee freeze probe (Tee to Freeze)")
-MACRO_CONFIG_INT(QmHitboxShowTeeDeath, qm_hitbox_show_tee_death, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee death probe")
-MACRO_CONFIG_INT(QmHitboxShowHammer, qm_hitbox_show_hammer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hammer interaction")
-MACRO_CONFIG_INT(QmHitboxShowProjectiles, qm_hitbox_show_projectiles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Projectile / explosion range")
-MACRO_CONFIG_INT(QmHitboxShowFreezeProjectiles, qm_hitbox_show_freeze_projectiles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze projectile collision volume")
-MACRO_CONFIG_INT(QmHitboxShowLasers, qm_hitbox_show_lasers, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Laser / shotgun interaction")
-MACRO_CONFIG_INT(QmHitboxShowFreezeLasers, qm_hitbox_show_freeze_lasers, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze laser collision volume")
-MACRO_CONFIG_INT(QmHitboxShowHook, qm_hitbox_show_hook, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook interaction")
-MACRO_CONFIG_INT(QmHitboxAlpha, qm_hitbox_alpha, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox Mode Global Opacity")
-MACRO_CONFIG_INT(QmHitboxPlayerScope, qm_hitbox_player_scope, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox Mode Player Scope: 0=local, 1=local+clone, 2=all")
+MACRO_CONFIG_INT(QmHitboxShowTeeCollision, qm_hitbox_show_tee_collision, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee collision circle")
+MACRO_CONFIG_INT(QmHitboxShowTeeFreeze, qm_hitbox_show_tee_freeze, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mark the freeze check at the center and the four death checks around each Tee")
+MACRO_CONFIG_INT(QmHitboxShowHammer, qm_hitbox_show_hammer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hammer and hook range")
+MACRO_CONFIG_INT(QmHitboxShowProjectiles, qm_hitbox_show_projectiles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Projectiles, explosions and regular lasers")
+MACRO_CONFIG_INT(QmHitboxShowFreezeProjectiles, qm_hitbox_show_freeze_projectiles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the areas where freeze projectiles and lasers can freeze a Tee")
+MACRO_CONFIG_INT(QmHitboxAlpha, qm_hitbox_alpha, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox line opacity")
+MACRO_CONFIG_INT(QmHitboxPlayerScope, qm_hitbox_player_scope, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox player scope: 0=self only, 1=self and dummy, 2=all players")
 // 同上：0x00FF00FF 是品红 RGB 写法，按 HSL 解会变白；修正为品红的 HSL 打包。
-MACRO_CONFIG_COL(QmHitboxColorFreeze, qm_hitbox_color_freeze, 0x00D5FF80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox Mode Freeze Border Color")
+MACRO_CONFIG_COL(QmHitboxColorFreeze, qm_hitbox_color_freeze, 0x00D5FF80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze hitbox color")
 // 同上：0x0000FFFF 是青色 RGB 写法；修正为青色的 HSL 打包。
-MACRO_CONFIG_COL(QmHitboxColorTee, qm_hitbox_color_tee, 0x0080FF80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox Mode Tee Collision Color")
+MACRO_CONFIG_COL(QmHitboxColorTee, qm_hitbox_color_tee, 0x0080FF80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee collision color")
 // 同上：0x00FFFF00 是黄色 RGB 写法；修正为黄色的 HSL 打包。
-MACRO_CONFIG_COL(QmHitboxColorWeapon, qm_hitbox_color_weapon, 0x002BFF80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox Mode Weapon Interaction Color")
+MACRO_CONFIG_COL(QmHitboxColorWeapon, qm_hitbox_color_weapon, 0x002BFF80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Weapon range color")
 
 // Entity Overlay / 实体叠加
 MACRO_CONFIG_COL(QmEntityOverlayFreezeColor, qm_entity_overlay_freeze_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze/deep freeze tile entity tint color")
@@ -416,8 +406,6 @@ MACRO_CONFIG_INT(QmPieMenuJoinTeamEnabled, qm_pie_menu_join_team_enabled, 1, 0, 
 MACRO_CONFIG_INT(QmPieMenuFollowEnabled, qm_pie_menu_follow_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show cross-server follow option")
 MACRO_CONFIG_INT(QmPieMenuScoreEnabled, qm_pie_menu_score_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show player score option")
 MACRO_CONFIG_INT(QmPieMenuCopyNameEnabled, qm_pie_menu_copy_name_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show copy name option")
-MACRO_CONFIG_STR(QmPieFollowName, qm_pie_follow_name, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Player to follow across servers until cancelled; empty disables following")
-MACRO_CONFIG_STR(QmPieFollowClan, qm_pie_follow_clan, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Clan of the player followed from the pie menu")
 MACRO_CONFIG_INT(QmPieMenuColorInviteTeam, qm_pie_menu_color_invite_team, 0xE67A4DBF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Invite team option color")
 MACRO_CONFIG_INT(QmPieMenuColorJoinTeam, qm_pie_menu_color_join_team, 0x4D9BE6BF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Join team option color")
 MACRO_CONFIG_INT(QmPieMenuColorFollow, qm_pie_menu_color_follow, 0x4DBF80BF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Follow option color")
@@ -918,7 +906,6 @@ MACRO_CONFIG_COL(QmChatBubbleBgColor, qm_chat_bubble_bg_color, 0xCC000000, CFGFL
 MACRO_CONFIG_COL(QmChatBubbleTextColor, qm_chat_bubble_text_color, 4294967295, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble text color")
 MACRO_CONFIG_INT(QmChatBubbleAnimation, qm_chat_bubble_animation, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble disappear animation (0=Fade, 1=Shrink, 2=Slide up)")
 
-MACRO_CONFIG_INT(QmComboPopup, qm_combo_popup, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show combo hint when hooking or hammering player within 2 seconds")
 
 // Dummy Mini View - 分身小窗
 MACRO_CONFIG_INT(QmDummyMiniView, qm_dummy_miniview, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show dummy mini view window")
@@ -936,12 +923,9 @@ MACRO_CONFIG_INT(QmNeteaseHookEnable, qm_netease_hook_enable, 1, 0, 1, CFGFLAG_C
 MACRO_CONFIG_INT(QmNeteaseHookTimeoutMs, qm_netease_hook_timeout_ms, 1500, 250, 10000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Netease hook heartbeat timeout (milliseconds)")
 MACRO_CONFIG_STR(QmNeteaseHookHelperPath, qm_netease_hook_helper_path, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Netease hook helper path (empty=beside QmClient)")
 
-// 网易云歌词展示开关。关闭展示时后台桥接仍可继续采集并维护当前歌曲状态。
-MACRO_CONFIG_INT(QmLyrics, qm_lyrics, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Netease lyric integration")
 MACRO_CONFIG_INT(QmWorldLyrics, qm_world_lyrics, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out")
-MACRO_CONFIG_INT(QmLyricsInMediaIsland, qm_lyrics_in_media_island, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show current Netease lyric in Media Island")
+MACRO_CONFIG_INT(QmLyricsInMediaIsland, qm_lyrics_in_media_island, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable lyrics")
 
-MACRO_CONFIG_INT(QmLyricsCommunity, qm_lyrics_community, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use cached or online AMLL community lyrics when the music source has no word timing")
 MACRO_CONFIG_INT(QmLyricsLanguage, qm_lyrics_language, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Lyrics language (0=Original, 1=Translation, 2=Original and translation)")
 MACRO_CONFIG_INT(QmLyricsSeparateIsland, qm_lyrics_separate_island, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show lyrics in a separate island below Dynamic Island")
 MACRO_CONFIG_INT(QmLyricsIslandFollowWidth, qm_lyrics_island_follow_width, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Match lyrics island width to the main Dynamic Island, excluding satellites")
@@ -967,7 +951,7 @@ MACRO_CONFIG_INT(QmQQMusicHookTimeoutMs, qm_qqmusic_hook_timeout_ms, 1500, 250, 
 MACRO_CONFIG_STR(QmQQMusicHookHelperPath, qm_qqmusic_hook_helper_path, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "QQ Music hook helper path (empty=beside QmClient)")
 
 // Spotify 歌词链路(纯网络:sp_dc → TOTP token → color-lyrics,LRCLIB 兜底)。
-// 共享同一套歌词展示开关(qm_lyrics / qm_lyrics_in_media_island)。
+// 共享动态岛歌词展示设置(qm_lyrics_in_media_island)。
 MACRO_CONFIG_INT(QmSpotifyEnable, qm_spotify_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Spotify lyric integration")
 MACRO_CONFIG_STR(QmSpotifySpDc, qm_spotify_sp_dc, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spotify sp_dc cookie (from browser DevTools, long-lived)")
 

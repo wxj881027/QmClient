@@ -2386,7 +2386,7 @@ void CScoreboard::OnRender()
 		Rect = QmScoreboardHeaderButtonRect(Rect);
 		if(m_RenderInteractions)
 			GameClient()->m_Tooltips.DoConfigToolTip(pButton, &Rect, pConfigValue);
-		return Ui()->DoButton_PopupMenu(pButton, pLabel, &Rect, SortButtonFontSize, TEXTALIGN_MC, 0.0f, false, m_RenderInteractions, Color, SortButtonFontSize);
+		return Ui()->DoButton_PopupMenu(pButton, pLabel, &Rect, SortButtonFontSize, TEXTALIGN_MC, 0.0f, false, m_RenderInteractions, Color, SortButtonFontSize, 0.0f, true);
 	};
 	auto &&DoSortButton = [&](CUIRect Rect) {
 		if(DoHeaderButton(&s_ScoreboardSortButton, pSortLabel, Rect, SortButtonColor, &g_Config.m_QmScoreboardSortMode))

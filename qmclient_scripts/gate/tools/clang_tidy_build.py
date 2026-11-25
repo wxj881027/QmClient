@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 """QmClient clang-tidy 独立工具。
 
-环境变量控制扫描范围与判据：
+三个环境变量控制扫描范围与判据：
 
 - `CLANG_TIDY_CHANGED_ONLY=1`：只扫本次改动涉及的翻译单元（PR / merge queue 用）。
   改动里出现头文件、构建脚本或 `.clang-tidy` 本身时自动退回全量——头文件会被

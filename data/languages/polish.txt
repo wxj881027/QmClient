@@ -73,6 +73,9 @@
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == Podpowiedź wyrównania X ze mną koloruje X innego gracza, gdy przez ustawiony czas wykrywania pokrywa się z twoim.
 
+%.0f Bps
+== %.0f bloków/s
+
 %.2f KiB
 == %.2f KiB
 
@@ -3263,6 +3266,9 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Określa, co wyświetla się obok nazw innych graczy, np. tagi klanów, oznaczenia znajomych i identyfikatory klienta.
 
+Convenience options for chat, the scoreboard and tune zones.
+== Dodatkowe opcje czatu, tabeli wyników i stref ustawień.
+
 Converse
 == Kontynuuj prywatną rozmowę
 
@@ -4298,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == Kolor konturu lasera drzwi
 
+Double-click to edit note
+== Kliknij dwukrotnie, aby edytować notatkę
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == Naciśnij dwukrotnie przypisany klawisz w ciągu 400 ms, aby wysłać bieżący wers piosenki na czat publiczny
 
@@ -4894,6 +4903,9 @@ Enable /team0 mode
 
 Enable 3D background particles
 == Włącz cząsteczki tła 3D
+
+Enable a music source to display its lyrics.
+== Włącz źródło muzyki, aby wyświetlić tekst utworu.
 
 Enable absolute controller aiming in game
 == Włącz absolutne celowanie kontrolerem w grze
@@ -7082,6 +7094,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 == Pozycja pozioma
 
+Horizontal speed × ramp
+== Prędkość pozioma × mnożnik
+
 Hostname of DNSBL provider for IP verification
 == Nazwa hosta dostawcy DNSBL do weryfikacji IP
 
@@ -7544,6 +7559,9 @@ Internet (From online source)
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == Interwał automatycznego zapisywania kopii bieżącej mapy w edytorze do folderu „auto” (0=wyłączone)
 
+Invalid
+== Nieprawidłowy
+
 Invalid Axiom API response
 == Nieprawidłowa odpowiedź API Axiom
 
@@ -8000,6 +8018,9 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 == Twoje lasery nie mogą cię trafić, a innych przyciągają do strzelającego
 
+Last corrected field
+== Ostatnio poprawione pole
+
 Last entered
 == Ostatnio wprowadzone
 
@@ -8452,6 +8473,9 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == Zapisuje wolne klatki i zacinanie się przy starcie, aby można było zgłosić, dlaczego gra wydawała się zacinać.
+
+Looks like an update is available
+== Wygląda na to, że jest aktualizacja
 
 Lose weapons when teleporting (useful for race maps)
 == Strać broń podczas teleportacji (przydatne na mapach wyścigowych)
@@ -9491,6 +9515,9 @@ Network
 Network compensation
 == Network compensation
 
+Network object corrections
+== Korekty obiektów sieciowych
+
 Network timeout
 == Limit czasu sieci
 
@@ -10418,6 +10445,9 @@ Particle glow
 Particle pulse
 == Puls cząsteczki
 
+Particle skin
+== Wygląd cząsteczek
+
 Particle speed
 == Prędkość cząsteczki
 
@@ -11065,6 +11095,12 @@ Position jump hint
 
 Position jump tip
 == Wskazówka skoku pozycji
+
+Position X
+== Współrzędna X
+
+Position Y
+== Współrzędna Y
 
 Position:
 == Pozycja:
@@ -13835,6 +13871,9 @@ Show flag on name plate
 Show FPS
 == Pokaż FPS
 
+Show FPS, prediction time, and performance graphs
+== Pokaż FPS, czas predykcji i wykresy wydajności
+
 Show freeze bar under frozen players indicating thaw time
 == Pokaż pasek zamrożenia pod zamrożonymi graczami wskazujący czas rozmrożenia
 
@@ -15071,6 +15110,18 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Ochrona przed spamem: zapobiega spamowaniu przełączania drużyn, czatu, zmian skórek, emotek i głosowań
 
+Spawn effects filtered
+== Odfiltrowane efekty odrodzenia
+
+Spawn events received
+== Odebrane zdarzenia odrodzenia
+
+Spawn particle failures
+== Błędy tworzenia cząsteczek odrodzenia
+
+Spawn particles dispatched
+== Wyemitowane cząsteczki odrodzenia
+
 Speaker
 == Głośnik
 
@@ -15557,6 +15608,9 @@ Switch team
 Switch tile overlay alpha (0-100)
 == Przezroczystość nakładki na bloki przełączników (0-100)
 
+Switch tile: type=%d delay=%d number=%d (x=%d y=%d)
+== Pole przełącznika: typ=%d opóźnienie=%d numer=%d (x=%d y=%d)
+
 Switch to grenade
 == Przełącz na granatnik
 
@@ -15877,6 +15931,9 @@ Teleport back to the practice respawn point
 
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == Teleportuje z powrotem do punktu odrodzenia ćwiczeń i przywraca zapisany tam stan Tee. Przywracany jest tylko Tee, świat działa dalej.
+
+Teleport checkpoint
+== Punkt kontrolny teleportacji
 
 Teleport dummy to cursor
 == Przenieś dummy do kursora
@@ -16877,6 +16934,9 @@ Tune variable to value
 Tune variable to value or show current value
 == Dostrój zmienną do wartości lub pokaż bieżącą wartość
 
+Tune zone (map / override)
+== Strefa ustawień (mapa / nadpisanie)
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == Na słabszych komputerach wyłącz: karty otwierają się i przewijają natychmiast. Kształt kursora jest tylko estetyczny: wszystkie trzy style mieszczą się w tej samej komórce znaku.
 
@@ -17408,6 +17468,9 @@ Use animated title style (overrides qm_title_color_mode)
 Use cached or online AMLL community lyrics when the music source has no word timing
 == Używaj tekstów piosenek społeczności AMLL z pamięci podręcznej lub internetu, gdy źródło muzyki nie udostępnia znaczników czasu dla poszczególnych słów
 
+Use cl_show_perf 1 to show the panel.
+== Wpisz cl_show_perf 1, aby wyświetlić panel.
+
 Use colored skins for frozen tees
 == Użyj kolorowych skórek dla zamrożonych tee
 
@@ -17513,6 +17576,9 @@ Use procedural ring pipeline
 Use public word filter
 == Używaj publicznego filtra słów
 
+Use qm_pref <0|1> [20-400] (milliseconds)
+== Użycie: qm_pref <0|1> [20-400] (milisekundy)
+
 Use server defaults
 == Użyj ustawień domyślnych serwera
 
@@ -17582,6 +17648,9 @@ VAD release delay (ms)
 VAD threshold (percent)
 == Próg VAD (procent)
 
+Valid
+== Prawidłowy
+
 Vanilla skins only
 == Tylko oryginalne skórki
 
@@ -17594,6 +17663,9 @@ Variable custom font weight for Latin text
 Velocity
 == Prędkość
 
+Velocity ramp
+== Mnożnik prędkości
+
 Verifying downloaded update...
 == Weryfikowanie pobranej aktualizacji…
 
@@ -17605,6 +17677,9 @@ Version performing the analysis
 
 Vertical position
 == Pozycja pionowa
+
+Vertical speed
+== Prędkość pionowa
 
 Vertical sync (may cause lag)
 == Synchronizacja pionowa (może powodować opóźnienia)

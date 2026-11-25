@@ -602,9 +602,9 @@ TEST(VoiceCore, ProcessIncomingPingRttRequiresMatchingOutstandingPing)
 
 TEST(QmClient, CustomTitleCountsUnicodeCodePoints)
 {
-	const std::string Ascii(24, 'A');
+	const std::string Ascii(8, 'A');
 	std::string Supplementary;
-	for(int i = 0; i < 24; ++i)
+	for(int i = 0; i < 8; ++i)
 		Supplementary.append("𠮷");
 	EXPECT_TRUE(IsValidQmTitle(Ascii.c_str()));
 	EXPECT_TRUE(IsValidQmTitle(Supplementary.c_str()));
@@ -620,7 +620,7 @@ TEST(QmClient, CustomTitleAllowsAnExplicitEmptyString)
 
 TEST(QmClient, CustomTitleAcceptsUnicodeSingleLineText)
 {
-	EXPECT_TRUE(IsValidQmTitle("[e\u0301・𠮷・\U0001f469\u200d\U0001f4bb・\ue000]"));
+	EXPECT_TRUE(IsValidQmTitle("[e\u0301୭𠮷・\ue000]"));
 	for(const char *pTitle : {" leading", "trailing\u3000", "a\nb", "a\u0085b", "a\u2029b", "a\u202eb", "a\u2067b", "a\xed\xa0\x80"})
 	{
 		SCOPED_TRACE(pTitle);
