@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-inline constexpr int QM_TITLE_MAX_CODEPOINTS = 24;
+inline constexpr int QM_TITLE_MAX_CODEPOINTS = 8;
 inline constexpr int QM_TITLE_TEXT_SIZE = 4 * QM_TITLE_MAX_CODEPOINTS + 1;
 
 enum class EQmTitleBadgeStyle
