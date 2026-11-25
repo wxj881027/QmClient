@@ -43,4 +43,16 @@ void QmProcessPredictedEvents(std::vector<CGameWorld::CPredictedEvent> &vEvents,
 	vEvents.erase(Write, vEvents.end());
 }
 
+template<typename F>
+[[nodiscard]] bool QmFinishRegularPredictionTick(CGameWorld &World, CGameWorld &RegularWorld, int FinalTickRegular, F &&HandleEvents)
+{
+	const int Tick = World.GameTick();
+	if(Tick > FinalTickRegular)
+		return true;
+
+	HandleEvents(Tick);
+	// 快速输入外推结束后会恢复这个副本，常规末 tick 的已播放记录也要一起保存。
+	return Tick != FinalTickRegular || RegularWorld.CopyWorldClean(&World);
+}
+
 #endif
