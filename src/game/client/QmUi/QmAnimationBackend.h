@@ -31,6 +31,9 @@ enum class EUiAnimProperty
 	COLOR_A,
 	COLOR_MIX,
 	SCALE,
+	// 显隐状态轨道：只表示「在不在场」，不参与绘制。
+	// 与 ALPHA 分开后，开合/生命周期走逻辑步，淡入淡出走渲染帧，两者互不拖累。
+	PRESENCE,
 };
 
 enum class EUiAnimInterruptPolicy

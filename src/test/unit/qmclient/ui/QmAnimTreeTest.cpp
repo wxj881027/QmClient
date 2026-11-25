@@ -384,3 +384,40 @@ TEST(UiV2TreePresence, ShowingDuringExplicitExitReversesTheFade)
 	Runtime.Advance(0.04f);
 	EXPECT_GT(Runtime.GetValue(NodeKey, EUiAnimProperty::ALPHA), ExitingAlpha);
 }
+
+TEST(UiV2TreePresence, SplitTracksKeepLogicAndRenderClocksIndependent)
+{
+	CScopedQmFullMotion FullMotion;
+	CUiV2Tree Tree;
+	CUiV2AnimationRuntime Runtime;
+	constexpr uint64_t NodeKey = 1005;
+
+	Tree.BeginFrame();
+	const SUiPresenceResult Entered = Tree.ResolvePresence(Runtime, NodeKey, true, ui_token::motion::MODAL_IN, &ui_token::motion::MODAL_PRESENCE);
+	EXPECT_TRUE(Entered.m_FreshEnter);
+	Tree.EndFrame(Runtime);
+
+	// 只推进渲染帧：透明度按渲染 dt 前进，显隐状态停在逻辑步上不动。
+	Runtime.Advance(0.10f, 0.0f);
+	const float RenderAlpha = Runtime.GetValue(NodeKey, EUiAnimProperty::ALPHA);
+	EXPECT_GT(RenderAlpha, 0.0f);
+	EXPECT_LT(RenderAlpha, 1.0f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::PRESENCE), 0.0f);
+
+	// 只推进一个逻辑步：显隐状态前进，透明度保持上一帧的展示值。
+	Runtime.Advance(0.0f, 1.0f / 120.0f, 1.0f);
+	const float PresenceAfterStep = Runtime.GetValue(NodeKey, EUiAnimProperty::PRESENCE);
+	EXPECT_GT(PresenceAfterStep, 0.0f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::ALPHA), RenderAlpha);
+
+	// 两条轨道各自走完后，节点稳定在场且不再持有动画。
+	Runtime.Advance(1.0f, 1.0f, 1.0f);
+	Tree.BeginFrame();
+	const SUiPresenceResult Present = Tree.ResolvePresence(Runtime, NodeKey, true, ui_token::motion::MODAL_IN, &ui_token::motion::MODAL_PRESENCE);
+	EXPECT_TRUE(Present.m_Render);
+	EXPECT_FALSE(Present.m_FreshEnter);
+	EXPECT_NEAR(Present.m_Alpha, 1.0f, 0.001f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::PRESENCE));
+	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA));
+	Tree.EndFrame(Runtime);
+}

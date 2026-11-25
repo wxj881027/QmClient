@@ -168,6 +168,9 @@ TEST(QmUiTokens, MotionRefsBindToAnimCurves)
 
 	EXPECT_EQ(ui_token::motion::BTN_HOVER.m_Easing, EEasing::EASE_OUT_QUART);
 	EXPECT_EQ(ui_token::motion::MODAL_IN.m_Easing, EEasing::EASE_OUT_QUART);
+	// 模态弹窗拆成两条时钟：显隐走逻辑步，透明度/缩放走渲染帧。
+	EXPECT_EQ(ui_token::motion::MODAL_IN.m_Clock, EUiAnimClock::RENDER);
+	EXPECT_EQ(ui_token::motion::MODAL_PRESENCE.m_Clock, EUiAnimClock::LOGIC);
 	EXPECT_NEAR(ui_token::motion::TOGGLE.m_Stiffness, 620.0f, 1e-6f);
 }
 

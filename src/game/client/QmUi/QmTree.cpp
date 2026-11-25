@@ -84,8 +84,11 @@ CUIRect CUiV2Tree::SyncLayoutTransition(CUiV2AnimationRuntime &AnimRuntime, uint
 	return ResolveLayoutTransition(AnimRuntime, NodeKey, Target, SUiSpringConfig{}, 1, false);
 }
 
-SUiPresenceResult CUiV2Tree::ResolvePresence(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, bool Visible, const SUiAnimTransition &Transition)
+SUiPresenceResult CUiV2Tree::ResolvePresence(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, bool Visible, const SUiAnimTransition &Transition, const SUiAnimTransition *pPresenceTransition)
 {
+	if(pPresenceTransition != nullptr)
+		return ResolveSplitPresence(AnimRuntime, NodeKey, Visible, Transition, *pPresenceTransition);
+
 	const uint64_t CurrentUseCounter = ++m_PresenceUseCounter;
 	if(!Visible)
 	{
@@ -134,6 +137,94 @@ SUiPresenceResult CUiV2Tree::ResolvePresence(CUiV2AnimationRuntime &AnimRuntime,
 			}
 			else if(!AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA))
 			{
+				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f);
+				State.m_Phase = EPresencePhase::PRESENT;
+			}
+		}
+		catch(...)
+		{
+			if(Inserted)
+				m_PresenceStates.erase(It);
+			throw;
+		}
+		State.m_TouchedThisFrame = true;
+		State.m_LastUseCounter = CurrentUseCounter;
+		return {true, AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f), Inserted};
+	}
+	catch(...)
+	{
+		if(FrameInserted)
+			m_FrameNodeKeys.erase(NodeKey);
+		throw;
+	}
+}
+
+SUiPresenceResult CUiV2Tree::ResolveSplitPresence(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, bool Visible, const SUiAnimTransition &VisualTransition, const SUiAnimTransition &PresenceTransition)
+{
+	const uint64_t CurrentUseCounter = ++m_PresenceUseCounter;
+	if(!Visible)
+	{
+		auto It = m_PresenceStates.find(NodeKey);
+		if(It == m_PresenceStates.end())
+			return {};
+
+		SPresenceState &State = It->second;
+		State.m_LastUseCounter = CurrentUseCounter;
+		if(State.m_Phase != EPresencePhase::EXITING)
+		{
+			SUiAnimTransition ExitPresence = PresenceTransition;
+			ExitPresence.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+			ExitPresence.m_Priority = std::max(ExitPresence.m_Priority, PRESENCE_EXIT_PRIORITY);
+			AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::PRESENCE, 0.0f, ExitPresence);
+
+			SUiAnimTransition ExitVisual = VisualTransition;
+			ExitVisual.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+			AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f, ExitVisual);
+			State.m_Phase = EPresencePhase::EXITING;
+		}
+
+		const float Presence = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::PRESENCE, 0.0f);
+		const float Alpha = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+		const bool PresenceActive = AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::PRESENCE);
+		const bool AlphaActive = AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA);
+		if(!PresenceActive && !AlphaActive && Presence <= 0.001f && Alpha <= 0.001f)
+		{
+			m_PresenceStates.erase(It);
+			return {};
+		}
+		return {true, Alpha, false};
+	}
+
+	const bool FrameInserted = m_FrameNodeKeys.insert(NodeKey).second;
+	try
+	{
+		auto [It, Inserted] = m_PresenceStates.try_emplace(NodeKey);
+		SPresenceState &State = It->second;
+		try
+		{
+			if(Inserted)
+			{
+				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::PRESENCE, 0.0f);
+				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+			}
+			if(Inserted || State.m_Phase == EPresencePhase::EXITING)
+			{
+				const int MinPriority = Inserted ? 1 : PRESENCE_EXIT_PRIORITY;
+				SUiAnimTransition EnterPresence = PresenceTransition;
+				EnterPresence.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+				EnterPresence.m_Priority = std::max(EnterPresence.m_Priority, MinPriority);
+				AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::PRESENCE, 1.0f, EnterPresence);
+
+				SUiAnimTransition EnterVisual = VisualTransition;
+				EnterVisual.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+				EnterVisual.m_Priority = std::max(EnterVisual.m_Priority, MinPriority);
+				AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f, EnterVisual);
+				State.m_Phase = EPresencePhase::ENTERING;
+			}
+			else if(!AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::PRESENCE) &&
+				!AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA))
+			{
+				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::PRESENCE, 1.0f);
 				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f);
 				State.m_Phase = EPresencePhase::PRESENT;
 			}

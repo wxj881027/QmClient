@@ -1500,12 +1500,20 @@ namespace ui_token::motion
 	inline constexpr SUiAnimTransition HOVER_FADE{.m_DurationSec = 0.12f, .m_Easing = EEasing::EASE_OUT_QUART};
 	// 按下缩放：比悬停更短，按下要「立刻」有反馈。
 	inline constexpr SUiAnimTransition PRESS_SCALE{.m_DurationSec = 0.08f, .m_Easing = EEasing::EASE_OUT_QUART};
-	// 模态弹窗入场：淡入 + 缩放同时进行，弹簧带一点回弹（ζ 由 m_Spring 决定）。
+	// 模态弹窗的淡入轨道：只负责透明度，走渲染帧（已按 1/20 s 截断）。
+	// 弹簧带一点回弹（ζ 由 m_Spring 决定），缩放从同一条轨道取参数。
+	// 开合/生命周期另由 MODAL_PRESENCE 走逻辑步，两条轨道互不影响。
 	inline constexpr SUiAnimTransition MODAL_FADE_SCALE{
 		.m_DurationSec = 0.20f,
 		.m_Easing = EEasing::EASE_OUT_QUART,
-		.m_Clock = EUiAnimClock::LOGIC,
 		.m_Spring = {1.0f, 400.0f, 40.0f, 0.001f, 0.01f},
+	};
+	// 模态弹窗开合状态：在场/退场窗口按 UI 逻辑步推进（120 Hz），
+	// 长帧只影响视觉淡入，不会让开合判定跳步。
+	inline constexpr SUiAnimTransition MODAL_PRESENCE{
+		.m_DurationSec = 0.20f,
+		.m_Easing = EEasing::EASE_OUT_QUART,
+		.m_Clock = EUiAnimClock::LOGIC,
 	};
 	// 页面切换横向滑入：整页位移，比局部反馈长一档才看得出方向。
 	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART, .m_Clock = EUiAnimClock::LOGIC};
