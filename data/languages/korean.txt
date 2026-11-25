@@ -18726,6 +18726,42 @@ Inactive
 Unavailable for this player
 == 이 플레이어에게 사용할 수 없음
 
+[Axiom map difficulty]
+Brutal
+== 브루탈
+
+[Axiom map difficulty]
+Easy
+== 쉬움
+
+[Axiom map difficulty]
+Extreme
+== 극한
+
+[Axiom map difficulty]
+Hard
+== 어려움
+
+[Axiom map difficulty]
+Insane
+== 미친
+
+[Axiom map difficulty]
+Main
+== 보통
+
+[Axiom map difficulty]
+Mod
+== 모드
+
+[Axiom map difficulty]
+Solo
+== 솔로
+
+[Axiom map difficulty]
+Train
+== 훈련
+
 [Bind keyboard key]
 Menu
 == 메뉴 키

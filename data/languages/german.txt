@@ -18726,6 +18726,42 @@ Inactive
 Unavailable for this player
 == Für diesen Spieler nicht verfügbar
 
+[Axiom map difficulty]
+Brutal
+== Brutal
+
+[Axiom map difficulty]
+Easy
+== Leicht
+
+[Axiom map difficulty]
+Extreme
+== Extrem
+
+[Axiom map difficulty]
+Hard
+== Schwer
+
+[Axiom map difficulty]
+Insane
+== Irrsinnig
+
+[Axiom map difficulty]
+Main
+== Normal
+
+[Axiom map difficulty]
+Mod
+== Modifikation
+
+[Axiom map difficulty]
+Solo
+== Solo
+
+[Axiom map difficulty]
+Train
+== Training
+
 [Bind keyboard key]
 Menu
 == Menütaste

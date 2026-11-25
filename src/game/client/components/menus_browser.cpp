@@ -253,11 +253,14 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 	return Localize("Unknown");
 }
 
-// Axiom 公告的类别是玩家可见的原文，直接显示，避免「普通」被归并成「简单」。
+// Axiom 英文类别单独本地化，中文公告保留原文，避免「普通」被归并成「简单」。
 static const char *MapDifficultyCategoryText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry &Entry)
 {
 	if(str_comp_nocase(Server.m_aCommunityId, "axiom") == 0)
-		return Entry.m_Category.c_str();
+	{
+		const char *pKey = Entry.AxiomCategoryKey();
+		return pKey != nullptr ? Localize(pKey, "Axiom map difficulty") : Entry.m_Category.c_str();
+	}
 	const char *pKey = FavoriteMapCategoryKeyFromText(Entry.m_Category.c_str());
 	if(pKey != nullptr)
 		return FavoriteMapCategoryDisplayName(pKey);

@@ -18726,6 +18726,42 @@ Inactive
 Unavailable for this player
 == このプレイヤーには利用できません
 
+[Axiom map difficulty]
+Brutal
+== 高難易度
+
+[Axiom map difficulty]
+Easy
+== 簡単
+
+[Axiom map difficulty]
+Extreme
+== 極限
+
+[Axiom map difficulty]
+Hard
+== 難しい
+
+[Axiom map difficulty]
+Insane
+== インセイン
+
+[Axiom map difficulty]
+Main
+== 通常
+
+[Axiom map difficulty]
+Mod
+== 改造
+
+[Axiom map difficulty]
+Solo
+== ソロ
+
+[Axiom map difficulty]
+Train
+== 練習
+
 [Bind keyboard key]
 Menu
 == メニューキー
