@@ -1587,9 +1587,10 @@ void CGameClient::PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks)
 	{
 		if(Worker)
 		{
-			// 后台队列满时停在当前图标，下一轮排空后继续；不能为了推进
-			// 游标退回同步光栅化，否则启动期又会把图集工作压回主线程。
-			if(!TextRender()->QmQueueGlyphForPrewarm(Codepoint, PixelSize))
+			// 只有后台队列满（REJECTED）才保留游标；RETRY/UNSUPPORTED 必须
+			// 推进，否则单个失败字形会永久卡住后续所有图标字号。RETRY 的
+			// 字形交给可见绘制同步兜底，不会留下空白。
+			if(!QmGlyphQueueResultShouldAdvance(TextRender()->QmQueueGlyphForPrewarm(Codepoint, PixelSize)))
 				break;
 		}
 		else

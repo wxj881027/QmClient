@@ -522,6 +522,22 @@ struct SQmTextRuntimeBudgetSnapshot
 	uint64_t m_Frame = 0;
 };
 
+// 单字形后台预热结果。只有队列满需要保留游标重试；RETRY 是图集预留
+// 不足或作业溢出后的瞬时失败，必须推进游标交给可见绘制兜底，否则一个
+// 失败字形会永久卡住后续所有图标字号。
+enum class EQmGlyphQueueResult
+{
+	QUEUED_OR_READY,
+	UNSUPPORTED,
+	RETRY,
+	REJECTED,
+};
+
+constexpr bool QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult Result)
+{
+	return Result != EQmGlyphQueueResult::REJECTED;
+}
+
 class ITextRender : public IInterface
 {
 	MACRO_INTERFACE("textrender")
@@ -604,8 +620,7 @@ public:
 	// 创建触发 100+ 新字形导致单帧 20–30ms 尖峰。
 	virtual void QmPrewarmGlyph(int Chr, int FontSize) {}
 	// QmClient: 单字形后台预热（图标等不经过菜单文本计划的路径）。
-	// 返回 false 表示 worker 不可用或队列已满，调用方应保留游标稍后重试。
-	virtual bool QmQueueGlyphForPrewarm(int Chr, int FontSize) { return false; }
+	virtual EQmGlyphQueueResult QmQueueGlyphForPrewarm(int Chr, int FontSize) { return EQmGlyphQueueResult::REJECTED; }
 	// QmClient: 后台字形预热是否可用；可见文本始终同步构建，不受此开关影响。
 	virtual bool QmGlyphWorkerEnabled() const { return false; }
 	// 启动加载阶段允许字形 worker 使用更多并发；只影响后台预热的提交节流。

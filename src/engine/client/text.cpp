@@ -1991,14 +1991,25 @@ public:
 	}
 
 	// 图标等单字形预热：只排后台任务，不在这里同步光栅化。
-	// 返回 true 表示已可构建（READY）或已入队；false 时调用方保留游标重试。
-	bool QmQueueGlyphForPrewarm(int Chr, int FontSize, const FontDataMap &FontData)
+	// 只有队列满（REJECTED）值得让调用方保留游标；RETRY/UNSUPPORTED 必须
+	// 推进，否则单个失败字形会永久卡住后续图标字号。
+	EQmGlyphQueueResult QmQueueGlyphForPrewarm(int Chr, int FontSize, const FontDataMap &FontData)
 	{
 		if(!QmGlyphWorkerEnabled() || Chr <= 0)
-			return false;
-		const EQmGlyphPrewarmResult Result = QmPrewarmGlyphTask(Chr, std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE), FontData);
-		return Result == EQmGlyphPrewarmResult::READY || Result == EQmGlyphPrewarmResult::QUEUED ||
-		       Result == EQmGlyphPrewarmResult::UNSUPPORTED;
+			return EQmGlyphQueueResult::REJECTED;
+		switch(QmPrewarmGlyphTask(Chr, std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE), FontData))
+		{
+		case EQmGlyphPrewarmResult::READY:
+		case EQmGlyphPrewarmResult::QUEUED:
+			return EQmGlyphQueueResult::QUEUED_OR_READY;
+		case EQmGlyphPrewarmResult::UNSUPPORTED:
+			return EQmGlyphQueueResult::UNSUPPORTED;
+		case EQmGlyphPrewarmResult::RETRY:
+			return EQmGlyphQueueResult::RETRY;
+		case EQmGlyphPrewarmResult::REJECTED:
+			return EQmGlyphQueueResult::REJECTED;
+		}
+		return EQmGlyphQueueResult::REJECTED;
 	}
 
 	// 把主线程收集的任务切成有界批次提交给引擎 job pool。批次限制避免加载阶段
@@ -3702,10 +3713,10 @@ class CTextRender : public IEngineTextRender
 		m_pGlyphMap->GetGlyph(Chr, FontSize);
 	}
 
-	bool QmQueueGlyphForPrewarm(int Chr, int FontSize) override
+	EQmGlyphQueueResult QmQueueGlyphForPrewarm(int Chr, int FontSize) override
 	{
 		if(m_pGlyphMap == nullptr || Chr <= 0)
-			return false;
+			return EQmGlyphQueueResult::REJECTED;
 		return m_pGlyphMap->QmQueueGlyphForPrewarm(Chr, FontSize, m_QmFontFaceData);
 	}
 

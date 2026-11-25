@@ -1,5 +1,7 @@
 #include <game/client/qm_icon_prewarm.h>
 
+#include <engine/textrender.h>
+
 #include <gtest/gtest.h>
 
 #include <limits>
@@ -129,4 +131,14 @@ TEST(QmIconPrewarm, PeekFailsAfterCompletion)
 	EXPECT_TRUE(Plan.Complete());
 	EXPECT_FALSE(Plan.Peek(Codepoint, Size));
 	EXPECT_FALSE(Plan.Next(Codepoint, Size));
+}
+
+TEST(QmGlyphQueueResult, OnlyQueueFullKeepsCursor)
+{
+	// 队列满可以等下一轮；RETRY/UNSUPPORTED 必须推进游标，
+	// 否则单个失败字形会让后续所有图标字号永远不再预热。
+	EXPECT_TRUE(QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult::QUEUED_OR_READY));
+	EXPECT_TRUE(QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult::UNSUPPORTED));
+	EXPECT_TRUE(QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult::RETRY));
+	EXPECT_FALSE(QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult::REJECTED));
 }
