@@ -36,7 +36,7 @@ def probe(build: Path, root: Path, role: str, timeout: float) -> dict:
 	# 只清理本次子进程的代理与测试映射；使用真实公网地址和系统证书存储。
 	env = {key: "" for key in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "all_proxy", "NO_PROXY", "no_proxy", "QMCLIENT_TEST_SERVERLIST_ORIGIN")}
 	env.update({"QMCLIENT_TEST_STORAGE_ROOT": str(artifacts), "QMCLIENT_TEST_HIDE_DIALOG": "1", "QMCLIENT_TEST_SERVERLIST_DOH": "1" if role == "doh" else ""})
-	config = ["dbg_http 1", "loglevel 1", "stdout_output_level 1", "gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_skip_start_menu 1", "cl_save_settings 0", "cl_menu_map \"\"", "qm_auto_update 0", "qm_steam_auto_launch 0", "http_allow_insecure 0", "qm_websocket_url ws://127.0.0.1:1/ws", "minimize"]
+	config = ["dbg_http 1", "loglevel 1", "stdout_output_level 1", "gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_skip_start_menu 1", "cl_save_settings 0", "cl_menu_map \"\"", "qm_steam_auto_launch 0", "http_allow_insecure 0", "qm_websocket_url ws://127.0.0.1:1/ws", "minimize"]
 	client: Process | None = None
 	result = {"role": role, "url": url, "tls_verification": True, "proxy": "direct", "artifacts": str(artifacts), "outcome": "ERROR"}
 	try:

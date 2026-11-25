@@ -73,6 +73,9 @@
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == X 与我对齐提示会在另一名玩家的 X 与你的对齐达设定的检测时间后为其变色。
 
+%.0f Bps
+== %.0f 格/秒
+
 %.2f KiB
 == %.2f KiB
 
@@ -3374,6 +3377,9 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 控制其他玩家名字旁显示的内容，例如战队标签、好友标记和客户端标识。
 
+Convenience options for chat, the scoreboard and tune zones.
+== 聊天、计分板和调参区的便捷设置。
+
 Converse
 == 继续私聊
 
@@ -5071,6 +5077,9 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 启用 3D 背景粒子
+
+Enable a music source to display its lyrics.
+== 启用一个音乐来源以显示歌词。
 
 Enable absolute controller aiming in game
 == 在游戏中启用绝对控制器瞄准
@@ -7334,6 +7343,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 == 水平位置
 
+Horizontal speed × ramp
+== 横向速度 × 速度倍率
+
 Hostname of DNSBL provider for IP verification
 == 用于 IP 验证的 DNSBL 提供商的主机名
 
@@ -7811,6 +7823,9 @@ Internet (From online source)
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == 当前编辑器地图副本自动保存到“auto”文件夹的时间间隔（0 表示关闭）
 
+Invalid
+== 无效
+
 Invalid Axiom API response
 == Axiom API 响应无效
 
@@ -8275,6 +8290,9 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 == 你自己发射的激光不会命中自己，激光会把其他玩家拉向发射者
+
+Last corrected field
+== 最近修正字段
 
 Last entered
 == 最后进入
@@ -8770,6 +8788,9 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == 记录慢帧和启动卡顿耗时，方便你反馈游戏为何感觉卡顿。
+
+Looks like an update is available
+== 貌似有可更新的版本呢
 
 Lose weapons when teleporting (useful for race maps)
 == 传送时失去武器（对某些竞速地图有用）
@@ -9845,6 +9866,9 @@ Network
 Network compensation
 == 网络补偿
 
+Network object corrections
+== 网络对象修正次数
+
 Network timeout
 == 网络超时
 
@@ -10856,6 +10880,9 @@ Particle glow
 Particle pulse
 == 粒子脉冲
 
+Particle skin
+== 粒子皮肤
+
 Particle speed
 == 粒子速度
 
@@ -11512,6 +11539,12 @@ Position jump hint
 
 Position jump tip
 == 位置跳转提示
+
+Position X
+== X 坐标
+
+Position Y
+== Y 坐标
 
 Position:
 == 坐标
@@ -13905,7 +13938,7 @@ Set timeout protection code s
 == 设置超时保护码
 
 Set up Kugou lyrics
-== 设置酷狗歌词接入
+== 配置酷狗歌词
 
 Set voice input device
 == 设置语音输入设备
@@ -14350,6 +14383,9 @@ Show flag on name plate
 
 Show FPS
 == 显示 FPS
+
+Show FPS, prediction time, and performance graphs
+== 显示 FPS、预测耗时和性能曲线
 
 Show freeze bar under frozen players indicating thaw time
 == 是否在冻结玩家下方显示冻结条以指示解冻时间
@@ -15593,6 +15629,18 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 刷屏保护：防止切换队伍、聊天、换皮肤、表情和投票的刷屏
 
+Spawn effects filtered
+== 过滤的出生特效
+
+Spawn events received
+== 收到的出生事件
+
+Spawn particle failures
+== 出生粒子添加失败次数
+
+Spawn particles dispatched
+== 已发出的出生粒子
+
 Speaker
 == 扬声器
 
@@ -16103,6 +16151,9 @@ Switch team
 Switch tile overlay alpha (0-100)
 == 开关图块覆盖层的实体不透明度（0-100）
 
+Switch tile: type=%d delay=%d number=%d (x=%d y=%d)
+== 开关图块：类型=%d 延迟=%d 编号=%d（x=%d y=%d）
+
 Switch to grenade
 == 切换到榴弹枪
 
@@ -16447,6 +16498,9 @@ Teleport back to the practice respawn point
 
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == 传送回练习重生点，并恢复在那里保存的 Tee 状态。只回滚 Tee，世界照常运行。
+
+Teleport checkpoint
+== 传送检查点
 
 Teleport dummy to cursor
 == 将分身传送到光标
@@ -17477,6 +17531,9 @@ Tune variable to value
 Tune variable to value or show current value
 == 将变量调到指定值，或显示当前值
 
+Tune zone (map / override)
+== 调参区（地图/覆盖）
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 机器较弱时关掉动效，卡片会立刻展开、滚动手感也随之关闭。光标形状只是外观：三种样式都占同一个字符格。
 
@@ -18026,6 +18083,9 @@ Use animated title style (overrides qm_title_color_mode)
 Use cached or online AMLL community lyrics when the music source has no word timing
 == 音乐来源没有逐字时间时，使用缓存或在线获取的 AMLL 社区歌词
 
+Use cl_show_perf 1 to show the panel.
+== 输入 cl_show_perf 1 显示面板。
+
 Use colored skins for frozen tees
 == 冻结 Tee 使用彩色皮肤
 
@@ -18131,6 +18191,9 @@ Use procedural ring pipeline
 Use public word filter
 == 使用公共屏蔽词
 
+Use qm_pref <0|1> [20-400] (milliseconds)
+== 用法：qm_pref <0|1> [20-400]（毫秒）
+
 Use server defaults
 == 使用服务默认值
 
@@ -18206,6 +18269,9 @@ VAD release delay (ms)
 VAD threshold (percent)
 == VAD 阈值（百分比）
 
+Valid
+== 有效
+
 Validate
 == 校验
 
@@ -18233,6 +18299,9 @@ Variants
 Velocity
 == 速度
 
+Velocity ramp
+== 速度倍率
+
 Verifying downloaded update...
 == 正在校验已下载的更新…
 
@@ -18244,6 +18313,9 @@ Version performing the analysis
 
 Vertical position
 == 垂直位置
+
+Vertical speed
+== 纵向速度
 
 Vertical sync (may cause lag)
 == 垂直同步（可能会导致延迟）

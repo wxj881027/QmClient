@@ -144,7 +144,7 @@ def scenario_map_change_during_resource_preparation(env: ProcessEnvironment) -> 
 		[
 			"stdout_output_level 2",
 			"qm_steam_auto_launch 0",
-			"qm_perf_debug 1",
+			"qm_pref 1 50",
 			"cl_auto_demo_record 1",
 			"cl_refresh_rate 20",
 			"cl_refresh_rate_inactive 20",
@@ -219,7 +219,7 @@ def scenario_http_map_download_enters_game(env: ProcessEnvironment) -> None:
 			map_data = map_path.read_bytes()
 			(http_root / filename).write_bytes(map_data)
 			map_path.unlink()
-			client = env.start_client(["stdout_output_level 2", "http_allow_insecure 1", "qm_perf_debug 1", "qm_steam_auto_launch 0", "cl_auto_demo_record 1", "minimize"], env={"QMCLIENT_TEST_HIDE_DIALOG": "1", "NO_PROXY": "127.0.0.1"}, startup_timeout=60)
+			client = env.start_client(["stdout_output_level 2", "http_allow_insecure 1", "qm_pref 1 50", "qm_steam_auto_launch 0", "cl_auto_demo_record 1", "minimize"], env={"QMCLIENT_TEST_HIDE_DIALOG": "1", "NO_PROXY": "127.0.0.1"}, startup_timeout=60)
 			client.wait_for(lambda line: f"task done: http://127.0.0.1:{http.server_port}/{filename}" in line, "HTTP map transfer succeeded", 20)
 			result = _wait_for_perf_map_event(env, "map_parse_worker_complete", "downloaded map parsed", 20, from_download=True)
 			if '"success":1' not in result:
@@ -261,7 +261,6 @@ def scenario_current_map_entity_background_during_loading(env: ProcessEnvironmen
 			"stdout_output_level 2",
 			"cl_show_welcome 0",
 			"qm_steam_auto_launch 0",
-			"qm_auto_update 0",
 			"qm_websocket_url disabled",
 			"cl_auto_demo_record 1",
 			'cl_background_entities ""',

@@ -123,7 +123,6 @@ namespace qm_module
 		case EQmModuleId::Background3D: return "qm:background_3d";
 		case EQmModuleId::WeaponTrajectory: return "qm:weapon_trajectory";
 		case EQmModuleId::WeaponAnimation: return "qm:weapon_animation";
-		case EQmModuleId::DebugMode: return "qm:debug_mode";
 		case EQmModuleId::BindStatusHud: return "qm:bind_status_hud";
 		// 本地新增卡片（本地专属/新卡）：枚举已扩展，映射必须同步，
 		// 否则 QmModuleStableId 返回 nullptr——会打断「全部模块有唯一可逆 stableId」，

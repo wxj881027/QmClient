@@ -81,9 +81,6 @@ namespace qm_card_catalog
 		case EQmModuleId::DebugGraph:
 			Add(Id, "qm:debug_graph", "Debug graph", "Debug performance graph panel", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudDebugGraphContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
-		case EQmModuleId::DebugMode:
-			Add(Id, "qm:debug_mode", "Debug mode", "Enable performance debug logging and diagnostics", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudDebugModeContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
-			return true;
 		case EQmModuleId::InputOverlay:
 			Add(Id, "qm:input_overlay", "Input overlay", "Input overlay display", [pMenus, Metrics, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudInputOverlayContent(pMenus, Content, Metrics, LabelWidth, ReadOnly); });
 			return true;

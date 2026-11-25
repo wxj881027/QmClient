@@ -319,13 +319,20 @@ catch (_) { finish(''); }
 				const auto Version = FileVersion(Exe);
 				if(Version.empty() || Version.rfind(L"10.", 0) == 0)
 					continue;
+				const auto Matched = Root + L"\\" + Version + L"\\libcef.dll";
+				if(IsFile(Matched))
+					return Matched;
+				const auto Series = KugouSharedPatchReleaseSeries(Version);
+				if(!Series.empty())
+				{
+					const auto SeriesDll = Root + L"\\" + std::wstring(Series) + L"\\libcef.dll";
+					if(IsFile(SeriesDll))
+						return SeriesDll;
+				}
 				const auto RegisteredDir = RegistryString(L"KuGou8");
 				const std::wstring Prefix = Root + L"\\";
 				if(RegisteredDir.size() >= Prefix.size() && _wcsnicmp(RegisteredDir.c_str(), Prefix.c_str(), Prefix.size()) == 0 && IsFile(RegisteredDir + L"\\libcef.dll"))
 					return RegisteredDir + L"\\libcef.dll";
-				const auto Matched = Root + L"\\" + Version + L"\\libcef.dll";
-				if(IsFile(Matched))
-					return Matched;
 				if(IsFile(Root + L"\\libcef.dll"))
 					return Root + L"\\libcef.dll";
 			}
@@ -430,9 +437,9 @@ catch (_) { finish(''); }
 					{
 						Session->Close();
 						if(!Processes)
-							State.m_Error = "Kugou playback data is unavailable";
+							State.m_Error = "暂时无法读取酷狗播放信息";
 						else
-							State.m_Error = HasProcess ? "Kugou CDP is unavailable; use Enable Kugou integration, then restart Kugou" : "Kugou is not running";
+							State.m_Error = HasProcess ? "无法连接酷狗歌词接口。请点击“配置酷狗歌词”，然后重启酷狗" : "酷狗音乐尚未启动";
 					}
 					else
 					{
@@ -447,7 +454,7 @@ catch (_) { finish(''); }
 							Session->Close();
 							State = {};
 							State.m_ProcessId = Listener;
-							State.m_Error = "Kugou playback data is unavailable";
+							State.m_Error = "暂时无法读取酷狗播放信息";
 						}
 					}
 					Lyrics.Update(State, TClock::now(), [](const std::string &MediaId, int64_t DurationMs) {
@@ -491,7 +498,7 @@ catch (_) { finish(''); }
 		{
 			State = {};
 			State.m_ProcessId = m_pImpl->m_State.m_ProcessId;
-			State.m_Error = "Waiting for Kugou playback data";
+			State.m_Error = "正在等待酷狗播放信息";
 		}
 		else
 			State = m_pImpl->m_State;
@@ -508,12 +515,12 @@ catch (_) { finish(''); }
 			return {1, L"请先完全退出酷狗音乐，再执行启用或恢复。操作完成后请手动重新启动酷狗。"};
 		const auto Dll = FindLibcef();
 		if(Dll.empty())
-			return {1, L"未找到受支持的酷狗安装目录。已知补丁来自酷狗 20.1.22.27795 / CEF 89.20.0。"};
+			return {1, L"未找到酷狗的 libcef.dll。请检查酷狗是否已正确安装。"};
 		const auto BackupPath = Dll + L".qmclient-original";
 		const auto Prompt = (Restore ? std::wstring(L"将恢复酷狗原始 libcef.dll 并停用歌词采集。\n") : std::wstring(L"将备份并修改酷狗 libcef.dll，启用本机调试端口 12233 以读取播放信息。\n")) +
 				    L"目标：" + Dll + L"\n备份：" + BackupPath + L"\n已有原始备份不会被覆盖。操作后请手动重启酷狗。是否继续？";
 		if(MessageBoxW(nullptr, Prompt.c_str(), L"QmClient · 酷狗歌词", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES)
-			return {ERROR_CANCELLED, L"Cancelled"};
+			return {ERROR_CANCELLED, L"已取消酷狗歌词配置。"};
 		const auto ConfirmedProcesses = KugouProcesses();
 		if(!ConfirmedProcesses)
 			return {1, L"无法确认酷狗是否退出，请完全退出酷狗音乐后重试。"};
@@ -579,7 +586,7 @@ catch (_) { finish(''); }
 		return {0, Restore ? L"已恢复酷狗原始 libcef.dll，备份保留。请手动启动酷狗。" : L"已备份原始 DLL 并启用酷狗歌词接入。请手动启动酷狗；升级后需重新检查兼容性。"};
 #else
 		(void)Restore;
-		return {1, L"Kugou integration requires Windows"};
+		return {1, L"酷狗歌词接入需要 Windows"};
 #endif
 	}
 }

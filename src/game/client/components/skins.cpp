@@ -148,7 +148,7 @@ static void LogSkinSettingsResourcePerf(const char *pJob, int Count, int Budget,
 
 static void LogSettingsSkinSourceEvictEvent(const char *pSkinName, const char *pReason)
 {
-	if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+	if(!g_Config.m_QmPerfEnabled)
 		return;
 	char aPayload[256];
 	str_format(aPayload, sizeof(aPayload), "event=evict skin=%s artifact=source reason=%s",
@@ -159,7 +159,7 @@ static void LogSettingsSkinSourceEvictEvent(const char *pSkinName, const char *p
 
 static void LogSettingsSkinSourceStageEvent(const char *pEvent, const char *pSkinName, int Width, int Height, int ByteCount, double DurationMs, int Uploads = -1)
 {
-	if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+	if(!g_Config.m_QmPerfEnabled)
 		return;
 	char aPayload[256];
 	if(Uploads > 0)
@@ -214,7 +214,7 @@ static const char *SkinStateName(CSkins::CSkinContainer::EState State)
 
 static void LogSettingsSkinSourceRequestEvent(const char *pSkinName, ESettingsResourcePriority Priority, CSkins::CSkinContainer::EState State)
 {
-	if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+	if(!g_Config.m_QmPerfEnabled)
 		return;
 	char aPayload[256];
 	str_format(aPayload, sizeof(aPayload), "event=source_request skin=%s priority=%s state=%s",
@@ -226,7 +226,7 @@ static void LogSettingsSkinSourceRequestEvent(const char *pSkinName, ESettingsRe
 
 static void LogSettingsSkinSourceWaitEvent(const char *pSkinName, const char *pReason, int RemainingUploads, int MaxUploads)
 {
-	if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+	if(!g_Config.m_QmPerfEnabled)
 		return;
 	struct SWaitLogThrottle
 	{
@@ -289,7 +289,7 @@ static void LogSettingsSkinSourceWaitEvent(const char *pSkinName, const char *pR
 
 static void LogSettingsSkinStartLoadingFallbackSweepEvent(int ItemsTotal, int ItemsScanned, int ItemsStarted, int ItemsSkipped, bool Invoked, double DurationMs, const char *pReason)
 {
-	if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+	if(!g_Config.m_QmPerfEnabled)
 		return;
 	char aPayload[256];
 	str_format(aPayload, sizeof(aPayload), "event=skin_start_loading_fallback_sweep items_total=%d items_scanned=%d items_started=%d items_skipped=%d invoked=%d dur_ms=%.3f reason=%s",
@@ -305,7 +305,7 @@ static void LogSettingsSkinStartLoadingFallbackSweepEvent(int ItemsTotal, int It
 
 static void LogSettingsSkinSourceWarmupEvent(const char *pEvent, const char *pExtra = nullptr)
 {
-	if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+	if(!g_Config.m_QmPerfEnabled)
 		return;
 	char aPayload[256];
 	if(pExtra != nullptr && pExtra[0] != '\0')
@@ -367,7 +367,7 @@ static void LogSettingsSkinFrameCapEvent(const CGameClient *pGameClient)
 	static int s_LastVisibleLoadCap = -1;
 	static int s_LastNormalLoadCap = -1;
 
-	if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+	if(!g_Config.m_QmPerfEnabled)
 		return;
 
 	const bool TeeSettingsActive = ActiveSettingsTeePage(pGameClient);

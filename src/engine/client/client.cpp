@@ -1990,7 +1990,7 @@ void CClient::RenderDebug()
 
 void CClient::RenderGraphs()
 {
-	if(!g_Config.m_DbgGraphs)
+	if(!g_Config.m_ClShowPerf)
 		return;
 
 	Graphics()->MapScreen(0, 0, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
@@ -8989,7 +8989,7 @@ int main(int argc, const char **argv)
 	pFutureFileLogger->Set(std::move(pConfiguredFileLogger));
 
 	// 性能日志文件：CFutureLogger 只能 Set 一次，启动时固定到可切换包装；
-	// 游戏内 qm_perf_debug / qm_perf_logfile / qm_perf_stutter_diagnostics 任一
+	// 游戏内 qm_pref
 	// 变化由 CClient::UpdateQmPerfFileLogger 按帧检测，立即打开/关闭文件。
 	std::shared_ptr<CQmPerfFileSwitchLogger> pQmPerfFileSwitchLogger = std::make_shared<CQmPerfFileSwitchLogger>();
 	pFuturePerfFileLogger->Set(pQmPerfFileSwitchLogger);
@@ -8997,7 +8997,7 @@ int main(int argc, const char **argv)
 	pClient->UpdateQmPerfFileLogger();
 	// QmClient: 仅开启 macOS 自动诊断（未配置性能日志）时预创建诊断目录，
 	// 目录按需写入方依赖启动期存在。
-	if(g_Config.m_QmMacosGraphicsDiagnostics != 0 && !g_Config.m_QmPerfLogfile && !g_Config.m_QmPerfDebug && !g_Config.m_QmPerfStutterDiagnostics && g_Config.m_QmGraphicsTrace == 0)
+	if(g_Config.m_QmMacosGraphicsDiagnostics != 0 && !g_Config.m_QmPerfEnabled && g_Config.m_QmGraphicsTrace == 0)
 	{
 		pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
 		pStorage->CreateFolder("dumps/QmClient_AutoDiagnostics", IStorage::TYPE_SAVE);

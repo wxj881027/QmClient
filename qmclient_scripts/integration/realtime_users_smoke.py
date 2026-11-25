@@ -117,7 +117,7 @@ def run_client(build_dir: Path, legacy: bool) -> None:
 		try:
 			client = Process(
 				"realtime-client",
-				[str(build_dir / f"DDNet{EXE_SUFFIX}"), "gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_save_settings 0", "qm_auto_update 0", "qm_steam_auto_launch 0", "qm_websocket_log 1", f"qm_websocket_url ws://127.0.0.1:{port}/ws"],
+				[str(build_dir / f"DDNet{EXE_SUFFIX}"), "gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_save_settings 0", "qm_steam_auto_launch 0", "qm_websocket_log 1", f"qm_websocket_url ws://127.0.0.1:{port}/ws"],
 				artifacts,
 				fifo_command="cl_input_fifo",
 				pipe_prefix="realtime_users_",

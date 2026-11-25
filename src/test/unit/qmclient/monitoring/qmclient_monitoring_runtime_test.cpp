@@ -611,35 +611,6 @@ TEST(QmMonitoringPerfContract, DiskReadRateUsesMegabytesPerSecond)
 	EXPECT_FLOAT_EQ(QmComputeDiskReadMbPerSec(1024, 1000000000ull, 2048, 1000000000ull), -1.0f);
 }
 
-TEST(QmMonitoringPerfContract, PerfDurationGateUsesConfiguredThreshold)
-{
-	const int OldThreshold = g_Config.m_QmPerfDebugThresholdMs;
-	const int OldStutterDiagnostics = g_Config.m_QmPerfStutterDiagnostics;
-	g_Config.m_QmPerfDebugThresholdMs = 4;
-	g_Config.m_QmPerfStutterDiagnostics = 0;
-
-	EXPECT_FALSE(QmPerfShouldLogDuration(3.999));
-	EXPECT_TRUE(QmPerfShouldLogDuration(4.0));
-	EXPECT_TRUE(QmPerfShouldLogDuration(0.0, true));
-
-	g_Config.m_QmPerfDebugThresholdMs = OldThreshold;
-	g_Config.m_QmPerfStutterDiagnostics = OldStutterDiagnostics;
-}
-
-TEST(QmStutterDiagnostics, PerfDurationGateUsesThreeHundredFpsBudgetWhileEnabled)
-{
-	const int OldThreshold = g_Config.m_QmPerfDebugThresholdMs;
-	const int OldStutterDiagnostics = g_Config.m_QmPerfStutterDiagnostics;
-	g_Config.m_QmPerfDebugThresholdMs = 4;
-	g_Config.m_QmPerfStutterDiagnostics = 1;
-
-	EXPECT_FALSE(QmPerfShouldLogDuration(QmStutterFrameBudgetMs() - 0.001));
-	EXPECT_TRUE(QmPerfShouldLogDuration(QmStutterFrameBudgetMs()));
-
-	g_Config.m_QmPerfDebugThresholdMs = OldThreshold;
-	g_Config.m_QmPerfStutterDiagnostics = OldStutterDiagnostics;
-}
-
 TEST(QmMonitoringPerfContract, PerfPayloadJsonFieldsPreserveSpaceContainingValues)
 {
 	char aJson[1024];

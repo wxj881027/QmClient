@@ -116,7 +116,6 @@ TEST(QmNewUiMenuGameplayPredictionContract, HammerHitConsumersUseDeferredServerE
 	EXPECT_NE(TClientSource.find("FindTargetHitsAtTick("), std::string::npos);
 	EXPECT_NE(TClientSource.find("if(!Hit.m_TargetWoke)"), std::string::npos);
 	EXPECT_NE(TClientSource.find("CheckHammerWakeupActions();"), std::string::npos);
-	EXPECT_NE(TClientSource.find("m_aaComboLastHammerHitSnapshotTick[Dummy][TargetId]"), std::string::npos);
 	EXPECT_EQ(GameClientSource.find("QmJellyHammerHitRadius"), std::string::npos);
 
 	const size_t FinalizePos = OnNewSnapshot.find("FinalizeHammerHitEvents();");

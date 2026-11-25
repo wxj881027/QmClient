@@ -723,6 +723,7 @@ void CFastPractice::SyncPracticeWorldConfig()
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTiles = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictDDRace = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTeleport = true;
+	m_PracticeBaseWorld.m_WorldConfig.m_AutoSwitchWeaponOnPickup = g_Config.m_ClAutoswitchWeapons != 0;
 	// 队伍号以服务器为准：/team 是服务器动作，分支若只在 fork 时取一次，
 	// 换队后门、激光和拖拉仍按旧队伍计算。这里只同步参与者本人，保留分支
 	// 自己的 solo 与队伍元数据，不整份覆盖。

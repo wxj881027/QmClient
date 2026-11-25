@@ -117,7 +117,7 @@ namespace
 
 	void LogSettingsLoadingPrewarmEvent(const IClient *pClient, const char *pEvent, int CompletedSteps, int MaxAttempts, int TeeWarmupEntries, int ConsecutiveNoProgressSteps, uint64_t UploadsCompleted, uint64_t LoadsCompleted, int MissingTextPlanItems, int TextPoolEntries, int PlanCollected, float ElapsedMs)
 	{
-		if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+		if(!g_Config.m_QmPerfEnabled)
 			return;
 		char aPayload[384];
 		str_format(aPayload, sizeof(aPayload), "event=%s steps=%d max_attempts=%d tee_entries=%d stall_steps=%d uploads_completed=%" PRIu64 " loads_completed=%" PRIu64 " missing_text_items=%d text_pool_entries=%d plan_collected=%d elapsed_ms=%.2f",
@@ -602,6 +602,18 @@ void CGameClient::OnConsoleInit()
 	m_pConfig = m_pConfigManager->Values();
 	m_pInput = Kernel()->RequestInterface<IInput>();
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
+	m_pConsole->Register("qm_pref", "i[0|1] ?i[20-400]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
+		const int ThresholdMs = pResult->NumArguments() > 1 ? pResult->GetInteger(1) : CConfig::ms_QmPerfDebugThresholdMs;
+		if(!QmApplyPerfPreferences(pResult->GetInteger(0), ThresholdMs))
+			static_cast<IConsole *>(pUserData)->Print(IConsole::OUTPUT_LEVEL_STANDARD, "qm_pref", Localize("Use qm_pref <0|1> [20-400] (milliseconds)"));
+	}, m_pConsole, "Use qm_pref <0|1> [20-400] (milliseconds)");
+	m_pConfigManager->RegisterCallback([](IConfigManager *pConfigManager, void *) {
+		if(!QmPerfEnabled() && g_Config.m_QmPerfDebugThresholdMs == CConfig::ms_QmPerfDebugThresholdMs)
+			return;
+		char aLine[64];
+		str_format(aLine, sizeof(aLine), "qm_pref %d %d", static_cast<int>(QmPerfEnabled()), g_Config.m_QmPerfDebugThresholdMs);
+		pConfigManager->WriteLine(aLine);
+	}, nullptr);
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pDemoPlayer = Kernel()->RequestInterface<IDemoPlayer>();
 	m_pServerBrowser = Kernel()->RequestInterface<IServerBrowser>();
@@ -1413,7 +1425,7 @@ void CGameClient::OnUpdate()
 		}
 	}
 
-	if(g_Config.m_QmPerfStutterDiagnostics)
+	if(g_Config.m_QmPerfEnabled)
 	{
 		m_QmStutterCapture.PrepareComponents(m_vpAll.size());
 		for(size_t i = 0; i < m_vpAll.size(); ++i)
@@ -2315,7 +2327,7 @@ void CGameClient::OnRender()
 			pComponent->OnRender();
 		}
 	};
-	if(g_Config.m_QmPerfStutterDiagnostics)
+	if(g_Config.m_QmPerfEnabled)
 	{
 		m_QmStutterCapture.PrepareComponents(m_vpAll.size());
 		for(size_t i = 0; i < m_vpAll.size(); ++i)
@@ -2354,7 +2366,7 @@ void CGameClient::OnRender()
 	LogPerfStage(this, "gameclient_onrender_total", FrameTimer.ElapsedMs());
 
 	// QmClient: 结算本帧的 stutter 诊断窗口（组件级 on_update/on_render 采样）。
-	// 该函数此前只有声明和定义、没有调用点，导致 qm_perf_stutter_diagnostics
+	// 该函数此前只有声明和定义、没有调用点，导致卡顿诊断
 	// 开启后永远不会产生 perf/stutter 报告；这里在渲染帧末尾统一消费。
 	ProcessQmStutterFrame();
 	LogQmIconDiagnostics(Client());
@@ -2438,7 +2450,7 @@ void CGameClient::OnRender()
 CQmStutterCapture::SFrame CGameClient::QmStutterFrameContext()
 {
 	CQmStutterCapture::SFrame Frame;
-	Frame.m_Enabled = g_Config.m_QmPerfStutterDiagnostics != 0;
+	Frame.m_Enabled = g_Config.m_QmPerfEnabled;
 	Frame.m_ComponentCount = m_vpAllPerfNames.size();
 	Frame.m_ppComponentNames = m_vpAllPerfNames.data();
 	Frame.m_pClient = Client();
@@ -2687,7 +2699,7 @@ void CGameClient::FormatStreamerName(int ClientId, char *pBuf, int BufSize) cons
 
 void CGameClient::RenderQmMonitoringHud(float GraphX, float GraphSpacing)
 {
-	if(!g_Config.m_DbgGraphs)
+	if(!g_Config.m_ClShowPerf)
 		return;
 
 	const SQmMonitoringHudLayout Layout = QmComputeMonitoringHudLayout(

@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def start_client(directory: Path, cwd: Path) -> Process:
-	args = [str(directory / "DDNet.exe"), "gfx_fullscreen 0", "gfx_screen_width 960", "gfx_screen_height 540", "gfx_backend OpenGL", "qm_graphics_mode 0", "cl_show_welcome 0", "qm_auto_update 0", "qm_steam_auto_launch 0", "cl_save_settings 1"]
+	args = [str(directory / "DDNet.exe"), "gfx_fullscreen 0", "gfx_screen_width 960", "gfx_screen_height 540", "gfx_backend OpenGL", "qm_graphics_mode 0", "cl_show_welcome 0", "qm_steam_auto_launch 0", "cl_save_settings 1"]
 	return Process("client", args, cwd, fifo_command="cl_input_fifo", pipe_prefix=f"qmstorage_{uuid.uuid4().hex}_")
 
 

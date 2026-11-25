@@ -1,5 +1,4 @@
 #include <game/client/components/qmclient/perf_logging.h>
-#include <game/client/components/qmclient/stutter_diagnostics.h>
 
 #include <gtest/gtest.h>
 
@@ -60,24 +59,28 @@ protected:
 	void TearDown() override { g_Config = m_Previous; }
 };
 
-TEST_F(CPerfLoggingPolicyTest, DisabledLoggingAndConfiguredThresholdHaveIndependentPolicies)
+TEST_F(CPerfLoggingPolicyTest, ConfiguredThresholdAppliesWhenLoggingIsEnabled)
 {
-	g_Config.m_QmPerfDebug = 0;
+	ASSERT_TRUE(QmApplyPerfPreferences(0, CConfig::ms_QmPerfDebugThresholdMs));
 	EXPECT_FALSE(QmPerfEnabled());
-	g_Config.m_QmPerfDebug = 1;
+	EXPECT_DOUBLE_EQ(QmPerfThresholdMs(), 50.0);
+
+	ASSERT_TRUE(QmApplyPerfPreferences(1, 20));
 	EXPECT_TRUE(QmPerfEnabled());
-	g_Config.m_QmPerfStutterDiagnostics = 0;
-	g_Config.m_QmPerfDebugThresholdMs = 20;
 	EXPECT_FALSE(QmPerfShouldLogDuration(19.999));
 	EXPECT_TRUE(QmPerfShouldLogDuration(20.0));
 	EXPECT_TRUE(QmPerfShouldLogDuration(0.0, true));
 }
 
-TEST_F(CPerfLoggingPolicyTest, StutterDiagnosticsCapThresholdButRespectLowerUserThreshold)
+TEST_F(CPerfLoggingPolicyTest, InvalidArgumentsLeaveBothPreferencesUnchanged)
 {
-	g_Config.m_QmPerfStutterDiagnostics = 1;
-	g_Config.m_QmPerfDebugThresholdMs = 20;
-	EXPECT_DOUBLE_EQ(QmPerfThresholdMs(), QmStutterFrameBudgetMs());
-	g_Config.m_QmPerfDebugThresholdMs = 1;
-	EXPECT_DOUBLE_EQ(QmPerfThresholdMs(), 1.0);
+	ASSERT_TRUE(QmApplyPerfPreferences(1, 400));
+	EXPECT_FALSE(QmApplyPerfPreferences(0, 19));
+	EXPECT_FALSE(QmApplyPerfPreferences(0, 401));
+	EXPECT_FALSE(QmApplyPerfPreferences(2, 50));
+	EXPECT_TRUE(QmPerfEnabled());
+	EXPECT_DOUBLE_EQ(QmPerfThresholdMs(), 400.0);
+
+	EXPECT_TRUE(QmApplyPerfPreferences(0, 50));
+	EXPECT_FALSE(QmPerfEnabled());
 }

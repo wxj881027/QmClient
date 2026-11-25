@@ -296,7 +296,6 @@ def smoke_ime_gradient_sdf(build_dir: Path) -> int:
 		"qm_ui_scale 100",
 		"cl_skip_start_menu 1",
 		"cl_save_settings 0",
-		"qm_auto_update 0",
 		"snd_enable 0",
 		'logfile "client.log"',
 	]

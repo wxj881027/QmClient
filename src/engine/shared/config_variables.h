@@ -102,8 +102,7 @@ MACRO_CONFIG_INT(ClShowKillMessages, cl_showkillmessages, 1, 0, 1, CFGFLAG_CLIEN
 MACRO_CONFIG_INT(ClShowFinishMessages, cl_show_finish_messages, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show finish messages")
 MACRO_CONFIG_INT(ClShowVotesAfterVoting, cl_show_votes_after_voting, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep vote window open after voting")
 MACRO_CONFIG_INT(ClShowLocalTimeAlways, cl_show_local_time_always, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Always show local time")
-MACRO_CONFIG_INT(ClShowfps, cl_showfps, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show in-game FPS")
-MACRO_CONFIG_INT(ClShowpred, cl_showpred, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show in-game prediction time (in milliseconds)")
+MACRO_CONFIG_INT(ClShowPerf, cl_show_perf, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show FPS, prediction time, and performance graphs")
 MACRO_CONFIG_INT(ClShowPacketLoss, cl_show_packet_loss, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show in-game packet loss rate")
 MACRO_CONFIG_INT(ClEyeWheel, cl_eye_wheel, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show eye wheel and expressions")
 MACRO_CONFIG_INT(ClEyeDuration, cl_eye_duration, 999999, 1, 999999, CFGFLAG_CLIENT | CFGFLAG_SAVE, "How long expression lasts")
@@ -561,7 +560,6 @@ MACRO_CONFIG_INT(DbgHttp, dbg_http, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SERVER, "D
 #if defined(CONF_WEBSOCKETS)
 MACRO_CONFIG_INT(DbgWebsockets, dbg_websockets, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SERVER, "Debug websockets")
 #endif
-MACRO_CONFIG_INT(DbgGraphs, dbg_graphs, 0, 0, 1, CFGFLAG_CLIENT, "Show performance graphs.")
 MACRO_CONFIG_INT(DbgGfx, dbg_gfx, 0, 0, 4, CFGFLAG_CLIENT, "Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).")
 MACRO_CONFIG_INT(DbgRenderGroupClips, dbg_render_group_clips, 0, 0, 1, CFGFLAG_CLIENT, "Debug group clipping.")
 MACRO_CONFIG_INT(DbgRenderQuadClips, dbg_render_quad_clips, 0, 0, 1, CFGFLAG_CLIENT, "Debug quad layer clipping.")

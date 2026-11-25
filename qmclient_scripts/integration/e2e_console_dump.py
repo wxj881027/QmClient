@@ -19,7 +19,6 @@ def _start_client(env: ProcessEnvironment, client_env: dict[str, str], *startup_
 			"stdout_output_level 2",
 			"cl_show_welcome 0",
 			"qm_steam_auto_launch 0",
-			"qm_auto_update 0",
 			"qm_websocket_url disabled",
 			*startup_commands,
 		],

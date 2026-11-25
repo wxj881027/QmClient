@@ -254,7 +254,8 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 		const float InteractionDistance = 20.0f;
 		const vec2 TeeDirection = Distance < InteractionDistance ? normalize(vec2(DeltaPosition.x, maximum(DeltaPosition.y, 0.5f))) : normalize(DeltaPosition);
 		const int TeeEmote = Distance < InteractionDistance ? EMOTE_HAPPY : EMOTE_NORMAL;
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, TeeEmote, TeeDirection, TeePosition);
+		if(!Ui()->DrawingSuppressed())
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, TeeEmote, TeeDirection, TeePosition);
 		static char s_InteractiveTeeButtonId;
 		if(Distance < InteractionDistance && Ui()->DoButtonLogic(&s_InteractiveTeeButtonId, 0, &NormalSkinPreview, BUTTONFLAG_LEFT))
 		{
@@ -284,13 +285,15 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 	{
 		TeamSkinInfo.m_aSixup[g_Config.m_ClDummy].m_aColors[Part] = GameClient()->m_Skins7.GetTeamColor(aUCCVars[Part], aColorVars[Part], TEAM_RED, Part);
 	}
-	RenderTools()->RenderTee(CAnimState::GetIdle(), &TeamSkinInfo, 0, vec2(1, 0), RedTeamSkinPreview.Center() + OffsetToMid);
+	if(!Ui()->DrawingSuppressed())
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeamSkinInfo, 0, vec2(1, 0), RedTeamSkinPreview.Center() + OffsetToMid);
 
 	for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
 	{
 		TeamSkinInfo.m_aSixup[g_Config.m_ClDummy].m_aColors[Part] = GameClient()->m_Skins7.GetTeamColor(aUCCVars[Part], aColorVars[Part], TEAM_BLUE, Part);
 	}
-	RenderTools()->RenderTee(CAnimState::GetIdle(), &TeamSkinInfo, 0, vec2(-1, 0), BlueTeamSkinPreview.Center() + OffsetToMid);
+	if(!Ui()->DrawingSuppressed())
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeamSkinInfo, 0, vec2(-1, 0), BlueTeamSkinPreview.Center() + OffsetToMid);
 
 	if(m_CustomSkinMenu)
 	{
@@ -559,7 +562,8 @@ void CMenus::RenderSkinSelection7(CUIRect MainView, float BodySize)
 			int TeeEmote = (Item.m_Selected && s_LastSelectionTime + 0.75f > Client()->GlobalTime()) ? EMOTE_HAPPY : EMOTE_NORMAL;
 			vec2 OffsetToMid;
 			CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &Info, OffsetToMid);
-			RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, TeeEmote, vec2(1.0f, 0.0f), TeePreview.Center() + OffsetToMid);
+			if(!Ui()->DrawingSuppressed())
+				RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, TeeEmote, vec2(1.0f, 0.0f), TeePreview.Center() + OffsetToMid);
 		}
 
 		SLabelProperties Props;
@@ -664,7 +668,8 @@ void CMenus::RenderSkinPartSelection7(CUIRect MainView, float BodySize)
 		{
 			TeePartEmote = (int)(Client()->GlobalTime() * 0.5f) % NUM_EMOTES;
 		}
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, TeePartEmote, vec2(1.0f, 0.0f), TeePos);
+		if(!Ui()->DrawingSuppressed())
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, TeePartEmote, vec2(1.0f, 0.0f), TeePos);
 
 		Ui()->DoLabel(&Label, pPart->m_aName, BodySize, TEXTALIGN_MC);
 	}

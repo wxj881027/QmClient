@@ -60,7 +60,6 @@ def start_demo_client(env: ProcessEnvironment, extra_config: list[str], extra_en
 		"cl_show_welcome 0",
 		"cl_skip_start_menu 1",
 		"cl_save_settings 0",
-		"qm_auto_update 0",
 		"qm_steam_auto_launch 0",
 		# 不能 minimize：Vulkan 交换链在窗口最小化时暂停（paused=1），帧捕获读不到呈现帧，
 		# 录制必然 READ_FAILED；导出需要可见窗口持续呈现帧（wt-1 实测同为前台窗口）。

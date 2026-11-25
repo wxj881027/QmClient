@@ -344,8 +344,6 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			LogStartMenuPerfStage(Client(), "start_menu_logo", StageStart, TrackPerf, UseV2Layout);
 		}
 
-		// 更新入口始终允许查看；重开详情保留下载和已准备的安装包。
-		const char *pUpdateLabel = GameClient()->m_TClient.QmClientUpdateStatusText();
 		// 双操作行的文字字号跟同一排的带图菜单按钮对齐（两条版式分支共用）。
 		// 分段按钮自己按控件正文档取字会小一号，同一列里看得出来。
 		const float RowLabelSize = GameClient()->m_Menus.MenuButtonLabelSize(aMenuButtons[2]);
@@ -385,16 +383,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			if(ui_widget::SecondaryButton(Ctx, &s_SettingsButton, Localize("Settings"), aMenuButtons[1]) || CheckHotKey(KEY_S))
 				NewPage = CMenus::PAGE_SETTINGS;
 
-			// 检查更新与「新功能」共用双操作按钮：左半显示更新状态，右半打开新功能弹窗。
-			static CButtonContainer s_QmUpdateButton, s_QmNewFeaturesButton;
-			ui_widget::SSplitActionOptions UpdateOptions;
-			UpdateOptions.m_LabelSize = RowLabelSize;
-			const int QmAction = ui_widget::SplitActionButton(Ctx, &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::CONTROL, Localize("Check for updates"), Localize("New features"), UpdateOptions);
-			if(QmAction == 0)
-			{
-				GameClient()->m_Menus.ShowQmUpdatePopup();
-			}
-			else if(QmAction == 1)
+			static CButtonContainer s_QmNewFeaturesButton;
+			const char *pNewsLabel = GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features");
+			if(ui_widget::SecondaryButton(Ctx, &s_QmNewFeaturesButton, pNewsLabel, NewFeaturesButton))
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			// 与 legacy 同一套分段按钮和同一条进度：V2 版式不带主菜单插画，只换两段文字与底色。
@@ -536,20 +527,13 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			if(GameClient()->m_Menus.DoButton_Menu(&s_SettingsButton, Localize("Settings"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "settings" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), ButtonLabelCache(1), -1.0f, &aMenuButtons[1]) || CheckHotKey(KEY_S))
 				NewPage = CMenus::PAGE_SETTINGS;
 
-			// 检查更新与新功能共用双操作按钮：左半显示更新状态，右半打开内置新功能弹窗。
-			static CButtonContainer s_QmUpdateButton, s_QmNewFeaturesButton;
-			ui_widget::SSplitActionOptions UpdateOptions;
-			UpdateOptions.m_LabelSize = RowLabelSize;
-			const int QmAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::START_MENU, Localize("Check for updates"), Localize("New features"), UpdateOptions);
-			if(QmAction == 0)
-			{
-				GameClient()->m_Menus.ShowQmUpdatePopup();
-			}
-			else if(QmAction == 1)
+			static CButtonContainer s_QmNewFeaturesButton;
+			const char *pNewsLabel = GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features");
+			if(GameClient()->m_Menus.DoButton_Menu(&s_QmNewFeaturesButton, pNewsLabel, 0, &NewFeaturesButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), nullptr, RowLabelSize))
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);
-			// 与「检查更新 / 新功能」同一个分段组件，边框、圆角、字号、悬浮与按下反馈完全一致。
+			// 沿用主菜单按钮的字号、悬浮与按下反馈。
 			// 未运行时进度为 0，整条仍是单按钮「运行服务器」；启动后右段从右端弹性长出，
 			// 左段被压窄成「进入」，插画始终钉在整条右端不动。切点照抄上游：
 			// 左段宽 =（总宽 − 贴图宽）/ 2，贴图占 4 倍按钮高。
@@ -625,38 +609,24 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		char aTBuf[64];
 		str_format(aTBuf, sizeof(aTBuf), CLIENT_NAME " %s", CLIENT_RELEASE_VERSION);
 		Ui()->DoLabel(&TClientVersion, aTBuf, 14.0f, TEXTALIGN_MR);
-#if defined(CONF_FAMILY_WINDOWS)
-		CUIRect UpdateEntry = TClientVersion;
-		UpdateEntry.w = std::min(UpdateEntry.w, TextRender()->TextWidth(14.0f, aTBuf) + 2 * ui_token::spacing::SM);
-		UpdateEntry.x = TClientVersion.x + TClientVersion.w - UpdateEntry.w;
-		static CButtonContainer s_UpdateEntry;
-		if(Ui()->DoButtonLogic(&s_UpdateEntry, 0, &UpdateEntry, BUTTONFLAG_LEFT))
-			GameClient()->m_Menus.ShowQmUpdatePopup();
-#endif
-#if defined(CONF_AUTOUPDATE) && defined(CONF_FAMILY_WINDOWS)
-		if(g_Config.m_QmAutoUpdate)
+#if defined(CONF_FAMILY_WINDOWS) && defined(CONF_ARCH_AMD64)
+		auto &Update = GameClient()->m_TClient;
+		if(Update.CanDownloadQmClientUpdate())
 		{
-			CUIRect UpdateToDateText;
-			MainView.HSplitTop(15.0f, &UpdateToDateText, nullptr);
-			UpdateToDateText.VSplitRight(40.0f, &UpdateToDateText, nullptr);
-			if(GameClient()->m_TClient.m_UpdateCheckFailed)
+			char aLabel[256];
+			str_format(aLabel, sizeof(aLabel), "%s...", Localize("Looks like an update is available"));
+			const float LabelSize = ui_token::font::BODY;
+			CUIRect UpdateLink;
+			MainView.HSplitTop(TClientVersion.h, &UpdateLink, nullptr);
+			UpdateLink.VSplitRight(40.0f, &UpdateLink, nullptr);
+			UpdateLink.VSplitRight(std::min(UpdateLink.w, TextRender()->TextWidth(LabelSize, aLabel) + 2.0f * ui_token::spacing::SM), nullptr, &UpdateLink);
+			static CButtonContainer s_UpdateLink;
+			if(Ui()->DoButtonLogic(&s_UpdateLink, 0, &UpdateLink, BUTTONFLAG_LEFT))
 			{
-				static CButtonContainer s_UpdateRetry;
-				if(GameClient()->m_Menus.DoButton_Menu(&s_UpdateRetry, Localize("Update failed. Please try again"), 0, &UpdateToDateText))
-					GameClient()->m_Menus.ShowQmUpdatePopup();
+				Update.RequestQmClientUpdateDownload();
+				GameClient()->m_Menus.ShowQmUpdatePopup();
 			}
-			else if(!GameClient()->m_TClient.m_FetchedQmClientUpdateInfo)
-			{
-				Ui()->DoLabel(&UpdateToDateText, Localize("(Fetching Update Info)"), 14.0f, TEXTALIGN_MR);
-			}
-			else if(GameClient()->m_TClient.NeedQmClientUpdate())
-			{
-				Ui()->DoLabel(&UpdateToDateText, Localize("(Update required)"), 14.0f, TEXTALIGN_MR);
-			}
-			else
-			{
-				Ui()->DoLabel(&UpdateToDateText, Localize("(On Latest)"), 14.0f, TEXTALIGN_MR);
-			}
+			Ui()->DoLabel(&UpdateLink, aLabel, LabelSize, TEXTALIGN_MR, {.m_MaxWidth = UpdateLink.w, .m_DisallowNewline = true, .m_EllipsisAtEnd = true});
 		}
 #endif
 		static CButtonContainer s_ConsoleButton, s_ConsoleGestureButton;

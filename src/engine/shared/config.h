@@ -42,6 +42,10 @@ public:
 #undef MACRO_CONFIG_COL
 #undef MACRO_CONFIG_STR
 #undef SET_CONFIG_DOMAIN
+
+	static constexpr int ms_QmPerfDebugThresholdMs = 50;
+	bool m_QmPerfEnabled = false;
+	int m_QmPerfDebugThresholdMs = ms_QmPerfDebugThresholdMs;
 };
 
 extern CConfig g_Config;
