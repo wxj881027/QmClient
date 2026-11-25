@@ -1,5 +1,6 @@
 // 路径策略与真实存储、录像记录器及自动清理协作；所有文件位于测试隔离目录。
 #include <base/fs_path.h>
+
 #include <engine/shared/demo.h>
 #include <engine/shared/filecollection.h>
 #include <engine/storage.h>

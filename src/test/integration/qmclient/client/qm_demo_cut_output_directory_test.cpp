@@ -1,4 +1,5 @@
 #include <base/fs_path.h>
+
 #include <game/client/components/menus.h>
 
 #include <gtest/gtest.h>

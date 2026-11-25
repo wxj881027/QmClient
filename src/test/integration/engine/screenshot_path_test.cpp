@@ -1,4 +1,5 @@
 #include <base/fs_path.h>
+
 #include <engine/client/screenshot_path.h>
 
 #include <gtest/gtest.h>
