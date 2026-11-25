@@ -34,6 +34,7 @@ try:
 		scenario_current_map_entity_background_during_loading,
 		scenario_http_map_download_enters_game,
 		scenario_map_change_during_resource_preparation,
+		scenario_quit_with_predicted_laser_doors,
 	)
 	from qmclient_scripts.integration.e2e_settings_language import scenario_settings_language_round_trip
 	from qmclient_scripts.integration.process_harness import ProcessEnvironment
@@ -55,6 +56,7 @@ except ModuleNotFoundError:
 		scenario_current_map_entity_background_during_loading,
 		scenario_http_map_download_enters_game,
 		scenario_map_change_during_resource_preparation,
+		scenario_quit_with_predicted_laser_doors,
 	)
 	from e2e_settings_language import scenario_settings_language_round_trip  # type: ignore[no-redef]
 	from process_harness import ProcessEnvironment  # type: ignore[no-redef]
@@ -498,6 +500,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"online_replay_without_source": scenario_online_replay_without_source,
 	"invalid_statistics_preserved": scenario_invalid_statistics_preserved,
 	"map_change_during_resource_preparation": scenario_map_change_during_resource_preparation,
+	"quit_with_predicted_laser_doors": scenario_quit_with_predicted_laser_doors,
 	"http_map_download_enters_game": scenario_http_map_download_enters_game,
 	"current_map_entity_background_during_loading": scenario_current_map_entity_background_during_loading,
 	"menu_background_failed_switch_shutdown": scenario_menu_background_failed_switch_shutdown,
