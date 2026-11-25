@@ -372,3 +372,21 @@ TEST(UiV2Anim, LogicClockAccumulatorClampsLongFrames)
 
 	EXPECT_FLOAT_EQ(QmUiAdvanceLogicClock(LongFrame, 0.0f), 0.0f);
 }
+
+TEST(UiV2Anim, LogicClockInterpolatesDisplayValueBetweenSteps)
+{
+	CUiV2AnimationRuntime Runtime;
+	Runtime.SetValue(35, EUiAnimProperty::POS_X, 0.0f);
+	SUiAnimRequest Request = MakeQmAnimRequest(35, EUiAnimProperty::POS_X, 1.0f, 1.0f, 1, EUiAnimInterruptPolicy::REPLACE, 66);
+	Request.m_Transition.m_Clock = EUiAnimClock::LOGIC;
+	ASSERT_TRUE(Runtime.RequestAnimation(Request));
+
+	// 走一个逻辑步到 0.1，但下一逻辑步的进度为 0：展示值仍停在步起点。
+	Runtime.Advance(0.01f, 0.1f, 0.0f);
+	EXPECT_NEAR(Runtime.GetValue(35, EUiAnimProperty::POS_X), 0.0f, 0.0001f);
+	// 没有新的逻辑步，只靠渲染帧把展示值插值到 0.05。
+	Runtime.Advance(0.01f, 0.0f, 0.5f);
+	EXPECT_NEAR(Runtime.GetValue(35, EUiAnimProperty::POS_X), 0.05f, 0.0001f);
+	Runtime.Advance(0.01f, 0.0f, 1.0f);
+	EXPECT_NEAR(Runtime.GetValue(35, EUiAnimProperty::POS_X), 0.1f, 0.0001f);
+}

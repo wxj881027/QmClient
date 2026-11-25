@@ -77,14 +77,32 @@ constexpr float QmUiRenderDeltaSeconds(float Dt)
 // （6 步），避免加载/系统弹窗后的首个可见帧把页切换直接推到终点。
 inline constexpr float QM_UI_LOGIC_STEP_SEC = 1.0f / 60.0f;
 inline constexpr float QM_UI_LOGIC_MAX_CATCHUP_SEC = 0.1f;
-inline float QmUiAdvanceLogicClock(float &AccumulatorSec, float RealDeltaSec)
+struct SQmUiLogicStep
 {
+	// 本帧消费掉的完整逻辑步数对应的时间。
+	float m_Seconds = 0.0f;
+	// 下一逻辑步已经走过的比例 [0,1)；渲染帧用它做插值，避免高刷屏
+	// 看到的动画只在 60 Hz 更新。
+	float m_Fraction = 1.0f;
+};
+inline SQmUiLogicStep QmUiAdvanceLogicClockStep(float &AccumulatorSec, float RealDeltaSec)
+{
+	SQmUiLogicStep Step;
 	if(!std::isfinite(RealDeltaSec) || RealDeltaSec <= 0.0f)
-		return 0.0f;
+	{
+		Step.m_Fraction = std::clamp(AccumulatorSec / QM_UI_LOGIC_STEP_SEC, 0.0f, 1.0f);
+		return Step;
+	}
 	AccumulatorSec = std::min(AccumulatorSec + std::min(RealDeltaSec, QM_UI_LOGIC_MAX_CATCHUP_SEC * 2.0f), QM_UI_LOGIC_MAX_CATCHUP_SEC);
 	const int Steps = (int)(AccumulatorSec / QM_UI_LOGIC_STEP_SEC);
 	AccumulatorSec -= Steps * QM_UI_LOGIC_STEP_SEC;
-	return Steps * QM_UI_LOGIC_STEP_SEC;
+	Step.m_Seconds = Steps * QM_UI_LOGIC_STEP_SEC;
+	Step.m_Fraction = std::clamp(AccumulatorSec / QM_UI_LOGIC_STEP_SEC, 0.0f, 1.0f);
+	return Step;
+}
+inline float QmUiAdvanceLogicClock(float &AccumulatorSec, float RealDeltaSec)
+{
+	return QmUiAdvanceLogicClockStep(AccumulatorSec, RealDeltaSec).m_Seconds;
 }
 
 // 加载画面允许比后台预热吃得更满，但仍必须给动态背景留出一个显示刷新周期。

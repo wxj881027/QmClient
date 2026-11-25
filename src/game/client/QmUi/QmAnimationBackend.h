@@ -220,7 +220,9 @@ public:
 	void Reset();
 	void Advance(float Dt);
 	// 分时钟推进：LOGIC 轨道只吃 DtLogic，其余轨道吃 DtVisual。
-	void Advance(float DtVisual, float DtLogic);
+	// LogicFraction 是下一逻辑步已走过的比例，用来把 LOGIC 轨道的展示值
+	// 插值到渲染帧，避免高刷屏上动画只在 60 Hz 跳变。
+	void Advance(float DtVisual, float DtLogic, float LogicFraction = 1.0f);
 
 	void SetValue(uint64_t NodeKey, EUiAnimProperty Property, float Value);
 	float GetValue(uint64_t NodeKey, EUiAnimProperty Property, float DefaultValue = 0.0f) const;
@@ -281,6 +283,10 @@ private:
 		float m_RestTimerSec = 0.0f;
 		SUiAnimTransition m_Transition;
 		EUiAnimClock m_Clock = EUiAnimClock::RENDER;
+		// LOGIC 轨道：本逻辑步开始时的值，渲染帧在它与 m_Current 之间插值。
+		float m_StepStartValue = 0.0f;
+		// 对外读取的展示值（渲染帧插值结果）。
+		float m_DisplayValue = 0.0f;
 		uint32_t m_TrackId = 0;
 		FCustomEasing m_pfnCustomEasing = nullptr;
 		void *m_pCustomEasingUser = nullptr;

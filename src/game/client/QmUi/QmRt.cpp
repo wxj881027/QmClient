@@ -70,7 +70,7 @@ void CUiRuntimeV2::OnRender()
 	m_FrameDt = Dt;
 	// 状态动画（页/页签切换、弹层开合）走固定逻辑步长；纯视觉插值继续用
 	// 截断后的渲染时间，长帧不会让状态过渡跳帧，也不会让淡入变成瞬切。
-	const float LogicDt = QmUiAdvanceLogicClock(m_LogicClockAccumulatorSec, RealDt);
+	const SQmUiLogicStep LogicStep = QmUiAdvanceLogicClockStep(m_LogicClockAccumulatorSec, RealDt);
 
 	float TreeBeginMs = 0.0f;
 	float AnimAdvanceMs = 0.0f;
@@ -79,7 +79,7 @@ void CUiRuntimeV2::OnRender()
 
 	{
 		CPerfTimer StageTimer(TimingEnabled);
-		m_AnimRuntime.Advance(Dt, LogicDt);
+		m_AnimRuntime.Advance(Dt, LogicStep.m_Seconds, LogicStep.m_Fraction);
 		AnimAdvanceMs = StageTimer.ElapsedMs();
 		LogPerfStage(m_pGameClient->Client(), m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr, "anim_advance", AnimAdvanceMs);
 	}

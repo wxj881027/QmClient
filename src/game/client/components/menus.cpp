@@ -4814,6 +4814,12 @@ void CMenus::Render()
 			}
 			const CUIRect MainViewClip = MainView;
 			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"));
+			if(PerfDebugEnabled() && TransitionStrength > 0.0f)
+			{
+				char aPayload[160];
+				str_format(aPayload, sizeof(aPayload), "event=menu_switch_strength value=%.5f node=menu_page_switch", TransitionStrength);
+				QmPerfLogPayload("perf/menu-switch", aPayload, Client(), "menu");
+			}
 			const bool TransitionActive = TransitionStrength > 0.0f && m_MenuPageTransitionDirection != 0.0f;
 			const bool ContentTransitionActive = TransitionActive && m_MenuPage != PAGE_SETTINGS;
 			const char *pPageName = MenuPageName(m_MenuPage);
