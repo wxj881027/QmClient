@@ -84,16 +84,6 @@ namespace
 		return str_comp_nocase(g_Config.m_GfxBackend, "OpenGL") == 0;
 	}
 
-	struct SHudTextInfoLayout
-	{
-		float m_FpsX = 0.0f;
-		float m_FpsY = 5.0f;
-		float m_PredX = 0.0f;
-		float m_PredY = 5.0f;
-		float m_LossX = 0.0f;
-		float m_LossY = 5.0f;
-	};
-
 	ColorRGBA GetPredictionNetworkColor(float PacketLoss, bool ConnectionProblems)
 	{
 		if(ConnectionProblems || PacketLoss >= 5.0f)
@@ -101,107 +91,6 @@ namespace
 		if(PacketLoss >= 1.0f)
 			return ColorRGBA(1.0f, 0.74f, 0.18f, 1.0f);
 		return ColorRGBA(0.35f, 1.0f, 0.38f, 1.0f);
-	}
-
-	ColorRGBA GetPredictionMarginColor(IClient::EPredictionMarginState PredictionMarginState)
-	{
-		switch(PredictionMarginState)
-		{
-		case IClient::EPredictionMarginState::UNSTABLE:
-			return ColorRGBA(1.0f, 0.25f, 0.18f, 1.0f);
-		case IClient::EPredictionMarginState::IGNORED_SPIKE:
-			return ColorRGBA(1.0f, 0.90f, 0.18f, 1.0f);
-		case IClient::EPredictionMarginState::STABLE:
-			return ColorRGBA(0.35f, 1.0f, 0.38f, 1.0f);
-		}
-		return ColorRGBA(0.35f, 1.0f, 0.38f, 1.0f);
-	}
-
-	SHudTextInfoLayout ComputeHudTextInfoLayoutV2(bool ShowFps, bool ShowPred, bool ShowLoss, bool UseMiniLayout, float HudWidth, float MiniX, float MiniY, float MiniW, float MiniH, float FpsWidth, float PredWidth, float LossWidth, std::vector<SUiLayoutChild> &vChildrenScratch)
-	{
-		SHudTextInfoLayout Result;
-		if(!ShowFps && !ShowPred && !ShowLoss)
-			return Result;
-
-		CUiV2LayoutEngine LayoutEngine;
-		std::vector<SUiLayoutChild> &vChildren = vChildrenScratch;
-		vChildren.clear();
-		vChildren.reserve(3);
-
-		if(ShowFps)
-		{
-			SUiLayoutChild Child;
-			Child.m_Style.m_Width = SUiLength::Px(FpsWidth);
-			Child.m_Style.m_Height = SUiLength::Px(10.0f);
-			vChildren.push_back(Child);
-		}
-		if(ShowPred)
-		{
-			SUiLayoutChild Child;
-			Child.m_Style.m_Width = SUiLength::Px(PredWidth);
-			Child.m_Style.m_Height = SUiLength::Px(10.0f);
-			vChildren.push_back(Child);
-		}
-		if(ShowLoss)
-		{
-			SUiLayoutChild Child;
-			Child.m_Style.m_Width = SUiLength::Px(LossWidth);
-			Child.m_Style.m_Height = SUiLength::Px(10.0f);
-			vChildren.push_back(Child);
-		}
-
-		SUiStyle ContainerStyle;
-		SUiLayoutBox ContainerBox;
-		const bool HasMultipleLines = vChildren.size() > 1;
-		if(UseMiniLayout)
-		{
-			ContainerStyle.m_Axis = EUiAxis::ROW;
-			ContainerStyle.m_Gap = HasMultipleLines ? 6.0f : 0.0f;
-			ContainerStyle.m_AlignItems = EUiAlign::START;
-			ContainerStyle.m_JustifyContent = EUiAlign::START;
-
-			const float TotalWidth = FpsWidth + PredWidth + LossWidth + ContainerStyle.m_Gap * maximum(0, (int)vChildren.size() - 1);
-			ContainerBox.m_X = MiniX + MiniW - TotalWidth;
-			ContainerBox.m_Y = MiniY + MiniH + 4.0f;
-			ContainerBox.m_W = TotalWidth;
-			ContainerBox.m_H = 10.0f;
-		}
-		else
-		{
-			ContainerStyle.m_Axis = EUiAxis::COLUMN;
-			ContainerStyle.m_Gap = HasMultipleLines ? 3.0f : 0.0f;
-			ContainerStyle.m_AlignItems = EUiAlign::END;
-			ContainerStyle.m_JustifyContent = EUiAlign::START;
-
-			const float MaxWidth = maximum(maximum(FpsWidth, PredWidth), LossWidth);
-			ContainerBox.m_X = HudWidth - 10.0f - MaxWidth;
-			ContainerBox.m_Y = 5.0f;
-			ContainerBox.m_W = MaxWidth;
-			ContainerBox.m_H = (float)vChildren.size() * 10.0f + (float)maximum(0, (int)vChildren.size() - 1) * ContainerStyle.m_Gap;
-		}
-
-		LayoutEngine.ComputeChildren(ContainerStyle, ContainerBox, vChildren);
-
-		size_t ChildIndex = 0;
-		if(ShowFps && ChildIndex < vChildren.size())
-		{
-			Result.m_FpsX = vChildren[ChildIndex].m_Box.m_X;
-			Result.m_FpsY = vChildren[ChildIndex].m_Box.m_Y;
-			++ChildIndex;
-		}
-		if(ShowPred && ChildIndex < vChildren.size())
-		{
-			Result.m_PredX = vChildren[ChildIndex].m_Box.m_X;
-			Result.m_PredY = vChildren[ChildIndex].m_Box.m_Y;
-			++ChildIndex;
-		}
-		if(ShowLoss && ChildIndex < vChildren.size())
-		{
-			Result.m_LossX = vChildren[ChildIndex].m_Box.m_X;
-			Result.m_LossY = vChildren[ChildIndex].m_Box.m_Y;
-		}
-
-		return Result;
 	}
 
 	uint64_t HudLocalTimeNodeKey(const char *pScope)
@@ -1162,7 +1051,7 @@ CHud::CHud()
 	m_DDRaceEffectsTextContainerIndex.Reset();
 	m_PlayerAngleTextContainerIndex.Reset();
 	m_PlayerPrevAngle = -INFINITY;
-	m_TextInfoDiagnostics.Reset();
+	m_DiagnosticLossSignature = UINT64_MAX;
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
@@ -1172,7 +1061,6 @@ CHud::CHud()
 	m_SwitchCountdownTracker.Reset();
 	m_HookCountdownRing.Reset();
 	m_MediaIslandMuteState.Reset();
-	m_vTextInfoLayoutChildrenScratch.reserve(2);
 	m_vLocalTimeLayoutChildrenScratch.resize(1);
 
 	for(int i = 0; i < 2; i++)
@@ -1239,7 +1127,6 @@ void CHud::ResetHudContainers()
 		ScoreInfo.Reset();
 	}
 
-	TextRender()->DeleteTextContainer(m_FPSTextContainerIndex);
 	TextRender()->DeleteTextContainer(m_DDRaceEffectsTextContainerIndex);
 	TextRender()->DeleteTextContainer(m_PlayerAngleTextContainerIndex);
 	m_PlayerPrevAngle = -INFINITY;
@@ -1251,7 +1138,7 @@ void CHud::ResetHudContainers()
 		m_aPlayerPrevPosition[i] = -INFINITY;
 	}
 
-	m_TextInfoDiagnostics.Reset();
+	m_DiagnosticLossSignature = UINT64_MAX;
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
@@ -2310,169 +2197,50 @@ void CHud::RenderDummyMiniMap()
 
 void CHud::RenderTextInfo()
 {
-	int Showfps = g_Config.m_ClShowPerf;
-#if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current())
-		Showfps = 0;
-#endif
-	const bool Showpred = g_Config.m_ClShowPerf && Client()->State() != IClient::STATE_DEMOPLAYBACK;
 	const bool ShowLoss = g_Config.m_ClShowPacketLoss && Client()->State() != IClient::STATE_DEMOPLAYBACK;
-
-	float MiniX = 0.0f;
-	float MiniY = 0.0f;
-	float MiniW = 0.0f;
-	float MiniH = 0.0f;
-	const bool HasMiniMap = GetDummyMiniMapRect(MiniX, MiniY, MiniW, MiniH);
-
-	char aFpsBuf[16] = {0};
-	char aPredBuf[64] = {0};
-	char aLossBuf[16] = {0};
-	constexpr float TextInfoFontSize = ui_token::hud::font::BODY;
-	float FpsTextWidth = 0.0f;
-	float FpsWidth = 0.0f;
-	float PredWidth = 0.0f;
-	float LossWidth = 0.0f;
-	if(Showfps)
-	{
-		const int FramesPerSecond = round_to_int(1.0f / Client()->FrameTimeAverage());
-		str_format(aFpsBuf, sizeof(aFpsBuf), "%d", FramesPerSecond);
-
-		// 预留四位数的宽度，实际数字直接右对齐，位数变化不移动 HUD 锚点。
-		FpsTextWidth = TextRender()->TextWidth(TextInfoFontSize, aFpsBuf);
-		FpsWidth = maximum(FpsTextWidth, TextRender()->TextWidth(TextInfoFontSize, "0000"));
-	}
-	if(Showpred)
-	{
-		str_format(aPredBuf, sizeof(aPredBuf), "%d", Client()->GetPredictionTime());
-		PredWidth = TextRender()->TextWidth(TextInfoFontSize, aPredBuf, -1, -1.0f);
-	}
-	const float PacketLoss = Client()->PacketLoss();
-	const ColorRGBA PredictionMarginColor = GetPredictionMarginColor(Client()->PredictionMarginState());
+	char aLoss[16] = "";
+	float X = 0.0f;
+	float Y = 5.0f;
 	if(ShowLoss)
 	{
-		str_format(aLossBuf, sizeof(aLossBuf), "%.1f%%", PacketLoss);
-		LossWidth = TextRender()->TextWidth(TextInfoFontSize, aLossBuf, -1, -1.0f);
-	}
+		const float PacketLoss = Client()->PacketLoss();
+		str_format(aLoss, sizeof(aLoss), "%.1f%%", PacketLoss);
+		constexpr float FontSize = ui_token::hud::font::BODY;
+		const float Width = TextRender()->TextWidth(FontSize, aLoss);
+		X = m_Width - 10.0f - Width;
 
-	const SHudTextInfoLayout Layout = ComputeHudTextInfoLayoutV2(Showfps, Showpred, ShowLoss, HasMiniMap, m_Width, MiniX, MiniY, MiniW, MiniH, FpsWidth, PredWidth, LossWidth, m_vTextInfoLayoutChildrenScratch);
-	const float FpsX = Layout.m_FpsX + FpsWidth - FpsTextWidth;
-	CHudEditor::STransformScope TextInfoScope;
-	if(Showfps || Showpred || ShowLoss)
-	{
-		bool BoundsInitialized = false;
-		float BoundsX = 0.0f;
-		float BoundsY = 0.0f;
-		float BoundsW = 0.0f;
-		float BoundsH = 0.0f;
-		const auto ExtendBounds = [&](float X, float Y, float W, float H) {
-			if(W <= 0.0f || H <= 0.0f)
-				return;
-			if(!BoundsInitialized)
-			{
-				BoundsX = X;
-				BoundsY = Y;
-				BoundsW = W;
-				BoundsH = H;
-				BoundsInitialized = true;
-				return;
-			}
-			const float Right = maximum(BoundsX + BoundsW, X + W);
-			const float Bottom = maximum(BoundsY + BoundsH, Y + H);
-			BoundsX = minimum(BoundsX, X);
-			BoundsY = minimum(BoundsY, Y);
-			BoundsW = Right - BoundsX;
-			BoundsH = Bottom - BoundsY;
-		};
-
-		if(Showfps)
-			ExtendBounds(Layout.m_FpsX, Layout.m_FpsY, FpsWidth, TextInfoFontSize);
-		if(Showpred)
-			ExtendBounds(Layout.m_PredX, Layout.m_PredY, PredWidth, TextInfoFontSize);
-		if(ShowLoss)
-			ExtendBounds(Layout.m_LossX, Layout.m_LossY, LossWidth, TextInfoFontSize);
-		if(BoundsInitialized)
-			TextInfoScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::TextInfo, {BoundsX - 2.0f, BoundsY - 2.0f, BoundsW + 4.0f, BoundsH + 4.0f});
-	}
-
-	if(Showfps)
-	{
-		CTextCursor Cursor;
-		Cursor.SetPosition(vec2(FpsX, Layout.m_FpsY));
-		Cursor.m_FontSize = TextInfoFontSize;
-		auto OldFlags = TextRender()->GetRenderFlags();
-		TextRender()->SetRenderFlags(OldFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
-		if(m_FPSTextContainerIndex.Valid())
-			TextRender()->RecreateTextContainerSoft(m_FPSTextContainerIndex, &Cursor, aFpsBuf);
-		else
-			TextRender()->CreateTextContainer(m_FPSTextContainerIndex, &Cursor, aFpsBuf);
-		TextRender()->SetRenderFlags(OldFlags);
-		if(m_FPSTextContainerIndex.Valid())
+		float MiniX, MiniY, MiniW, MiniH;
+		if(GetDummyMiniMapRect(MiniX, MiniY, MiniW, MiniH))
 		{
-			TextRender()->RenderTextContainer(m_FPSTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor());
+			X = MiniX + MiniW - Width;
+			Y = MiniY + MiniH + 4.0f;
 		}
-	}
-	if(Showpred)
-	{
-		const ColorRGBA OldColor = TextRender()->GetTextColor();
-		const ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
-		TextRender()->TextColor(PredictionMarginColor);
-		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
-		TextRender()->Text(Layout.m_PredX, Layout.m_PredY, TextInfoFontSize, aPredBuf, -1.0f);
-		TextRender()->TextColor(OldColor);
-		TextRender()->TextOutlineColor(OldOutlineColor);
-	}
-	if(ShowLoss)
-	{
-		const ColorRGBA OldColor = TextRender()->GetTextColor();
-		const ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
+
+		const auto Scope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::TextInfo, {X - 2.0f, Y - 2.0f, Width + 4.0f, FontSize + 4.0f});
+		const CUiScopedTextRenderState TextState(*TextRender());
 		TextRender()->TextColor(GetPredictionNetworkColor(PacketLoss, Client()->ConnectionProblems()));
 		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
-		TextRender()->Text(Layout.m_LossX, Layout.m_LossY, TextInfoFontSize, aLossBuf, -1.0f);
-		TextRender()->TextColor(OldColor);
-		TextRender()->TextOutlineColor(OldOutlineColor);
+		TextRender()->Text(X, Y, FontSize, aLoss, -1.0f);
+		GameClient()->m_HudEditor.EndTransform(Scope);
 	}
 
 	if(QmMacosGraphicsDiagnosticsEnabled())
 	{
-		const auto AlphaBucket = [](float Alpha) { return std::clamp((int)std::round(Alpha * 10.0f), 0, 10); };
-		const auto PositionBucket = [](float Position) { return std::clamp((int)std::round(Position), -32768, 32767); };
-		const auto LogTextInfo = [&](const char *pName, uint64_t &LastSignature, bool Enabled, bool Rendered, float TargetAlpha, float ResolvedAlpha, float TargetX, float TargetY, float ResolvedX, float ResolvedY, int ContainerIndex, bool ContainerValid, const char *pText) {
-			auto AppendSignature = [](uint64_t Signature, int Value) {
-				return (Signature ^ static_cast<uint32_t>(Value)) * 1099511628211ULL;
-			};
-			uint64_t Signature = 1469598103934665603ULL;
-			Signature = AppendSignature(Signature, Enabled ? 1 : 0);
-			Signature = AppendSignature(Signature, Rendered ? 1 : 0);
-			Signature = AppendSignature(Signature, ContainerValid ? 1 : 0);
-			Signature = AppendSignature(Signature, AlphaBucket(TargetAlpha));
-			Signature = AppendSignature(Signature, AlphaBucket(ResolvedAlpha));
-			Signature = AppendSignature(Signature, PositionBucket(TargetX));
-			Signature = AppendSignature(Signature, PositionBucket(TargetY));
-			Signature = AppendSignature(Signature, PositionBucket(ResolvedX));
-			Signature = AppendSignature(Signature, PositionBucket(ResolvedY));
-			Signature = AppendSignature(Signature, ContainerIndex);
-			Signature = AppendSignature(Signature, str_length(pText != nullptr ? pText : ""));
-			if(Signature == LastSignature)
-				return;
+		const auto PositionBucket = [](float Position) { return std::clamp(round_to_int(Position), -32768, 32767); };
+		const int aFields[] = {ShowLoss, PositionBucket(X), PositionBucket(Y), str_length(aLoss)};
+		uint64_t Signature = 1469598103934665603ULL;
+		for(int Field : aFields)
+			Signature = (Signature ^ static_cast<uint32_t>(Field)) * 1099511628211ULL;
+		if(Signature != m_DiagnosticLossSignature)
+		{
 			char aPayload[384];
-			str_format(aPayload, sizeof(aPayload), "event=hud_text_info item=%s enabled=%d rendered=%d target_alpha=%.3f resolved_alpha=%.3f target_x=%.1f target_y=%.1f resolved_x=%.1f resolved_y=%.1f text_container=%d text_container_valid=%d text_len=%d",
-				pName, Enabled ? 1 : 0, Rendered ? 1 : 0, TargetAlpha, ResolvedAlpha, TargetX, TargetY, ResolvedX, ResolvedY,
-				ContainerIndex, ContainerValid ? 1 : 0, str_length(pText != nullptr ? pText : ""));
+			const float Alpha = ShowLoss ? 1.0f : 0.0f;
+			str_format(aPayload, sizeof(aPayload), "event=hud_text_info item=loss enabled=%d rendered=%d target_alpha=%.3f resolved_alpha=%.3f target_x=%.1f target_y=%.1f resolved_x=%.1f resolved_y=%.1f text_container=-1 text_container_valid=0 text_len=%d",
+				ShowLoss, ShowLoss, Alpha, Alpha, X, Y, X, Y, str_length(aLoss));
 			QmMacosGraphicsDiagnosticsLogPayload("perf/autodiag_hud", aPayload, Client());
-			LastSignature = Signature;
-		};
-		const float FpsAlpha = Showfps ? 1.0f : 0.0f;
-		const float PredAlpha = Showpred ? 1.0f : 0.0f;
-		const float LossAlpha = ShowLoss ? 1.0f : 0.0f;
-		LogTextInfo("fps", m_TextInfoDiagnostics.m_DiagnosticFpsSignature, Showfps, Showfps, FpsAlpha, FpsAlpha,
-			FpsX, Layout.m_FpsY, FpsX, Layout.m_FpsY, m_FPSTextContainerIndex.m_Index, m_FPSTextContainerIndex.Valid(), aFpsBuf);
-		LogTextInfo("pred", m_TextInfoDiagnostics.m_DiagnosticPredSignature, Showpred, Showpred, PredAlpha, PredAlpha,
-			Layout.m_PredX, Layout.m_PredY, Layout.m_PredX, Layout.m_PredY, -1, false, aPredBuf);
-		LogTextInfo("loss", m_TextInfoDiagnostics.m_DiagnosticLossSignature, ShowLoss, ShowLoss, LossAlpha, LossAlpha,
-			Layout.m_LossX, Layout.m_LossY, Layout.m_LossX, Layout.m_LossY, -1, false, aLossBuf);
+			m_DiagnosticLossSignature = Signature;
+		}
 	}
-
-	GameClient()->m_HudEditor.EndTransform(TextInfoScope);
 
 	if(GameClient()->m_FastPractice.Enabled())
 	{

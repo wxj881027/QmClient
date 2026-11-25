@@ -430,12 +430,14 @@ inline EQmDiagnosticCause QmDeterminePrimaryCause(const SQmNetworkMetrics &Net, 
 	return EQmDiagnosticCause::NONE;
 }
 
-inline SQmMonitoringHudLayout QmComputeMonitoringHudLayout(float ScreenWidth, float ScreenHeight, float GraphX, float GraphSpacing)
+inline SQmMonitoringHudLayout QmComputeMonitoringHudLayout(float ScreenWidth, float ScreenHeight)
 {
 	using namespace ui_token::hud::debug_graph;
 	const float Scale = std::max(0.0f, std::min({QmComputeMonitoringUiScale(ScreenWidth, ScreenHeight), ScreenWidth / WIDTH, ScreenHeight / HEIGHT}));
 	const float Width = WIDTH * Scale;
 	const float Height = HEIGHT * Scale;
+	const float GraphSpacing = std::round(ScreenWidth / 100.0f);
+	const float GraphX = ScreenWidth - GraphSpacing;
 	const float Left = std::clamp(GraphX - GraphSpacing - Width, 0.0f, std::max(0.0f, ScreenWidth - Width));
 	const float Top = std::clamp(GraphSpacing * 2.0f, 0.0f, std::max(0.0f, ScreenHeight - Height));
 	return {{Left, Top, Width, Height}, Scale};

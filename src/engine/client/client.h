@@ -352,7 +352,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// time
 	CSmoothTime m_aGameTime[NUM_DUMMIES];
 	CSmoothTime m_PredictedTime;
-	EPredictionMarginState m_PredictionMarginState = EPredictionMarginState::STABLE;
 
 	// input
 	struct // TODO: handle input better
@@ -379,7 +378,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// graphs
 	CGraph m_aInputtimeMarginGraphs[NUM_DUMMIES];
 	CGraph m_aGametimeMarginGraphs[NUM_DUMMIES];
-	CGraph m_FpsGraph;
 	float m_aLastGameTimeMarginMs[NUM_DUMMIES] = {0.0f, 0.0f};
 
 	// the game snapshots are modifiable by the game
@@ -630,7 +628,6 @@ public:
 	int GetPredictionTime() override;
 	CSnapItem SnapGetItem(int SnapId, int Index) const override;
 	int GetPredictionTick() override;
-	EPredictionMarginState PredictionMarginState() const override;
 	float PingMs() const override;
 	float PredictionLeadMs() const override;
 	float PredictionMarginMs() const override;

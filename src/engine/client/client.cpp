@@ -713,8 +713,7 @@ CSnapshotDelta *CClient::SnapshotDelta()
 CClient::CClient() :
 	m_DemoPlayer(&m_SnapshotDelta, &m_SnapshotDeltaSixup, true, [&]() { UpdateDemoIntraTimers(); }),
 	m_aInputtimeMarginGraphs{{128, 2, true}, {128, 2, true}},
-	m_aGametimeMarginGraphs{{128, 2, true}, {128, 2, true}},
-	m_FpsGraph(4096, 0, true)
+	m_aGametimeMarginGraphs{{128, 2, true}, {128, 2, true}}
 {
 	m_StateStartTime = time_get();
 	for(auto &DemoRecorder : m_aDemoRecorders)
@@ -2010,11 +2009,8 @@ void CClient::RenderGraphs()
 		return;
 
 	Graphics()->MapScreen(0, 0, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
-	const float GraphSpacing = std::round(Graphics()->ScreenWidth() / 100.0f);
-	const float GraphX = Graphics()->ScreenWidth() - GraphSpacing;
-
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	GameClient()->RenderQmMonitoringHud(GraphX, GraphSpacing);
+	GameClient()->RenderQmMonitoringHud();
 }
 
 void CClient::Restart()
@@ -3331,21 +3327,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			}
 
 			if(Target)
-			{
-				const CSmoothTime::EUpdateStatus UpdateStatus = m_PredictedTime.Update(&m_aInputtimeMarginGraphs[Conn], Target, TimeLeft, CSmoothTime::ADJUSTDIRECTION_UP);
-				switch(UpdateStatus)
-				{
-				case CSmoothTime::EUpdateStatus::IGNORED_SPIKE:
-					m_PredictionMarginState = EPredictionMarginState::IGNORED_SPIKE;
-					break;
-				case CSmoothTime::EUpdateStatus::UNSTABLE:
-					m_PredictionMarginState = EPredictionMarginState::UNSTABLE;
-					break;
-				case CSmoothTime::EUpdateStatus::STABLE:
-					m_PredictionMarginState = EPredictionMarginState::STABLE;
-					break;
-				}
-			}
+				m_PredictedTime.Update(&m_aInputtimeMarginGraphs[Conn], Target, TimeLeft, CSmoothTime::ADJUSTDIRECTION_UP);
 		}
 		else if(Msg == NETMSG_SNAP || Msg == NETMSG_SNAPSINGLE || Msg == NETMSG_SNAPEMPTY)
 		{
@@ -5202,9 +5184,6 @@ void CClient::Run()
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", aBuf, ColorRGBA(0.7f, 0.7f, 1.0f, 1.0f));
 	}
 
-	//
-	m_FpsGraph.Init(0.0f, 120.0f);
-
 	// never start with the editor
 	g_Config.m_ClEditor = 0;
 
@@ -5493,7 +5472,6 @@ void CClient::Run()
 				}
 				// update frametime
 				m_RenderFrameTime = (Now - m_LastRenderTime) / (float)time_freq();
-				m_FpsGraph.Add(1.0f / m_RenderFrameTime);
 
 				if(m_pBenchmarkFile)
 				{
@@ -9214,11 +9192,6 @@ int CClient::GetPredictionTick()
 		PredictionTick = GameTick(g_Config.m_ClDummy) + 1;
 	}
 	return PredictionTick;
-}
-
-IClient::EPredictionMarginState CClient::PredictionMarginState() const
-{
-	return m_PredictionMarginState;
 }
 
 void CClient::GetSmoothTick(int *pSmoothTick, float *pSmoothIntraTick, float MixAmount)
