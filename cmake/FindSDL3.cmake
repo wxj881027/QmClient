@@ -80,7 +80,12 @@ if(SDL3_FOUND)
         )
       endif()
     elseif(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
-      set(SDL3_COPY_DIRS "${EXTRA_SDL3_LIBDIR}/SDL3.framework")
+      # EXTRA_SDL3_LIBDIR 是相对源码根的路径（给 find_library 的 HINTS 用），
+      # 但 DLL/framework 的拷贝命令是在二进制目录里执行的，
+      # 相对路径会解析成 build/ddnet-libs/... 而当场失败。这里先绝对化。
+      get_filename_component(QM_SDL3_FRAMEWORK_DIR
+        "${EXTRA_SDL3_LIBDIR}/SDL3.framework" ABSOLUTE BASE_DIR "${PROJECT_SOURCE_DIR}")
+      set(SDL3_COPY_DIRS "${QM_SDL3_FRAMEWORK_DIR}")
     endif()
   endif()
   if(ANDROID)
