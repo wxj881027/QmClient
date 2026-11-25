@@ -1,10 +1,12 @@
 #include <base/time.h>
 
 #include <engine/client.h>
+#include <engine/storage.h>
 
 #include <game/client/components/player_points.h>
 
 #include <gtest/gtest.h>
+#include <test/test.h>
 
 #include <chrono>
 #include <memory>
@@ -52,6 +54,8 @@ namespace
 		int m_SubmitCalls = 0;
 		int m_JobSubmitCalls = 0;
 		int m_StoreCalls = 0;
+		int m_StorePlaytimeCalls = 0;
+		using CPlayerPoints::InitializeCache;
 		int64_t m_Now = time_freq();
 		bool StartJobs() { return m_Pool.TryInit(1); }
 		void StopJobs() { m_Pool.Shutdown(); }
@@ -82,11 +86,19 @@ namespace
 			return m_Pool.TryAdd(pJob);
 		}
 		int64_t Now() const noexcept override { return m_Now; }
-		void StoreToDb(const char *, int) override
+		void StoreToDb(const char *pName, int Points) override
 		{
 			++m_StoreCalls;
 			if(m_StoreThrows)
 				throw std::bad_alloc();
+			CPlayerPoints::StoreToDb(pName, Points);
+		}
+		void StorePlaytimeToDb(const char *pName, int64_t Hours) override
+		{
+			++m_StorePlaytimeCalls;
+			if(m_StoreThrows)
+				throw std::bad_alloc();
+			CPlayerPoints::StorePlaytimeToDb(pName, Hours);
 		}
 	};
 
@@ -102,6 +114,8 @@ namespace
 	class PlayerPointsController : public ::testing::Test
 	{
 	protected:
+		CTestInfo m_Info;
+		std::unique_ptr<IStorage> m_pStorage;
 		CPoints m_Points;
 		void SetUp() override { ASSERT_TRUE(m_Points.StartJobs()); }
 		void TearDown() override { m_Points.OnShutdown(); }
@@ -110,6 +124,28 @@ namespace
 			m_Points.m_pNext = std::make_shared<CResponse>();
 			m_Points.EnsureQueried(pName);
 			return m_Points.m_pNext;
+		}
+		void OpenDiskCache()
+		{
+			m_pStorage = m_Info.CreateTestStorage();
+			ASSERT_NE(m_pStorage, nullptr);
+			m_Points.InitializeCache(m_pStorage.get());
+		}
+		std::shared_ptr<CResponse> QueryPlaytime()
+		{
+			m_Points.m_pNext = std::make_shared<CResponse>();
+			m_Points.EnsurePlaytimeQueried("player");
+			return m_Points.m_pNext;
+		}
+		void PublishPlaytime(int64_t Seconds)
+		{
+			auto pRequest = QueryPlaytime();
+			const std::string Body = "{\"profile\":{\"name\":\"player\"},\"most_played_gametypes\":[{\"key\":\"Gores\",\"seconds_played\":" + std::to_string(Seconds) + "}]}";
+			ASSERT_NO_FATAL_FAILURE(pRequest->Finish(Body));
+			m_Points.OnRender();
+			ASSERT_FALSE(m_Points.m_vJobs.empty());
+			ASSERT_TRUE(WaitForJob(m_Points.m_vJobs.back()));
+			m_Points.OnRender();
 		}
 		void Publish(std::string_view Body)
 		{
@@ -325,4 +361,57 @@ TEST_F(PlayerPointsController, EmptyNamesDoNotStartRequests)
 	EXPECT_EQ(m_Points.GetPoints(nullptr).m_Status, EPointsStatus::NOT_REQUESTED);
 	EXPECT_EQ(m_Points.GetPoints("").m_Status, EPointsStatus::NOT_REQUESTED);
 	EXPECT_EQ(m_Points.m_FactoryCalls, 0);
+}
+
+TEST_F(PlayerPointsController, RestartKeepsDiskPlaytimeVisibleDuringFailedAndSuccessfulRefresh)
+{
+	ASSERT_NO_FATAL_FAILURE(OpenDiskCache());
+	ASSERT_NO_FATAL_FAILURE(Publish(R"({"points":{"points":42}})"));
+	ASSERT_NO_FATAL_FAILURE(PublishPlaytime(360000));
+	ASSERT_EQ(m_Points.GetPlaytime("player").m_Hours, 100);
+	m_Points.OnShutdown();
+	m_Points.InitializeCache(m_pStorage.get());
+	ASSERT_EQ(m_Points.GetPlaytime("player").m_Status, EPointsStatus::READY);
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Hours, 100);
+	EXPECT_EQ(m_Points.GetPoints("player").m_Points, 42);
+	auto pRefresh = QueryPlaytime();
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Status, EPointsStatus::READY);
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Hours, 100);
+	ASSERT_NO_FATAL_FAILURE(pRefresh->Finish("", EHttpState::ERROR, 503));
+	m_Points.OnRender();
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Status, EPointsStatus::READY);
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Hours, 100);
+	EXPECT_EQ(m_Points.m_StorePlaytimeCalls, 1);
+	m_Points.AdvanceSeconds(30);
+	ASSERT_NO_FATAL_FAILURE(PublishPlaytime(720000));
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Hours, 200);
+	m_Points.OnShutdown();
+	m_Points.InitializeCache(m_pStorage.get());
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Hours, 200);
+	EXPECT_EQ(m_Points.GetPoints("player").m_Points, 42);
+}
+
+TEST_F(PlayerPointsController, MissingRecordZeroIsPersistedAcrossRestart)
+{
+	ASSERT_NO_FATAL_FAILURE(OpenDiskCache());
+	auto pRequest = QueryPlaytime();
+	ASSERT_NO_FATAL_FAILURE(pRequest->Finish("", EHttpState::ERROR, 404));
+	m_Points.OnRender();
+	ASSERT_EQ(m_Points.m_StorePlaytimeCalls, 1);
+	m_Points.OnShutdown();
+	m_Points.InitializeCache(m_pStorage.get());
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Status, EPointsStatus::READY);
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Hours, 0);
+	EXPECT_EQ(m_Points.GetPoints("player").m_Status, EPointsStatus::NOT_REQUESTED);
+}
+
+TEST_F(PlayerPointsController, PlaytimePersistenceFailureKeepsPublishedMemoryResult)
+{
+	m_Points.m_StoreThrows = true;
+	ASSERT_NO_FATAL_FAILURE(PublishPlaytime(360000));
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Status, EPointsStatus::READY);
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Hours, 100);
+	m_Points.EnsurePlaytimeQueried("player");
+	EXPECT_EQ(m_Points.m_FactoryCalls, 1);
+	EXPECT_EQ(m_Points.m_StorePlaytimeCalls, 1);
 }
