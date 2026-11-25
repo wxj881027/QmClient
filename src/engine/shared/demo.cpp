@@ -454,12 +454,11 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 			return;
 
 		// create delta
-		CSnapshotDeltaBuffer DeltaData;
-		const int DeltaSize = m_pSnapshotDelta->CreateDelta(m_LastSnapshotData.AsSnapshot(), (CSnapshot *)pData, DeltaData.Data(), sizeof(DeltaData.m_aData));
+		const int DeltaSize = m_pSnapshotDelta->CreateDelta(m_LastSnapshotData.AsSnapshot(), (CSnapshot *)pData, m_DeltaBuffer.Data(), sizeof(m_DeltaBuffer.m_aData));
 		if(DeltaSize > 0)
 		{
 			// record delta
-			if(Write(CHUNKTYPE_DELTA, DeltaData.m_aData, DeltaSize))
+			if(Write(CHUNKTYPE_DELTA, m_DeltaBuffer.Data(), DeltaSize))
 				mem_copy(&m_LastSnapshotData, pData, Size);
 		}
 		else if(DeltaSize < 0)
@@ -1821,7 +1820,10 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 
 bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser)
 {
-	CDemoPlayer DemoPlayer(m_pSnapshotDelta, m_pSnapshotDeltaSixup, false, m_pMapDataOperations, CDemoPlayer::ETimeMode::UNCACHED);
+	// 播放器约 322KB、记录器约 65KB：macOS/iOS 的普通线程栈只有 512KB，作业线程正是
+	// 这种栈，放栈上必然撞保护页（表现为 SIGBUS）。两者都放堆上，用法保持不变。
+	const auto pDemoPlayerOwner = std::make_unique<CDemoPlayer>(m_pSnapshotDelta, m_pSnapshotDeltaSixup, false, m_pMapDataOperations, CDemoPlayer::ETimeMode::UNCACHED);
+	CDemoPlayer &DemoPlayer = *pDemoPlayerOwner;
 	struct CPlayerGuard
 	{
 		CDemoPlayer &m_Player;
@@ -1879,7 +1881,8 @@ bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vect
 	}
 
 	demo_output::CTransaction Output(m_pOutputOperations);
-	CDemoRecorder DemoRecorder(DemoPlayer.IsSixup() ? m_pSnapshotDeltaSixup : m_pSnapshotDelta, false, m_pRecordOperations);
+	const auto pDemoRecorderOwner = std::make_unique<CDemoRecorder>(DemoPlayer.IsSixup() ? m_pSnapshotDeltaSixup : m_pSnapshotDelta, false, m_pRecordOperations);
+	CDemoRecorder &DemoRecorder = *pDemoRecorderOwner;
 	struct CRecorderGuard
 	{
 		CDemoRecorder &m_Recorder;
