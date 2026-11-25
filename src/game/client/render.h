@@ -145,6 +145,21 @@ public:
 		m_SkinMetrics = TeeRenderInfo.m_SkinMetrics;
 	}
 
+	void ApplyNinjaSkin(const CTeeRenderInfo &Ninja, const CTeeRenderInfo &Original, int SixupIndex, bool TeamPlay, bool ColorFreeze, bool ColorFreezeFeet, int DarkenPercent)
+	{
+		if(!TeamPlay)
+		{
+			const ColorRGBA White(1, 1, 1, 1);
+			const ColorRGBA Body = Original.m_CustomColoredSkin ? Original.m_ColorBody : Original.m_BloodColor;
+			const float Darken = (DarkenPercent / 100.0f) * 0.5f + 0.5f;
+			m_ColorBody = ColorFreeze ? ColorRGBA(Body.r * Darken, Body.g * Darken, Body.b * Darken, 1.0f) : White;
+			m_ColorFeet = ColorFreeze && ColorFreezeFeet ? Original.m_ColorFeet : White;
+		}
+		m_CustomColoredSkin = TeamPlay || ColorFreeze;
+		m_aSixup[SixupIndex].Reset();
+		ApplySkin(Ninja);
+	}
+
 	void ResetMissingDescriptorBranches(const unsigned Flags)
 	{
 		if(!(Flags & CSkinDescriptor::FLAG_SIX))
@@ -394,6 +409,13 @@ enum class ESkinChangeTransitionAction
 	START,
 	CANCEL,
 };
+
+// 预览中配色变化也复用皮肤过渡；关闭自定义颜色时忽略未使用的颜色值。
+inline bool SkinPreviewColorsChanged(const CTeeRenderInfo &Previous, const CTeeRenderInfo &Current)
+{
+	return Previous.m_CustomColoredSkin != Current.m_CustomColoredSkin ||
+	       (Current.m_CustomColoredSkin && (Previous.m_ColorBody != Current.m_ColorBody || Previous.m_ColorFeet != Current.m_ColorFeet));
+}
 
 inline ESkinChangeTransitionAction ResolveSkinChangeTransitionAction(bool HasPreviousAppearance, bool SkinChanged, bool AppearanceChanged)
 {

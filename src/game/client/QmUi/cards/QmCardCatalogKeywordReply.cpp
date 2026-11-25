@@ -6,11 +6,11 @@
 #include <engine/shared/localization.h>
 #include <engine/textrender.h>
 
-#include <game/client/QmUi/SettingsChoiceGrid.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/menus.h>
+#include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/localization.h>
 
@@ -36,8 +36,9 @@ struct SAutoReplyRuleInputRow
 	int m_AutoRename = 0;
 	int m_Regex = 0;
 	std::string m_TriggerId;
-	std::string m_OptionsId;
 	std::string m_ReplyId;
+	CButtonContainer m_RenameButton;
+	CButtonContainer m_RegexButton;
 	CButtonContainer m_RemoveButton;
 	CLineInputBuffered<512> m_TriggerInput;
 	CLineInputBuffered<256> m_ReplyInput;
@@ -99,7 +100,6 @@ static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const
 	auto pRow = std::make_unique<SAutoReplyRuleInputRow>();
 	const std::string Prefix = "keyword-rule-" + std::to_string(s_NextKeywordRuleId++);
 	pRow->m_TriggerId = Prefix + "-trigger";
-	pRow->m_OptionsId = Prefix + "-options";
 	pRow->m_ReplyId = Prefix + "-reply";
 	SetRuleInput(pRow->m_TriggerInput, pRow->m_pExtendedTrigger, pTrigger);
 	SetRuleInput(pRow->m_ReplyInput, pRow->m_pExtendedReply, pReply);
@@ -193,7 +193,9 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	const bool CanCommit = Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly();
-	const float SmallSize = CurrentSettingsContentMetrics().m_SmallSize;
+	const auto &Metrics = CurrentSettingsContentMetrics();
+	const float SmallSize = Metrics.m_SmallSize;
+	const float RowGap = ui_token::settings::RowGap(LineSpacing);
 	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_keyword_reply_text_inputs", UiScale);
 	CUIRect Row, LabelColumn, ControlColumn;
 	const bool CanSaveRules = CanCommit && SyncKeywordRuleRows(*Ui());
@@ -212,21 +214,18 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 			}
 		}
 	}
-	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	if(s_KeywordReplyTab == 2)
 	{
-		if(Flow.Control("keyword-cooldown", LineHeight, Row))
+		if(Flow.Control("keyword-cooldown", LineHeight, Row, RowGap))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-keyword-reply-auto-reply-cooldown", &LabelColumn, Localize("Auto reply cooldown"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			static int s_QmAutoReplyCooldownInputId;
 			RenderQmSettingsSliderWithValueInput(&s_QmAutoReplyCooldownInputId, ControlColumn, &g_Config.m_QmAutoReplyCooldown, 0, 30, "s", !CanCommit);
 		}
-		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		auto Checkbox = [&](const char *pId, const char *pText, int *pValue) {
-			if(Flow.Control(pId, LineHeight, Row))
+			if(Flow.Control(pId, LineHeight, Row, RowGap))
 				RenderQmFunctionCheckbox(pValue, pText, Localize(pText), pValue, &Row, !CanCommit);
-			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		};
 		Checkbox("keyword-enabled", Localizable("Enable keyword reply"), &g_Config.m_QmKeywordReplyEnabled);
 		Checkbox("keyword-dummy", Localizable("Reply with dummy"), &g_Config.m_QmKeywordReplyUseDummy);
@@ -234,13 +233,12 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 	}
 
 	QmKeywordReplyRules::SEditorChanges Changes;
-	if(Flow.Control("keyword-rules-heading", LineHeight, Row))
+	if(Flow.Control("keyword-rules-heading", LineHeight, Row, RowGap))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-keyword-reply-rules", &LabelColumn, Localize("Keyword rules"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
-		CUIRect Add;
-		ControlColumn.VSplitRight(std::min(ControlColumn.w, maximum(LineHeight, 24.0f * UiScale)), nullptr, &Add);
-		Add.VMargin(std::max(0.0f, (Add.w - Add.h) * 0.5f), &Add);
+		const auto HeaderActions = ResolveSettingsInputActionsLayout(ControlColumn, 1, Metrics);
+		const CUIRect &Add = HeaderActions.m_Actions.m_aButtons[0];
 		const bool CanAddRule = s_vKeywordRuleRows.size() < MAX_KEYWORD_RULE_ROWS;
 		if(s_KeywordReplyTab == 0 && DoButton_Menu_QmIcon(&s_KeywordAddRuleButton, EQmIcon::PLUS, FONT_ICON_PLUS, CanAddRule ? 0 : -1, &Add, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL) && CanCommit)
 		{
@@ -251,58 +249,45 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 			TriggerInput.Activate(EInputPriority::UI);
 			Changes.m_Added = true;
 		}
+		if(s_KeywordReplyTab == 0 && !PrewarmOnly)
+			GameClient()->m_Tooltips.DoToolTip(&s_KeywordAddRuleButton, &Add, Localize("Add"));
 	}
-	Flow.Space(ui_token::settings::RowGap(LineSpacing));
-	const float OptionSpacing = std::max(4.0f, 4.0f * UiScale);
-	const char *apOptions[] = {Localize("Rename"), Localize("Regex")};
-	// 选项是两个独立开关；保持原网格尺寸，由真实译文决定窄宽换行。
-	static CSettingsChoiceWidthCache s_OptionWidths;
-	const float OptionWidth = s_OptionWidths.Resolve(apOptions, std::size(apOptions), BodySize, TextRender()->GlyphAtlasRevision(),
-		[this](const char *pText, float Size) { return TextRender()->TextWidth(Size, pText); });
-	const float MinOptionWidth = OptionWidth + LineHeight * 2.0f;
-	const SSettingsChoiceGrid Options = ResolveSettingsToggleGrid(Content.w, MinOptionWidth, LineHeight, LineSpacing, 2, 2);
 	for(size_t Index = 0; Index < s_vKeywordRuleRows.size();)
 	{
 		auto &pRule = s_vKeywordRuleRows[Index];
 		bool RemoveClicked = false;
-		if(Flow.Control(pRule->m_TriggerId.c_str(), LineHeight, Row))
+		if(Flow.Control(pRule->m_TriggerId.c_str(), LineHeight, Row, RowGap))
 		{
-			CUIRect InputColumn, Remove;
-			Row.VSplitRight(std::min(Row.w, std::max(LineHeight, 24.0f * UiScale)), &InputColumn, &Remove);
-			InputColumn.VSplitRight(std::min(InputColumn.w, OptionSpacing), &InputColumn, nullptr);
 			if(s_KeywordReplyTab == 0)
-				Changes.m_TriggerText |= ui_widget::InputField(TextInputCtx, &pRule->m_TriggerInput, InputColumn, Localize("Keyword rules"), BodySize);
+			{
+				const auto Layout = ResolveSettingsInputActionsLayout(Row, 3, Metrics);
+				Changes.m_TriggerText |= ui_widget::InputField(TextInputCtx, &pRule->m_TriggerInput, Layout.m_Input, Localize("Keyword rules"), BodySize);
+				const auto Option = [&](int ActionIndex, CButtonContainer *pButton, EQmIcon Icon, const char *pFallbackIcon, const char *pTooltip, int *pValue) {
+					const CUIRect &Button = Layout.m_Actions.m_aButtons[ActionIndex];
+					const bool Changed = Ui()->DoButton_QmIcon(pButton, Icon, pFallbackIcon, *pValue, &Button, BUTTONFLAG_LEFT) && CanCommit;
+					if(Changed)
+						*pValue ^= 1;
+					if(!PrewarmOnly)
+						GameClient()->m_Tooltips.DoToolTip(pButton, &Button, pTooltip);
+					return Changed;
+				};
+				Changes.m_Rename |= Option(0, &pRule->m_RenameButton, EQmIcon::PENCIL, FONT_ICON_PENCIL, Localize("Rename"), &pRule->m_AutoRename);
+				Changes.m_Regex |= Option(1, &pRule->m_RegexButton, EQmIcon::TERMINAL, FONT_ICON_TERMINAL, Localize("Regex"), &pRule->m_Regex);
+				const CUIRect &Remove = Layout.m_Actions.m_aButtons[2];
+				RemoveClicked = Ui()->DoButton_QmIcon(&pRule->m_RemoveButton, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Remove, BUTTONFLAG_LEFT) && CanCommit;
+				if(!PrewarmOnly)
+					GameClient()->m_Tooltips.DoToolTip(&pRule->m_RemoveButton, &Remove, Localize("Remove"));
+			}
 			else
 			{
 				SLabelProperties Props;
-				Props.m_MaxWidth = InputColumn.w;
+				Props.m_MaxWidth = Row.w;
 				Props.m_EllipsisAtEnd = true;
-				Ui()->DoLabel(&InputColumn, pRule->m_TriggerInput.GetString(), BodySize, TEXTALIGN_ML, Props);
-			}
-			RemoveClicked = s_KeywordReplyTab == 0 && DoButton_Menu_QmIcon(&pRule->m_RemoveButton, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Remove, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL) && CanCommit;
-		}
-		Flow.Space(ui_token::settings::RowGap(LineSpacing));
-		if(s_KeywordReplyTab == 0)
-		{
-			if(Flow.Control(pRule->m_OptionsId.c_str(), Options.Height(), Row))
-			{
-				const auto Option = [&](int CellIndex, const char *pTextId, int *pValue) {
-					const CUIRect Cell = Options.Cell(Row, CellIndex);
-					SLabelProperties Props;
-					Props.m_DisallowNewline = true;
-					Props.m_StopAtEnd = true;
-					const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pValue, pTextId, apOptions[CellIndex], *pValue, &Cell, Props, !PrewarmOnly, BodySize) != 0;
-					if(Changed && CanCommit)
-						*pValue ^= 1;
-					return Changed && CanCommit;
-				};
-				Changes.m_Rename |= Option(0, "Rename", &pRule->m_AutoRename);
-				Changes.m_Regex |= Option(1, "Regex", &pRule->m_Regex);
+				Ui()->DoLabel(&Row, pRule->m_TriggerInput.GetString(), BodySize, TEXTALIGN_ML, Props);
 			}
 		}
-		else if(Flow.Control(pRule->m_ReplyId.c_str(), LineHeight, Row))
+		if(s_KeywordReplyTab == 1 && Flow.Control(pRule->m_ReplyId.c_str(), LineHeight, Row, ui_token::settings::SubRowGap(LineSpacing)))
 			Changes.m_ReplyText |= ui_widget::InputField(TextInputCtx, &pRule->m_ReplyInput, Row, Localize("Reply content"), BodySize);
-		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		if(RemoveClicked)
 		{
 			ReleaseRuleInputs(*Ui(), *pRule);
@@ -344,8 +329,11 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 		break;
 	}
 	if(pValidation)
-		Flow.Text("keyword-validation", pValidation, 0.0f, SmallSize, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) {
+	{
+		Flow.Space(RowGap);
+		Flow.Text("keyword-validation", pValidation, 0.0f, SmallSize, 0.0f, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) {
 				TextRender()->TextColor(1.0f, 0.2f, 0.2f, 1.0f);
 				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-keyword-reply-rule-validation", &Rect, pText, SmallSize, TEXTALIGN_ML, {}, (int)Rect.w);
 				TextRender()->TextColor(TextRender()->DefaultTextColor()); }, LineHeight);
+	}
 }

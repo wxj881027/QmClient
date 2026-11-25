@@ -1379,7 +1379,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			Button.VSplitRight(RowSpacing, &Button, nullptr);
 
 			static CButtonContainer s_StoreBrowseId;
-			if(DoButton_Menu(&s_StoreBrowseId, Localize("Browse font store…"), 0, &Button))
+			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, &s_StoreBrowseId, "tclient-font-store-browse", Localize("Browse font store…"), 0, &Button, CurrentSettingsContentMetrics()))
 			{
 				s_FontStorePopupCtx.m_pMenus = this;
 				s_FontStorePopupCtx.m_New = true;

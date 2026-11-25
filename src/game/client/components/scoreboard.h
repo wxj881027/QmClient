@@ -394,6 +394,7 @@ class CScoreboard : public CComponent
 	std::array<CCachedText, MAX_CLIENTS> m_aScoreSecondsText;
 	std::array<CCachedText, MAX_CLIENTS> m_aScoreMillisText;
 	std::array<char, MAX_CLIENTS> m_aScoreTooltipIds{};
+	std::array<char, MAX_CLIENTS> m_aPlaytimeTooltipIds{};
 
 	// 本帧解析出的 Axiom 积分模式（NONE 表示当前服务器不是 Axiom 积分服）。
 	// 每帧在 OnRender 开头刷新一次，渲染期由 HasQmAxiomScoreMode / QmAxiomScorePoints 复用。

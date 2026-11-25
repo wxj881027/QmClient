@@ -575,6 +575,14 @@ namespace ui_token::settings
 	inline constexpr float ActionGap(const float LineSpacing) { return LineSpacing * 4.0f; }
 } // namespace ui_token::settings
 
+namespace ui_token::tee_preview
+{
+	// 圆角目标为 50 屏幕像素，窄框仍在两端之间留出直边。
+	inline constexpr float Radius(float ShortSide, float PixelSize) { return std::min(50.0f * PixelSize, ShortSide * 0.4f); }
+	// 标题与旗帜至少留出卡片内边距，并避开圆弧的对角线交点。
+	inline constexpr float HeadingInset(float UiScale, float Radius) { return std::max(settings::CARD_PADDING * UiScale, Radius * 0.3f); }
+} // namespace ui_token::tee_preview
+
 // 列表（CListBox）的整行外观与自适应高度：行高、行距、胶囊圆角、行内左右内边距、
 // 可见行数上限、覆盖式滚动条尺寸都从这里取。数值全部由既有 settings/spacing 派生，
 // 调用点不再各写一套字面量。

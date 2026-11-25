@@ -10973,6 +10973,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == プレイ時間 (h)
 
+Playtime query failed. Retrying shortly.
+== プレイ時間の取得に失敗しました。まもなく再試行します。
+
 Please add a valid cut first
 == 有効なカットを先に追加してください
 
@@ -11596,6 +11599,9 @@ Query server setting: %s
 
 Query team rank for %s
 == %s のチームランクを照会
+
+Querying playtime from DDStats...
+== DDStats からプレイ時間を取得中…
 
 Querying points for %s...
 == %s のポイントを取得中...
@@ -16685,6 +16691,9 @@ Total hours
 Total play time
 == 合計プレイ時間
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== DDStats による総プレイ時間です。更新中も前回の結果を表示します。
+
 Total points
 == 合計ポイント
 
@@ -18716,6 +18725,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == このプレイヤーには利用できません
+
+[Axiom map difficulty]
+Brutal
+== 高難易度
+
+[Axiom map difficulty]
+Easy
+== 簡単
+
+[Axiom map difficulty]
+Extreme
+== 極限
+
+[Axiom map difficulty]
+Hard
+== 難しい
+
+[Axiom map difficulty]
+Insane
+== インセイン
+
+[Axiom map difficulty]
+Main
+== 通常
+
+[Axiom map difficulty]
+Mod
+== 改造
+
+[Axiom map difficulty]
+Solo
+== ソロ
+
+[Axiom map difficulty]
+Train
+== 練習
 
 [Bind keyboard key]
 Menu

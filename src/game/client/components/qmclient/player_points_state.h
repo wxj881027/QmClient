@@ -69,6 +69,16 @@ public:
 		Entry.m_Status = EPointsStatus::READY;
 	}
 
+	void LoadPlaytime(const std::string &Name, int64_t Hours)
+	{
+		if(Hours < 0)
+			return;
+		Load(Name, 0);
+		SEntry &Entry = m_Entries.find(Name)->second;
+		Entry.m_PlaytimeHours = Hours;
+		Entry.m_PlaytimeStatus = EPointsStatus::READY;
+	}
+
 	SPlayerPointsResult Get(std::string_view Name) const
 	{
 		const auto It = m_Entries.find(Name);

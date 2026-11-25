@@ -479,11 +479,10 @@ public:
 		uint64_t m_MaterializedRevision = 0;
 		bool m_PlanKnown = false;
 		bool m_FullIndexMerged = true;
-		int m_Dummy = -1;
-		int m_RequestedDummy = 0;
 		int m_ListFilter = -1;
 		int m_SortMode = -1;
 		std::string m_Search;
+		std::array<std::string, NUM_DUMMIES> m_aSelectedNames;
 		CSkinListEntry::SColorKey m_MainColorKey;
 		CSkinListEntry::SColorKey m_DummyColorKey;
 		bool m_NeedsUpdate = true;
@@ -653,7 +652,7 @@ public:
 	void RefreshEventSkins();
 	void Refresh(TSkinLoadedCallback &&SkinLoadedCallback);
 	CSkinLoadingStats LoadingStats() const;
-	CSkinList &SkinList(int Dummy);
+	CSkinList &SkinList() { return m_SkinList; }
 	const CQmRecentTeeSkins &RecentSkins() const { return m_RecentSkins; }
 	std::optional<CSkinListEntry> RecentSkinListEntry(const SQmRecentTeeSkin &Skin);
 	void RecordRecentSkin(int Dummy);
@@ -1135,14 +1134,15 @@ private:
 	ESkinSourceMask CatalogSourcesForName(const char *pName, bool RequestSources) const;
 	void ApplyCatalogSources(CSkinContainer *pSkinContainer) const;
 	bool SkinListSourcesPending() const;
+	bool SkinListFilterCurrent() const;
 	bool SkinListPlanQueryCurrent() const;
 	void RecordSkinSource(CSkinContainer *pSkinContainer, ESkinSource Source);
-	void QueueSkinListPlanJob(int Dummy);
+	void QueueSkinListPlanJob();
 	void ProcessSkinListPlanJob();
 	void ApplySkinListPlan(std::vector<SSettingsSkinListEntry> &&vPlannedEntries, int UnfilteredCount);
 	bool MergeSkinListEntries();
 	void FinishSkinListMaterialization();
-	CSkinListEntry MakeSkinListEntry(const CSkinContainer *pSkinContainer, std::optional<CSkinListEntry::SColorKey> ColorKey) const;
+	CSkinListEntry MakeSkinListEntry(const CSkinContainer *pSkinContainer, const CSkinListEntry::SColorKey &ColorKey) const;
 	CSkinListEntry MakeSkinListEntry(const SSettingsSkinListEntry &PlannedEntry, const CSkinContainer *pSkinContainer) const;
 
 	static void ConAddFavoriteSkin(IConsole::IResult *pResult, void *pUserData);

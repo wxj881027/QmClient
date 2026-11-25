@@ -1118,20 +1118,6 @@ inline float ResolveQmHudDummyMiniViewHeight(const SSettingsContentMetrics &Metr
 	return Expanded ? 4.0f * Metrics.m_RowStep + PreviewGap : Metrics.m_RowStep;
 }
 
-inline float ResolveQmHudDynamicIslandHeight(const SSettingsContentMetrics &Metrics, const bool OriginalStyle, const bool SwitchCountdownEnabled, const float ContentWidth)
-{
-	// 常驻行：原始样式、显示队伍、钩子倒计时和开关倒计时。
-	float Height = 4.0f * Metrics.m_RowStep;
-	if(!OriginalStyle)
-	{
-		const CUIRect ColorRowView{0.0f, 0.0f, std::max(0.0f, ContentWidth), 0.0f};
-		Height += ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight + 3.0f * Metrics.m_RowStep;
-	}
-	// 开关倒计时启用时增加跟随 Tee / 灵动岛两个位置开关，不再保留位置标题行。
-	Height += (SwitchCountdownEnabled ? 2.0f : 0.0f) * Metrics.m_RowStep;
-	return Height;
-}
-
 inline float ResolveQmHudVoiceHeight(const SSettingsContentMetrics &Metrics, const bool Enabled, const bool Advanced, const bool ShowStatus, const int NoiseSuppressMode, const bool VadEnabled, const bool StereoEnabled)
 {
 	if(!Enabled)

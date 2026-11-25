@@ -295,7 +295,7 @@ private:
 	ColorRGBA m_HoveredItemColor;
 
 protected:
-	CListboxItem DoNextRow();
+	CListboxItem DoNextRow(vec2 Offset = vec2(0.0f, 0.0f));
 	// 行首统一步进：本条目标记为「开启新的一行」时给一次行距并切出该行矩形，
 	// 返回是否新行。DoNextItem / SkipItems / DoSubheader 共用，避免三处各推一次。
 	bool BeginRowIfNeeded();
@@ -385,7 +385,7 @@ public:
 	void SuppressInitialSelectionScroll() { m_InitialScrollPending = false; }
 	void SkipItems(int Count);
 	// CornerRadius < 0 时按行类型取默认值：单列整行是胶囊，多列网格沿用旧的小圆角。
-	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = -1.0f);
+	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = -1.0f, vec2 Offset = vec2(0.0f, 0.0f));
 	CListboxItem DoCustomRow(float Height, bool ScrollHere = false);
 	void ResetScroll()
 	{

@@ -1,6 +1,7 @@
 // 卡片换位追随的语义契约：按槽位序号算差值、跳太远直接对齐、切列直接对齐。
 // 这些行为不依赖渲染上下文，只用纯函数与状态断言，避免源码字符串合同。
 #include <game/client/QmUi/QmSlotReflow.h>
+#include <game/client/QmUi/cards/QmCardCatalogTeeSkinListState.h>
 
 #include <gtest/gtest.h>
 
@@ -88,6 +89,24 @@ TEST(QmSlotReflow, HugeJumpDoesNotAnimate)
 	EXPECT_FLOAT_EQ(Offset.y, 0.0f);
 }
 
+TEST(QmSlotReflow, ExternalItemsShareTheResourceListTrajectory)
+{
+	CQmSlotReflow Reflow;
+	CQmSlotReflow::CItem Item;
+	for(int Frame = 0; Frame < 60; ++Frame)
+	{
+		const int Slot = Frame == 0 ? 2 : (Frame < 10 ? 0 : 1);
+		Reflow.BeginFrame(1.0f / 60.0f, 3, false);
+		const vec2 Expected = Reflow.Track("skin", Slot, 100, 50);
+		EXPECT_EQ(Reflow.Track(Item, Slot, 100, 50), Expected);
+		EXPECT_EQ(Reflow.Track(Item, Slot, 100, 50), Expected);
+		EXPECT_EQ(Item.DisplayedOffset(Slot), Expected);
+	}
+	Reflow.Reset();
+	Reflow.BeginFrame(1.0f / 60.0f, 3, false);
+	EXPECT_EQ(Reflow.Track(Item, 0, 100, 50), vec2(0, 0));
+}
+
 TEST(QmSlotReflow, SlowFramesKeepDisplacedCardBoundedAndSettle)
 {
 	CQmSlotReflow Reflow;
@@ -105,4 +124,34 @@ TEST(QmSlotReflow, SlowFramesKeepDisplacedCardBoundedAndSettle)
 	}
 	EXPECT_FLOAT_EQ(Offset.x, 0.0f);
 	EXPECT_FLOAT_EQ(Offset.y, 0.0f);
+}
+
+TEST(SettingsTeeSkinListState, ReflowReadsDoNotAdvanceAndDisablingMotionSettlesImmediately)
+{
+	CSettingsTeeSkinListState State;
+	auto &Row = State.Resolve("bluekitty", std::nullopt);
+	State.BeginReflow(10, 1.0f / 60.0f, 3, EQmTeeSkinCollection::ALL, true);
+	State.RowOffset(Row, 1, 100, 50, true);
+	State.BeginReflow(11, 1.0f / 60.0f, 3, EQmTeeSkinCollection::ALL, true);
+	const vec2 Moved = State.RowOffset(Row, 0, 100, 50, true);
+	EXPECT_EQ(Moved, vec2(100, 0));
+	EXPECT_EQ(State.RowOffset(Row, 0, 100, 50, false), Moved);
+	State.BeginReflow(11, 1.0f / 60.0f, 3, EQmTeeSkinCollection::ALL, true);
+	EXPECT_EQ(State.RowOffset(Row, 0, 100, 50, true), Moved);
+	State.BeginReflow(12, 1.0f / 60.0f, 3, EQmTeeSkinCollection::ALL, false);
+	EXPECT_EQ(State.RowOffset(Row, 0, 100, 50, true), vec2(0, 0));
+	State.BeginReflow(13, 1.0f / 60.0f, 3, EQmTeeSkinCollection::ALL, true);
+	EXPECT_EQ(State.RowOffset(Row, 0, 100, 50, true), vec2(0, 0));
+}
+
+TEST(SettingsTeeSkinListState, ReturningToTheListOrChangingCollectionDoesNotReplayOldMovement)
+{
+	CSettingsTeeSkinListState State;
+	auto &Row = State.Resolve("bluekitty", std::nullopt);
+	State.BeginReflow(1, 1.0f / 60.0f, 3, EQmTeeSkinCollection::ALL, true);
+	State.RowOffset(Row, 1, 100, 50, true);
+	State.BeginReflow(3, 1.0f / 60.0f, 3, EQmTeeSkinCollection::ALL, true);
+	EXPECT_EQ(State.RowOffset(Row, 0, 100, 50, true), vec2(0, 0));
+	State.BeginReflow(4, 1.0f / 60.0f, 3, EQmTeeSkinCollection::FAVORITES, true);
+	EXPECT_EQ(State.RowOffset(Row, 2, 100, 50, true), vec2(0, 0));
 }
