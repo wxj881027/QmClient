@@ -385,7 +385,7 @@ namespace qm_ui_test
 			g_Config.m_QmUiMotionLevel = 0;
 			g_Config.m_QmGaussianBlur = 0;
 			g_Config.m_QmTextRasterMode = 0;
-			g_Config.m_QmPerfDebug = g_Config.m_QmPerfLogfile = g_Config.m_QmPerfStutterDiagnostics = 0;
+			g_Config.m_QmPerfEnabled = false;
 			m_Info.m_DeleteTestStorageFilesOnSuccess = false;
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);

@@ -59,7 +59,7 @@ namespace
 	CUi::SDropDownState s_VoiceNoiseSuppressModeDropDownState;
 	void LogQmPerfStage(IClient *pClient, const char *pStage, double DurationMs, bool Force, const char *pExtra)
 	{
-		if(g_Config.m_QmPerfDebug)
+		if(g_Config.m_QmPerfEnabled)
 			QmPerfLogStage("perf/qmclient", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
 	}
 

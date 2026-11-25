@@ -67,20 +67,7 @@ bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 		return m_pBinds->OnInput(Event);
 	}
 
-	const int KeyModifierMask = GetModifierMaskOfKey(Event.m_Key);
-	const int ModifierMask = GetModifierMask(Input()) & ~KeyModifierMask;
-	const char *pBind = m_pBinds->Get(Event.m_Key, ModifierMask);
-	if(!pBind[0] && AllowsUnmodifiedFallback(Event.m_Key, ModifierMask))
-		pBind = m_pBinds->Get(Event.m_Key, KeyModifier::NONE);
-	if(!IsExactDebugGraphToggleCommand(pBind))
-		return false;
-
-	// 已按住的键仍按活动槽位处理，避免提前执行该槽位中的普通命令。
-	const auto OtherActiveId = m_pBinds->m_ActiveBinds.Find([&](const CActiveBind &Bind) {
-		return Bind.m_Key == Event.m_Key &&
-		       !IsExactDebugGraphToggleCommand(Bind.m_ShortcutState.Command(m_pBinds->Get(Bind)));
-	});
-	return OtherActiveId == 0 && m_pBinds->OnInput(Event);
+	return false;
 }
 
 CBinds::CBinds()
@@ -444,8 +431,6 @@ void CBinds::SetDefaults()
 
 	Bind(KEY_F3, "vote yes");
 	Bind(KEY_F4, "vote no");
-	Bind(KEY_G, "toggle dbg_graphs 0 1", false, (1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT));
-	Bind(KEY_G, "toggle dbg_graphs 0 1", false, (1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT));
 
 	Bind(KEY_K, "kill");
 	Bind(KEY_Q, "say /spec");
@@ -485,7 +470,11 @@ void CBinds::ConBind(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
-	pBinds->Bind(BindSlot.m_Key, pResult->GetString(1), false, BindSlot.m_ModifierMask);
+	const char *pCommand = pResult->GetString(1);
+	// 清掉旧版保存的性能绑定，用户为同一按键设置的其他命令仍可加载。
+	if(IsExactDebugGraphToggleCommand(pCommand))
+		pCommand = "";
+	pBinds->Bind(BindSlot.m_Key, pCommand, false, BindSlot.m_ModifierMask);
 }
 
 void CBinds::ConBinds(IConsole::IResult *pResult, void *pUserData)

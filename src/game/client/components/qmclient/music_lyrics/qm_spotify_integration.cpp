@@ -576,7 +576,7 @@ bool CSpotifyIntegration::GetCurrentLyric(char *pBuffer, size_t BufferSize) cons
 	if(pBuffer == nullptr || BufferSize == 0)
 		return false;
 	pBuffer[0] = '\0';
-	if(!g_Config.m_QmLyrics || !g_Config.m_QmLyricsInMediaIsland)
+	if(!g_Config.m_QmLyricsInMediaIsland)
 		return false;
 	if(!m_pImpl->m_HasIdentity || !m_pImpl->m_HasLyrics || m_pImpl->m_CurrentLyric.empty())
 		return false;
@@ -587,13 +587,13 @@ bool CSpotifyIntegration::GetCurrentLyric(char *pBuffer, size_t BufferSize) cons
 
 bool CSpotifyIntegration::HasCurrentLyric() const
 {
-	return g_Config.m_QmLyrics != 0 && g_Config.m_QmLyricsInMediaIsland != 0 &&
+	return g_Config.m_QmLyricsInMediaIsland != 0 &&
 	       m_pImpl->m_HasIdentity && m_pImpl->m_HasLyrics && !m_pImpl->m_CurrentLyric.empty();
 }
 
 bool CSpotifyIntegration::HasActiveLyrics() const
 {
-	return g_Config.m_QmLyrics != 0 && g_Config.m_QmLyricsInMediaIsland != 0 &&
+	return g_Config.m_QmLyricsInMediaIsland != 0 &&
 	       m_pImpl->m_HasIdentity && m_pImpl->m_ActiveLyrics;
 }
 

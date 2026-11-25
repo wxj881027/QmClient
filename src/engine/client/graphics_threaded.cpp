@@ -3061,7 +3061,7 @@ void CGraphics_Threaded::RenderMediaIslandSdf(const IGraphics::SMediaIslandSdfPa
 	m_pCommandBuffer->AddRenderCalls(1);
 }
 
-// 圆角绘制统计：只在 qm_perf_debug 打开时累加，用于判断该不该做合批。
+// 圆角绘制统计：只在 qm_pref 启用时累加，用于判断该不该做合批。
 static int s_QmPerfSdfRects = 0;
 static int s_QmPerfSdfFlushes = 0;
 static int64_t s_QmPerfLastLog = 0;
@@ -3072,7 +3072,7 @@ void CGraphics_Threaded::RenderRoundedRectSdf(const IGraphics::SRoundedRectSdfPa
 	if(Rect.z <= 0.0f || Rect.w <= 0.0f)
 		return;
 
-	if(g_Config.m_QmPerfDebug != 0)
+	if(g_Config.m_QmPerfEnabled)
 	{
 		s_QmPerfSdfRects++;
 		if(m_NumVertices > 0)
@@ -5070,8 +5070,8 @@ void CGraphics_Threaded::Swap()
 			{
 				const double FrameSerializationWaitMsAvg = m_MacosFrameSerializationWaitCount > 0 ? m_MacosFrameSerializationWaitMsSum / (double)m_MacosFrameSerializationWaitCount : 0.0;
 				const int UnlimitedConfig = g_Config.m_GfxVsync == 0 && g_Config.m_GfxRefreshRate == 0 && g_Config.m_ClRefreshRate == 0;
-				dbg_msg("perf/macos_graphics", "event=frame_submit sample_frames=120 submit_duration_ms_sum=%.3f submit_duration_ms_avg=%.3f frame_serialization_wait_count=%" PRIu64 " frame_serialization_wait_ms_sum=%.3f frame_serialization_wait_ms_avg=%.3f unlimited_config=%d vsync=%d gfx_refresh_rate=%d cl_refresh_rate=%d cl_refresh_rate_inactive=%d debug=%d dbg_graphs=%d async_render_old=%d backend=%s renderer=%s vendor=%s drawable_width=%d drawable_height=%d hidpi_scale=%.3f fullscreen=%d fsaa=%u refresh_hz=%d ring_commands_sum=%" PRIu64 " ring_flushes_sum=%" PRIu64 " rounded_sdf_commands_sum=%" PRIu64 " rounded_sdf_flushes_sum=%" PRIu64 " buffered_text_commands_sum=%" PRIu64 " buffered_text_no_container_sum=%" PRIu64 " buffered_text_zero_quad_sum=%" PRIu64,
-					m_MacosGraphicsDiagnosticSubmitMsSum, m_MacosGraphicsDiagnosticSubmitMsSum / 120.0, m_MacosFrameSerializationWaitCount, m_MacosFrameSerializationWaitMsSum, FrameSerializationWaitMsAvg, UnlimitedConfig, g_Config.m_GfxVsync, g_Config.m_GfxRefreshRate, g_Config.m_ClRefreshRate, g_Config.m_ClRefreshRateInactive, g_Config.m_Debug, g_Config.m_DbgGraphs, g_Config.m_GfxAsyncRenderOld, pBackend, GetRendererString(), GetVendorString(), m_ScreenWidth, m_ScreenHeight, m_ScreenHiDPIScale, g_Config.m_GfxFullscreen, m_MultiSamplingCount, m_ScreenRefreshRate, m_RingCommandCount, m_RingFlushCount, m_RoundedRectSdfCommandCount, m_RoundedRectSdfFlushCount, m_BufferedTextCommandCount, m_BufferedTextNoContainerCount, m_BufferedTextZeroQuadCount);
+				dbg_msg("perf/macos_graphics", "event=frame_submit sample_frames=120 submit_duration_ms_sum=%.3f submit_duration_ms_avg=%.3f frame_serialization_wait_count=%" PRIu64 " frame_serialization_wait_ms_sum=%.3f frame_serialization_wait_ms_avg=%.3f unlimited_config=%d vsync=%d gfx_refresh_rate=%d cl_refresh_rate=%d cl_refresh_rate_inactive=%d debug=%d cl_show_perf=%d async_render_old=%d backend=%s renderer=%s vendor=%s drawable_width=%d drawable_height=%d hidpi_scale=%.3f fullscreen=%d fsaa=%u refresh_hz=%d ring_commands_sum=%" PRIu64 " ring_flushes_sum=%" PRIu64 " rounded_sdf_commands_sum=%" PRIu64 " rounded_sdf_flushes_sum=%" PRIu64 " buffered_text_commands_sum=%" PRIu64 " buffered_text_no_container_sum=%" PRIu64 " buffered_text_zero_quad_sum=%" PRIu64,
+					m_MacosGraphicsDiagnosticSubmitMsSum, m_MacosGraphicsDiagnosticSubmitMsSum / 120.0, m_MacosFrameSerializationWaitCount, m_MacosFrameSerializationWaitMsSum, FrameSerializationWaitMsAvg, UnlimitedConfig, g_Config.m_GfxVsync, g_Config.m_GfxRefreshRate, g_Config.m_ClRefreshRate, g_Config.m_ClRefreshRateInactive, g_Config.m_Debug, g_Config.m_ClShowPerf, g_Config.m_GfxAsyncRenderOld, pBackend, GetRendererString(), GetVendorString(), m_ScreenWidth, m_ScreenHeight, m_ScreenHiDPIScale, g_Config.m_GfxFullscreen, m_MultiSamplingCount, m_ScreenRefreshRate, m_RingCommandCount, m_RingFlushCount, m_RoundedRectSdfCommandCount, m_RoundedRectSdfFlushCount, m_BufferedTextCommandCount, m_BufferedTextNoContainerCount, m_BufferedTextZeroQuadCount);
 				m_MacosGraphicsDiagnosticFrameCount = 0;
 				m_MacosGraphicsDiagnosticSubmitMsSum = 0.0;
 				m_MacosFrameSerializationWaitMsSum = 0.0;

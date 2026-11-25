@@ -306,7 +306,7 @@ class CQmIconDrawDiagnostics
 public:
 	static void Record(int Count = 1)
 	{
-		if(Count > 0 && (g_Config.m_QmPerfDebug || g_Config.m_QmPerfLogfile || g_Config.m_QmPerfStutterDiagnostics))
+		if(Count > 0 && g_Config.m_QmPerfEnabled)
 			s_Draws += Count;
 	}
 	static uint64_t Take() { return std::exchange(s_Draws, 0); }

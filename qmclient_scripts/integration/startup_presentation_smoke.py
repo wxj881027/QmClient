@@ -44,7 +44,6 @@ class StartupEnvironment:
 			"gfx_backgroundrender 1",
 			"cl_save_settings 0",
 			"cl_show_welcome 0",
-			"qm_auto_update 0",
 			"qm_steam_auto_launch 0",
 			"cl_languagefile languages/simplified_chinese.txt",
 			"tc_custom_font DejaVu Sans",

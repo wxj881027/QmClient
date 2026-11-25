@@ -280,6 +280,7 @@ void ApplySettingsCardDeckDragPlacement(std::array<std::vector<int>, 3> &aColumn
 // 单列仅改变视觉顺序：full 卡保持 full 语义，普通卡按原左右可见容量稳定拆回 canonical 列。
 void ApplySettingsCardDeckSingleColumnDragPlacement(std::array<std::vector<int>, 3> &aColumns, int ActiveStateIndex, int TargetOrder);
 // vItems 必须由 layout 阶段按每列视觉顺序输出；该约束让拖拽热路径保持线性且零分配。
+int ResolveSettingsCardDeckDropColumn(int CurrentColumn, int SourceLayoutColumn, float MouseX, const CUIRect &Left, const CUIRect &Right);
 int ResolveSettingsCardDeckDropOrder(float MouseY, int TargetColumn, const std::vector<SSettingsCardDeckItemGeometry> &vItems, int IgnoredStateIndex);
 float SettingsCardDeckAutoScrollDelta(float MouseY, const CUIRect &Viewport, float UiScale);
 bool CommitSettingsCardDeckDrop(qm_card_order::CModel &Model, const char *pTab, const char *pStableId, int TargetColumn, int TargetOrder, const std::vector<int> *pActiveStateIndices = nullptr);

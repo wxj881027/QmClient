@@ -3695,6 +3695,22 @@ turkish = "Bir anahtar kelime kuralı kaydedilemedi. Tetikleyicinin => içerip i
 polish = "Nie udało się zapisać reguły słów kluczowych. Sprawdź, czy wyzwalacz zawiera => lub zaczyna się od zastrzeżonego prefiksu."
 
 [[message]]
+key = "Convenience options for chat, the scoreboard and tune zones."
+[message.translations]
+simplified_chinese = "聊天、计分板和调参区的便捷设置。"
+traditional_chinese = "聊天、計分板和調參區的便利設定。"
+japanese = "チャット、スコアボード、調整ゾーンの便利な設定。"
+korean = "채팅, 점수판, 튜닝 구역의 편의 설정입니다."
+russian = "Дополнительные параметры чата, таблицы счёта и зон настроек."
+german = "Zusatzoptionen für Chat, Punktetabelle und Tuning-Zonen."
+spanish = "Opciones adicionales para el chat, el marcador y las zonas de ajustes."
+french = "Options pratiques pour le chat, le tableau des scores et les zones de réglage."
+brazilian_portuguese = "Opções práticas para o chat, o placar e as zonas de ajuste."
+portuguese = "Opções úteis para o chat, a tabela de pontuações e as zonas de ajuste."
+turkish = "Sohbet, skor tablosu ve ayar bölgeleri için kolaylık seçenekleri."
+polish = "Dodatkowe opcje czatu, tabeli wyników i stref ustawień."
+
+[[message]]
 key = "Could not save keyword rules. Edit a rule to retry."
 [message.translations]
 simplified_chinese = "无法保存关键词规则。编辑任意一条规则可重试。"
@@ -10195,6 +10211,22 @@ brazilian_portuguese = "Ativar partículas de fundo 3D"
 portuguese = "Ativar partículas 3D de fundo"
 turkish = "3D arka plan parçacıklarını etkinleştir"
 polish = "Włącz cząsteczki tła 3D"
+
+[[message]]
+key = "Enable a music source to display its lyrics."
+[message.translations]
+simplified_chinese = "启用一个音乐来源以显示歌词。"
+traditional_chinese = "啟用一個音樂來源以顯示歌詞。"
+japanese = "歌詞を表示する音楽ソースを有効にします。"
+korean = "가사를 표시할 음악 소스를 켭니다."
+russian = "Включите источник музыки для показа текста песни."
+german = "Aktiviere eine Musikquelle, um ihre Songtexte anzuzeigen."
+spanish = "Activa una fuente de música para mostrar sus letras."
+french = "Activez une source musicale pour afficher ses paroles."
+brazilian_portuguese = "Ative uma fonte de música para mostrar as letras."
+portuguese = "Ative uma fonte de música para mostrar as letras."
+turkish = "Şarkı sözlerini göstermek için bir müzik kaynağını etkinleştirin."
+polish = "Włącz źródło muzyki, aby wyświetlić tekst utworu."
 
 [[message]]
 key = "Enable and calibrate controller input"
@@ -18675,6 +18707,22 @@ brazilian_portuguese = "Frames longos"
 portuguese = "Frames longos"
 turkish = "Uzun kareler"
 polish = "Długie klatki"
+
+[[message]]
+key = "Looks like an update is available"
+[message.translations]
+simplified_chinese = "貌似有可更新的版本呢"
+traditional_chinese = "好像有可更新的版本呢"
+japanese = "アップデートがあるようです"
+korean = "업데이트가 있는 것 같아요"
+russian = "Похоже, доступно обновление"
+german = "Es gibt wohl ein Update"
+spanish = "Parece que hay una actualización"
+french = "On dirait qu’une mise à jour est disponible"
+brazilian_portuguese = "Parece que há uma atualização"
+portuguese = "Parece que está disponível uma atualização"
+turkish = "Görünüşe göre bir güncelleme var"
+polish = "Wygląda na to, że jest aktualizacja"
 
 [[message]]
 key = "LRCLIB API base URL (can be changed to a mirror)"
@@ -30433,8 +30481,8 @@ polish = "Ustaw punkt odrodzenia ćwiczeń"
 [[message]]
 key = "Set up Kugou lyrics"
 [message.translations]
-simplified_chinese = "设置酷狗歌词接入"
-traditional_chinese = "設定酷狗歌詞接入"
+simplified_chinese = "配置酷狗歌词"
+traditional_chinese = "設定酷狗歌詞"
 japanese = "Kugou 歌詞の接続設定"
 korean = "Kugou 가사 연결 설정"
 russian = "Настроить тексты Kugou"
@@ -31383,6 +31431,22 @@ brazilian_portuguese = "Mostrar cartão de resultado na ilha dinâmica"
 portuguese = "Mostrar cartão de resultado na ilha dinâmica"
 turkish = "Sonuç kartını dinamik adada göster"
 polish = "Pokaż kartę wyniku na dynamicznej wyspie"
+
+[[message]]
+key = "Show FPS, prediction time, and performance graphs"
+[message.translations]
+simplified_chinese = "显示 FPS、预测耗时和性能曲线"
+traditional_chinese = "顯示 FPS、預測耗時和效能曲線"
+japanese = "FPS、予測時間、パフォーマンスグラフを表示"
+korean = "FPS, 예측 시간 및 성능 그래프 표시"
+russian = "Показывать FPS, время предсказания и графики производительности"
+german = "FPS, Vorhersagezeit und Leistungsdiagramme anzeigen"
+spanish = "Mostrar FPS, tiempo de predicción y gráficas de rendimiento"
+french = "Afficher les FPS, le temps de prédiction et les graphiques de performances"
+brazilian_portuguese = "Mostrar FPS, tempo de previsão e gráficos de desempenho"
+portuguese = "Mostrar FPS, tempo de previsão e gráficos de desempenho"
+turkish = "FPS, tahmin süresi ve performans grafiklerini göster"
+polish = "Pokaż FPS, czas predykcji i wykresy wydajności"
 
 [[message]]
 key = "Show freeze tile outlines"
@@ -39159,6 +39223,22 @@ turkish = "Müzik kaynağında sözcük zamanlaması yoksa önbellekteki veya ç
 polish = "Używaj tekstów piosenek społeczności AMLL z pamięci podręcznej lub internetu, gdy źródło muzyki nie udostępnia znaczników czasu dla poszczególnych słów"
 
 [[message]]
+key = "Use cl_show_perf 1 to show the panel."
+[message.translations]
+simplified_chinese = "输入 cl_show_perf 1 显示面板。"
+traditional_chinese = "輸入 cl_show_perf 1 顯示面板。"
+japanese = "cl_show_perf 1 を入力するとパネルが表示されます。"
+korean = "cl_show_perf 1을 입력하면 패널이 표시됩니다."
+russian = "Введите cl_show_perf 1, чтобы показать панель."
+german = "Mit cl_show_perf 1 wird das Panel angezeigt."
+spanish = "Usa cl_show_perf 1 para mostrar el panel."
+french = "Utilisez cl_show_perf 1 pour afficher le panneau."
+brazilian_portuguese = "Use cl_show_perf 1 para mostrar o painel."
+portuguese = "Use cl_show_perf 1 para mostrar o painel."
+turkish = "Paneli göstermek için cl_show_perf 1 yazın."
+polish = "Wpisz cl_show_perf 1, aby wyświetlić panel."
+
+[[message]]
 key = "Use custom chat bubble colors"
 [message.translations]
 simplified_chinese = "使用自定义消息气泡颜色"
@@ -39451,6 +39531,22 @@ brazilian_portuguese = "Usar filtro público de palavras"
 portuguese = "Usar filtro público de palavras"
 turkish = "Ortak kelime filtresini kullan"
 polish = "Używaj publicznego filtra słów"
+
+[[message]]
+key = "Use qm_pref <0|1> [20-400] (milliseconds)"
+[message.translations]
+simplified_chinese = "用法：qm_pref <0|1> [20-400]（毫秒）"
+traditional_chinese = "用法：qm_pref <0|1> [20-400]（毫秒）"
+japanese = "使い方：qm_pref <0|1> [20-400]（ミリ秒）"
+korean = "사용법: qm_pref <0|1> [20-400] (밀리초)"
+russian = "Синтаксис: qm_pref <0|1> [20-400] (миллисекунды)"
+german = "Verwendung: qm_pref <0|1> [20-400] (Millisekunden)"
+spanish = "Uso: qm_pref <0|1> [20-400] (milisegundos)"
+french = "Utilisation : qm_pref <0|1> [20-400] (millisecondes)"
+brazilian_portuguese = "Uso: qm_pref <0|1> [20-400] (milissegundos)"
+portuguese = "Utilização: qm_pref <0|1> [20-400] (milissegundos)"
+turkish = "Kullanım: qm_pref <0|1> [20-400] (milisaniye)"
+polish = "Użycie: qm_pref <0|1> [20-400] (milisekundy)"
 
 [[message]]
 key = "Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active"

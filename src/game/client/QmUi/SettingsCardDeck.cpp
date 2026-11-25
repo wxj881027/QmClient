@@ -840,6 +840,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				m_WidthAnchorStateIndex = -1;
 				m_Drag.m_StateIndex = Card.m_StateIndex;
 				m_Drag.m_SourceColumn = Card.m_Column;
+				m_Drag.m_SourceLayoutColumn = Card.m_LayoutColumn;
 				m_Drag.m_TargetColumn = Card.m_Column;
 				m_Drag.m_GrabOffsetX = Input.m_MouseX - Card.m_Frame.m_Rect.x;
 				m_Drag.m_GrabOffsetY = Input.m_MouseY - Card.m_Frame.m_Rect.y;
@@ -851,13 +852,8 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	if(m_Drag.Active())
 	{
 		const bool MouseInScrollViewport = PointInRect(ScrollViewport, Input.m_MouseX, Input.m_MouseY);
-		if(DrawLayout.m_TwoColumns && m_Drag.m_SourceColumn != 0)
-		{
-			if(MouseInScrollViewport && Input.m_MouseX >= DrawLayout.m_aColumns[0].x && Input.m_MouseX <= DrawLayout.m_aColumns[0].x + DrawLayout.m_aColumns[0].w)
-				m_Drag.m_TargetColumn = 1;
-			else if(MouseInScrollViewport && Input.m_MouseX >= DrawLayout.m_aColumns[1].x && Input.m_MouseX <= DrawLayout.m_aColumns[1].x + DrawLayout.m_aColumns[1].w)
-				m_Drag.m_TargetColumn = 2;
-		}
+		if(DrawLayout.m_TwoColumns && MouseInScrollViewport)
+			m_Drag.m_TargetColumn = ResolveSettingsCardDeckDropColumn(m_Drag.m_TargetColumn, m_Drag.m_SourceLayoutColumn, Input.m_MouseX, DrawLayout.m_aColumns[0], DrawLayout.m_aColumns[1]);
 		m_vDragGeometry.clear();
 		m_vDragGeometry.reserve(m_vPreparedCards.size());
 		for(const SPreparedCard &Card : m_vPreparedCards)

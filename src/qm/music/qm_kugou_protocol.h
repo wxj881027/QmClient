@@ -19,7 +19,9 @@ namespace QmMusicHook
 		std::string m_Original;
 		std::string m_Patched;
 	};
-	// 指纹来自酷狗 20.1.22.27795 附带的 CEF 89.20.0，未知版本绝不写入。
+	// 同一发行版本的不同构建可以把 CEF 放在不含构建号的目录。
+	std::wstring_view KugouSharedPatchReleaseSeries(std::wstring_view Version);
+	// 指纹来自酷狗 20.1.22.27795 附带的 CEF 89.20.0，写入前仍须查验 DLL。
 	const std::vector<SKugouPatch> &KugouPatches();
 	enum class EKugouPatchState
 	{

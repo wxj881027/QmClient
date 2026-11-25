@@ -310,6 +310,18 @@ void ApplySettingsCardDeckSingleColumnDragPlacement(std::array<std::vector<int>,
 	}
 }
 
+int ResolveSettingsCardDeckDropColumn(int CurrentColumn, int SourceLayoutColumn, float MouseX, const CUIRect &Left, const CUIRect &Right)
+{
+	// 已缩成半宽的旧全宽槽位按画面上的列处理，真正的全宽卡仍在原槽位内排序。
+	if(SourceLayoutColumn == 0)
+		return CurrentColumn;
+	if(MouseX >= Left.x && MouseX <= Left.x + Left.w)
+		return 1;
+	if(MouseX >= Right.x && MouseX <= Right.x + Right.w)
+		return 2;
+	return CurrentColumn;
+}
+
 int ResolveSettingsCardDeckDropOrder(float MouseY, int TargetColumn, const std::vector<SSettingsCardDeckItemGeometry> &vItems, int IgnoredStateIndex)
 {
 	int Order = 0;

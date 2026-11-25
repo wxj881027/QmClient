@@ -36,7 +36,6 @@ TEST(QmNewUiMenuGameplayHudContract, MediaIslandLyricsUsesNeteaseIntegration)
 	// 媒体岛只消费统一的歌词呈现层，不再直接读网易云集成。
 	EXPECT_NE(MediaIslandCache.find("GameClient()->m_LyricsPresentation.Frame()"), std::string::npos);
 	EXPECT_EQ(MediaIslandCache.find("m_NeteaseIntegration"), std::string::npos);
-	EXPECT_NE(IntegrationSource.find("m_QmLyrics"), std::string::npos);
 	EXPECT_NE(IntegrationSource.find("m_QmLyricsInMediaIsland"), std::string::npos);
 }
 

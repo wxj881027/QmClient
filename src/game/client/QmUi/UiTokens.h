@@ -8,6 +8,8 @@
 
 #include <base/color.h>
 
+#include <engine/textrender.h>
+
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -1289,6 +1291,8 @@ namespace ui_token::hud::font
 {
 	// 辅助信息：坐标、FPS 一类角标，最小一档。
 	inline constexpr float CAPTION = 6.0f;
+	inline constexpr EFontPreset DEBUG_PRESET = EFontPreset::DEFAULT_FONT;
+	inline constexpr float DEBUG_TEXT_REFERENCE_WIDTH = 400.0f;
 	// 正文：HUD 面板里成行的说明与数值标签。
 	inline constexpr float BODY = 8.0f;
 	// 标题：HUD 面板标题、区域名。

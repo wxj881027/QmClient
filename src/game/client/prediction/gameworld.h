@@ -90,6 +90,7 @@ public:
 		bool m_PredictEvents;
 		bool m_OldLaser;
 		bool m_PredictTeleport = false;
+		bool m_AutoSwitchWeaponOnPickup = false;
 	} m_WorldConfig;
 
 	bool m_IsValidCopy;

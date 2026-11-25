@@ -92,7 +92,6 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::SystemMediaControls, EQmModuleColumn::Right, 15, "system_media_controls"},
 		{EQmModuleId::Lyrics, EQmModuleColumn::Right, 16, "lyrics"},
 		{EQmModuleId::Background3D, EQmModuleColumn::Right, 17, "background_3d"},
-		{EQmModuleId::DebugMode, EQmModuleColumn::Right, 19, "debug_mode"},
 		{EQmModuleId::BindStatusHud, EQmModuleColumn::Right, 20, "bind_status_hud"},
 		// 本地新增卡：模块集合必须覆盖全部 QmModuleCount 项，
 		// 否则 MakeAllDefaults().size() 会少于 QmModuleCount（本测试与 roundtrip 均依赖此不变量）。

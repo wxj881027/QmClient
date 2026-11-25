@@ -8,11 +8,33 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/UiTextRenderState.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/localization.h>
 
 static constexpr int64_t GRAPH_MAX_VALUES = 128;
+
+namespace
+{
+	float DebugHudFontSize(float Width)
+	{
+		return ui_token::hud::font::CAPTION * std::clamp(Width / ui_token::hud::font::DEBUG_TEXT_REFERENCE_WIDTH, 0.65f, 1.0f);
+	}
+
+	void DrawDebugHudRow(ITextRender &TextRender, float ScreenWidth, float Y, float FontSize, const char *pLabel, const char *pValue)
+	{
+		const float Right = ScreenWidth - ui_token::spacing::SM;
+		const float Left = ScreenWidth - std::min(100.0f, ScreenWidth * 0.45f);
+		const float ValueWidth = TextRender.TextWidth(FontSize, pValue);
+		const float LabelWidth = TextRender.TextWidth(FontSize, pLabel);
+		const float Available = std::max(1.0f, Right - Left - ui_token::spacing::XS);
+		const float FittedSize = FontSize * std::min(1.0f, Available / std::max(1.0f, ValueWidth + LabelWidth));
+		TextRender.Text(Left, Y, FittedSize, pLabel);
+		TextRender.Text(Right - TextRender.TextWidth(FittedSize, pValue), Y, FittedSize, pValue);
+	}
+}
 
 CDebugHud::CDebugHud() :
 	m_RampGraph(GRAPH_MAX_VALUES, 2, false),
@@ -22,7 +44,7 @@ CDebugHud::CDebugHud() :
 
 float CDebugHud::RenderNetCorrections(float StartY)
 {
-	if(!g_Config.m_Debug || g_Config.m_DbgGraphs || !GameClient()->m_Snap.m_pLocalCharacter || !GameClient()->m_Snap.m_pLocalPrevCharacter)
+	if(!g_Config.m_Debug || g_Config.m_ClShowPerf || !GameClient()->m_Snap.m_pLocalCharacter || !GameClient()->m_Snap.m_pLocalPrevCharacter)
 		return StartY;
 
 	const float Height = 300.0f;
@@ -35,80 +57,78 @@ float CDebugHud::RenderNetCorrections(float StartY)
 	const float Ramp = VelocityRamp(Velspeed, GameClient()->m_aTuning[g_Config.m_ClDummy].m_VelrampStart, GameClient()->m_aTuning[g_Config.m_ClDummy].m_VelrampRange, GameClient()->m_aTuning[g_Config.m_ClDummy].m_VelrampCurvature);
 	const CCharacter *pCharacter = GameClient()->m_GameWorld.GetCharacterById(GameClient()->m_Snap.m_LocalClientId);
 
-	const float FontSize = 5.0f;
+	const float FontSize = DebugHudFontSize(Width);
 	const float LineHeight = FontSize + 1.0f;
 
 	float y = StartY;
 	char aBuf[128];
 	const auto &&RenderRow = [&](const char *pLabel, const char *pValue) {
-		TextRender()->Text(Width - 100.0f, y, FontSize, pLabel);
-		TextRender()->Text(Width - 10.0f - TextRender()->TextWidth(FontSize, pValue), y, FontSize, pValue);
+		DrawDebugHudRow(*TextRender(), Width, y, FontSize, pLabel, pValue);
 		y += LineHeight;
 	};
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-	str_format(aBuf, sizeof(aBuf), "%.0f Bps", Velspeed / 32);
-	RenderRow("Velspeed:", aBuf);
+	str_format(aBuf, sizeof(aBuf), Localize("%.0f Bps"), Velspeed / 32);
+	RenderRow(Localize("Speed"), aBuf);
 
-	str_format(aBuf, sizeof(aBuf), "%.0f Bps", VelspeedX / 32 * Ramp);
-	RenderRow("Velspeed.x * Ramp:", aBuf);
+	str_format(aBuf, sizeof(aBuf), Localize("%.0f Bps"), VelspeedX / 32 * Ramp);
+	RenderRow(Localize("Horizontal speed × ramp"), aBuf);
 
-	str_format(aBuf, sizeof(aBuf), "%.0f Bps", VelspeedY / 32);
-	RenderRow("Velspeed.y:", aBuf);
+	str_format(aBuf, sizeof(aBuf), Localize("%.0f Bps"), VelspeedY / 32);
+	RenderRow(Localize("Vertical speed"), aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%.2f", Ramp);
-	RenderRow("Ramp:", aBuf);
+	RenderRow(Localize("Velocity ramp"), aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%d", pCharacter == nullptr ? -1 : pCharacter->m_TeleCheckpoint);
-	RenderRow("Checkpoint:", aBuf);
+	RenderRow(Localize("Teleport checkpoint"), aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%d / %d", pCharacter == nullptr ? -1 : pCharacter->GetPureTuneZone(), pCharacter == nullptr ? -1 : pCharacter->GetOverriddenTuneZone());
-	RenderRow("Tune zone (pure / override):", aBuf);
+	RenderRow(Localize("Tune zone (map / override)"), aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%.2f", GameClient()->m_Snap.m_pLocalCharacter->m_X / 32.0f);
-	RenderRow("Pos.x:", aBuf);
+	RenderRow(Localize("Position X"), aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%.2f", GameClient()->m_Snap.m_pLocalCharacter->m_Y / 32.0f);
-	RenderRow("Pos.y:", aBuf);
+	RenderRow(Localize("Position Y"), aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_Snap.m_pLocalCharacter->m_Angle);
-	RenderRow("Angle:", aBuf);
+	RenderRow(Localize("Angle"), aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->NetobjNumCorrections());
-	RenderRow("Netobj corrections", aBuf);
-	RenderRow(" on:", GameClient()->NetobjCorrectedOn());
+	RenderRow(Localize("Network object corrections"), aBuf);
+	RenderRow(Localize("Last corrected field"), GameClient()->NetobjCorrectedOn());
 
 	return y;
 }
 
 float CDebugHud::RenderParticleDiagnostics(float StartY)
 {
-	if(!g_Config.m_Debug || g_Config.m_DbgGraphs)
+	if(!g_Config.m_Debug || g_Config.m_ClShowPerf)
 		return StartY;
 
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
-	const float FontSize = 5.0f;
+	const float FontSize = DebugHudFontSize(Width);
 	float y = StartY;
 	char aBuf[128];
 	const auto &&RenderRow = [&](const char *pLabel, const char *pValue) {
-		TextRender()->Text(Width - 100.0f, y, FontSize, pLabel);
-		TextRender()->Text(Width - 10.0f - TextRender()->TextWidth(FontSize, pValue), y, FontSize, pValue);
+		DrawDebugHudRow(*TextRender(), Width, y, FontSize, pLabel, pValue);
 		y += FontSize + 1.0f;
 	};
 
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnEventsProcessed);
-	RenderRow("Spawn received:", aBuf);
+	RenderRow(Localize("Spawn events received"), aBuf);
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnEffectsDispatched);
-	RenderRow("Spawn particles:", aBuf);
+	RenderRow(Localize("Spawn particles dispatched"), aBuf);
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnEffectsFiltered);
-	RenderRow("Spawn filtered:", aBuf);
+	RenderRow(Localize("Spawn effects filtered"), aBuf);
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnParticleAddFailures);
-	RenderRow("Spawn add failed:", aBuf);
-	RenderRow("Particles skin:", GameClient()->m_ParticlesSkinLoaded ? "valid" : "invalid");
+	RenderRow(Localize("Spawn particle failures"), aBuf);
+	RenderRow(Localize("Particle skin"), GameClient()->m_ParticlesSkinLoaded ? Localize("Valid") : Localize("Invalid"));
 
 	return y;
 }
@@ -135,7 +155,7 @@ void CDebugHud::RenderTuning()
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
-	const float FontSize = 5.0f;
+	const float FontSize = DebugHudFontSize(Width);
 
 	const float StartY = 50.0f;
 	float y = StartY;
@@ -285,7 +305,7 @@ void CDebugHud::RenderHint()
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
-	const float FontSize = 5.0f;
+	const float FontSize = DebugHudFontSize(Width);
 	const float Spacing = 5.0f;
 	// TClient：状态栏渲染在屏幕最底部，底部提示文本需要向上避让
 	const float StatusBarHeight = g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f;
@@ -322,10 +342,10 @@ void CDebugHud::RenderSwitchTileInfo()
 	const float WidthScreen = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, WidthScreen, Height);
 
-	const float FontSize = 5.0f;
+	const float FontSize = DebugHudFontSize(WidthScreen);
 	const float Spacing = 5.0f;
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "Switch tile: type=%d delay=%d number=%d (x=%d y=%d)", SwitchType, SwitchDelay, SwitchNumber, TileX, TileY);
+	str_format(aBuf, sizeof(aBuf), Localize("Switch tile: type=%d delay=%d number=%d (x=%d y=%d)"), SwitchType, SwitchDelay, SwitchNumber, TileX, TileY);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	const float TextWidth = TextRender()->TextWidth(FontSize, aBuf);
 	const float X = std::max(Spacing, WidthScreen - Spacing - TextWidth);
@@ -340,6 +360,8 @@ void CDebugHud::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
+	const CUiScopedTextRenderState TextState(*TextRender());
+	TextRender()->SetFontPreset(ui_token::hud::font::DEBUG_PRESET);
 	RenderTuning();
 	// 右侧诊断文本按段落依次向下排列，避免各行互相覆盖
 	float DebugTextY = 50.0f;

@@ -32,7 +32,6 @@ def smoke_update_popup_failure_cancel(source: Path, workspace: Path, proxy: str)
 		"gfx_backgroundrender 1",
 		"cl_show_welcome 0",
 		"cl_save_settings 0",
-		"qm_auto_update 0",
 		"qm_steam_auto_launch 0",
 		"stdout_output_level 1",
 		"cl_languagefile languages/simplified_chinese.txt",

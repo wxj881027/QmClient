@@ -190,7 +190,6 @@ def run_font_scenario(source: Path, workspace: Path, name: str, proxy: str) -> d
 		"ui_page 16",
 		"stdout_output_level 1",
 		"cl_save_settings 0",
-		"qm_auto_update 0",
 		"qm_steam_auto_launch 0",
 		"qm_graphics_trace 1",
 		"cl_languagefile languages/simplified_chinese.txt",

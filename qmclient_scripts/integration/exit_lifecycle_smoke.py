@@ -108,7 +108,6 @@ def client_scenario(build: Path, directory: Path, name: str, proxy: str) -> None
 		"gfx_screen_height 540",
 		"cl_save_settings 1",
 		"player_name QmExitSaved",
-		"qm_auto_update 0",
 		"qm_steam_auto_launch 0",
 	]
 	if name == "cleanup-stall":

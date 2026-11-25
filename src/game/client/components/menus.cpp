@@ -6694,7 +6694,7 @@ int CMenus::IdleRenderFrameRate() const
 	if(Ui()->ActiveItem() != nullptr || CLineInput::GetActiveInput() != nullptr || GameClient()->m_KeyBinder.IsActive() || Ui()->IsPopupOpen())
 		return 0;
 	// 性能采样期间解除空闲节流，普通设置页空闲时仍限制功耗。
-	if(IsSettingsPageActive() && (g_Config.m_QmPerfDebug != 0 || m_SettingsPerfWindowTracker.HasActiveWindow()))
+	if(IsSettingsPageActive() && (g_Config.m_QmPerfEnabled || m_SettingsPerfWindowTracker.HasActiveWindow()))
 		return 0;
 
 	if(GameClient()->m_MenuBackground.IsLoading())

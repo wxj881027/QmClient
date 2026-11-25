@@ -3,8 +3,11 @@
 #include <game/client/components/qmclient/map_mechanism_builder.h>
 #include <game/client/components/qmclient/shadow_gun_replay.h>
 #include <game/client/laser_data.h>
+#include <game/client/pickup_data.h>
+#include <game/client/prediction/entities/character.h>
 #include <game/client/prediction/entities/door.h>
 #include <game/client/prediction/entities/dragger.h>
+#include <game/client/prediction/entities/pickup.h>
 #include <game/client/prediction/entities/practice_light.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/collision.h>
@@ -144,6 +147,38 @@ namespace
 			Tile.m_Number = Number;
 		}
 	};
+}
+
+TEST(ShadowMechanism, WeaponPickupFollowsPracticeWorldAutoEquipSetting)
+{
+	SMechanismFixture Fixture;
+	Fixture.Init();
+	CTuningParams Tuning;
+	for(const bool AutoEquip : {false, true})
+	{
+		SCOPED_TRACE(AutoEquip);
+		CGameWorld World;
+		World.Init(&Fixture.m_Collision, &Tuning, nullptr);
+		World.m_WorldConfig.m_AutoSwitchWeaponOnPickup = AutoEquip;
+		CNetObj_Character Snapshot{};
+		Snapshot.m_X = Snapshot.m_Y = 80;
+		Snapshot.m_HookedPlayer = -1;
+		Snapshot.m_Weapon = WEAPON_HAMMER;
+		auto *pCharacter = new CCharacter(&World, 0, &Snapshot, nullptr);
+		World.InsertEntity(pCharacter);
+		pCharacter->m_IsLocal = true;
+		pCharacter->SetWeaponGot(WEAPON_SHOTGUN, false);
+
+		CPickupData Data{};
+		Data.m_Pos = vec2(80.0f, 80.0f);
+		Data.m_Type = POWERUP_WEAPON;
+		Data.m_Subtype = WEAPON_SHOTGUN;
+		CPickup Pickup(&World, 1, &Data);
+		Pickup.Tick();
+
+		EXPECT_TRUE(pCharacter->GetWeaponGot(WEAPON_SHOTGUN));
+		EXPECT_EQ(pCharacter->GetActiveWeapon(), AutoEquip ? WEAPON_SHOTGUN : WEAPON_HAMMER);
+	}
 }
 
 TEST(ShadowMechanism, DoorCollisionOwnershipStaysWithPlayableWorld)

@@ -33,7 +33,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_pie_menu_text_inputs", UiScale);
 	char aLayoutExtra[96];
 	str_copy(aLayoutExtra, "tab=function module=pie_menu", sizeof(aLayoutExtra));
-	if(CanCommit && g_Config.m_QmPerfDebug)
+	if(CanCommit && g_Config.m_QmPerfEnabled)
 		QmPerfLogStage("perf/qmclient", "pie_menu_layout", LayoutTimer.ElapsedMs(), false, Client(), nullptr, nullptr, aLayoutExtra);
 	CPerfTimer ControlsTimer;
 	CUIRect Row, LabelColumn, ControlColumn;
@@ -60,7 +60,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	}
 	if(!g_Config.m_QmPieMenuEnabled)
 	{
-		if(CanCommit && g_Config.m_QmPerfDebug)
+		if(CanCommit && g_Config.m_QmPerfEnabled)
 			QmPerfLogStage("perf/qmclient", "pie_menu_controls", ControlsTimer.ElapsedMs(), false, Client(), nullptr, nullptr, aLayoutExtra);
 		return;
 	}
@@ -411,6 +411,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 				color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), BodySize, true, true);
 		}
 	}
-	if(CanCommit && g_Config.m_QmPerfDebug)
+	if(CanCommit && g_Config.m_QmPerfEnabled)
 		QmPerfLogStage("perf/qmclient", "pie_menu_controls", ControlsTimer.ElapsedMs(), false, Client(), nullptr, nullptr, aLayoutExtra);
 }

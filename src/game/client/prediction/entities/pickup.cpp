@@ -126,6 +126,11 @@ void CPickup::Tick()
 				if(m_Subtype >= 0 && m_Subtype < NUM_WEAPONS && (!pChr->GetWeaponGot(m_Subtype) || pChr->GetWeaponAmmo(m_Subtype) != -1))
 				{
 					pChr->GiveWeapon(m_Subtype);
+					if(GameWorld()->m_WorldConfig.m_AutoSwitchWeaponOnPickup && pChr->m_IsLocal && pChr->GetActiveWeapon() != m_Subtype)
+					{
+						pChr->SetQueuedWeapon(m_Subtype);
+						pChr->DoWeaponSwitch();
+					}
 
 					if(GameWorld()->m_WorldConfig.m_IsDDRace && GameWorld()->m_WorldConfig.m_PredictDDRace)
 					{
