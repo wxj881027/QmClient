@@ -7,6 +7,7 @@
 
 #include <engine/shared/config.h>
 #include <game/collision.h>
+#include <game/mapitems.h>
 
 #include <bitset>
 
