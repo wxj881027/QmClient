@@ -3,7 +3,6 @@
 
 #include <engine/shared/config.h>
 
-#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/render.h>
@@ -101,17 +100,14 @@ namespace qm_spectator_layout
 		return Layout;
 	}
 
-	inline SRoundedSurfaceParams TeamRowSurface(float Radius, bool StartsTeam, bool EndsTeam)
+	template<typename F>
+	int TeamBandEnd(int FirstRow, int GroupEnd, F &&TeamAt)
 	{
-		SRoundedSurfaceParams Surface;
-		Surface.m_Corners = IGraphics::CORNER_NONE;
-		if(StartsTeam)
-			Surface.m_Corners |= IGraphics::CORNER_T;
-		if(EndsTeam)
-			Surface.m_Corners |= IGraphics::CORNER_B;
-		// 中间行必须给零半径，否则公共表面会把 CORNER_NONE 解析为四角圆角。
-		Surface.m_Radius = Surface.m_Corners == IGraphics::CORNER_NONE ? 0.0f : Radius;
-		return Surface;
+		const int Team = TeamAt(FirstRow);
+		int End = FirstRow + 1;
+		while(End < GroupEnd && TeamAt(End) == Team)
+			++End;
+		return End;
 	}
 
 	// HalfHeight 默认 300（桌面 600 高的面板）；手机放大整块时传入按比例加高的半高。

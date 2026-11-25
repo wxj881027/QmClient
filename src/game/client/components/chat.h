@@ -436,7 +436,7 @@ private:
 		// 从最旧一端量出的屏幕容量：滚到顶时这组消息必须完整可见。
 		int m_FittingLines = 1;
 	};
-	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, bool IsScoreBoardOpen, bool ShowLargeArea, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
+	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, bool ShowLargeArea, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
 	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations);
 	bool UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed);
 
@@ -662,7 +662,7 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	void OnRender() override;
-	bool OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea);
+	bool OnPrepareLines(float y, bool ShowLargeArea);
 	void Reset();
 	void OnRelease() override;
 	void OnNewSnapshot() override;

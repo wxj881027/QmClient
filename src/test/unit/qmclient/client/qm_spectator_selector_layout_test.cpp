@@ -92,45 +92,22 @@ TEST(QmSpectatorSelectorLayout, TouchStaysUnderFingerWhilePanelMoves)
 	}
 }
 
-TEST(QmSpectatorSelectorLayout, TeamBandMiddleHasStraightSides)
+TEST(QmSpectatorSelectorLayout, ATeamBandIncludesOnlyConsecutiveRowsOfTheSameTeam)
 {
-	for(float Radius : {3.0f, 5.0f, 6.0f, 10.0f, 30.0f})
-	{
-		SCOPED_TRACE(Radius);
-		const auto Surface = qm_spectator_layout::TeamRowSurface(Radius, false, false);
-		const auto Plan = ResolveRoundedSurfacePlan(CUIRect{0.0f, 0.0f, 270.0f, 60.0f}, Surface, true);
-		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.x, 0.0f);
-		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.y, 0.0f);
-		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.z, 0.0f);
-		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.w, 0.0f);
-		EXPECT_FLOAT_EQ(Plan.m_Radius, 0.0f);
-	}
+	const int aTeams[] = {2, 2, 2, 3, 2};
+	const auto TeamAt = [&](int Row) { return aTeams[Row]; };
+	EXPECT_EQ(qm_spectator_layout::TeamBandEnd(0, 5, TeamAt), 3);
+	EXPECT_EQ(qm_spectator_layout::TeamBandEnd(3, 5, TeamAt), 4);
+	EXPECT_EQ(qm_spectator_layout::TeamBandEnd(4, 5, TeamAt), 5);
 }
 
-TEST(QmSpectatorSelectorLayout, TeamBandRoundsOnlyExposedEnds)
+TEST(QmSpectatorSelectorLayout, ATeamBandStopsAtTheEndOfItsGroup)
 {
-	const CUIRect Row{0.0f, 0.0f, 270.0f, 60.0f};
-	const auto First = ResolveRoundedSurfacePlan(Row, qm_spectator_layout::TeamRowSurface(30.0f, true, false), true);
-	EXPECT_FLOAT_EQ(First.m_CornerRadii.x, 30.0f);
-	EXPECT_FLOAT_EQ(First.m_CornerRadii.y, 30.0f);
-	EXPECT_FLOAT_EQ(First.m_CornerRadii.z, 0.0f);
-	EXPECT_FLOAT_EQ(First.m_CornerRadii.w, 0.0f);
-
-	const auto Last = ResolveRoundedSurfacePlan(Row, qm_spectator_layout::TeamRowSurface(30.0f, false, true), true);
-	EXPECT_FLOAT_EQ(Last.m_CornerRadii.x, 0.0f);
-	EXPECT_FLOAT_EQ(Last.m_CornerRadii.y, 0.0f);
-	EXPECT_FLOAT_EQ(Last.m_CornerRadii.z, 30.0f);
-	EXPECT_FLOAT_EQ(Last.m_CornerRadii.w, 30.0f);
-}
-
-TEST(QmSpectatorSelectorLayout, SinglePlayerTeamKeepsAllRoundedCorners)
-{
-	const auto Surface = qm_spectator_layout::TeamRowSurface(30.0f, true, true);
-	const auto Plan = ResolveRoundedSurfacePlan(CUIRect{0.0f, 0.0f, 270.0f, 60.0f}, Surface, true);
-	EXPECT_FLOAT_EQ(Plan.m_CornerRadii.x, 30.0f);
-	EXPECT_FLOAT_EQ(Plan.m_CornerRadii.y, 30.0f);
-	EXPECT_FLOAT_EQ(Plan.m_CornerRadii.z, 30.0f);
-	EXPECT_FLOAT_EQ(Plan.m_CornerRadii.w, 30.0f);
+	const auto TeamAt = [](int Row) {
+		EXPECT_LT(Row, 2);
+		return 2;
+	};
+	EXPECT_EQ(qm_spectator_layout::TeamBandEnd(0, 2, TeamAt), 2);
 }
 
 TEST(QmSpectatorSelectorLayout, GroupTitleSeparatesPlayersLabelAndDivider)

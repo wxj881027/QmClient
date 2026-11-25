@@ -2975,7 +2975,7 @@ int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const
 	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw, Radius);
 }
 
-int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize, float TextInsetX)
+int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize, float TextInsetX, bool CenterTextInk)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
 	ui_widget::SButtonSurfaceOptions Options;
@@ -2983,6 +2983,7 @@ int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pTex
 	// 弹层条目、列表胶囊行现在是同一个视觉件：圆角统一由行高推导（半角 ≤ CARD），
 	// 不再一边 radius::BASE(8)、一边 list::RowRadius(24→12)。
 	Options.m_Radius = ui_token::list::RowRadius(pRect->h);
+	Options.m_AlignToPixel = !CenterTextInk;
 	Options.m_Enabled = Enabled;
 	Options.m_TransparentInactive = TransparentInactive;
 	Options.m_Color = ButtonColor;
@@ -2993,7 +2994,35 @@ int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pTex
 	// 左右方向必须用 VMargin（HMargin 在这个仓库是上下），轴向与档位都在 token 里算好；
 	// 调用点没显式给值时按字号与行高派生——弹层条目一律带内退，不靠调用点记得传参。
 	const CUIRect EntryLabel = ui_token::dropdown::EntryLabelRect(*pRect, Padding, Size, TextInsetX);
-	if(MinimumFontSize > 0.0f)
+	if(CenterTextInk)
+	{
+		if(!DrawingSuppressed() && EntryLabel.w > 0.0f)
+		{
+			ITextRender *pTextRender = TextRender();
+			const CUiScopedTextRenderState TextState(*pTextRender);
+			// 定位后保留小数坐标，让实际字形中心和按钮中心对齐。
+			pTextRender->SetRenderFlags(pTextRender->GetRenderFlags() | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+			constexpr int LabelFlags = TEXTFLAG_DISALLOW_NEWLINE | TEXTFLAG_ELLIPSIS_AT_END;
+			CTextCursor Measured;
+			Measured.m_FontSize = Size;
+			Measured.m_LineWidth = EntryLabel.w;
+			Measured.m_Flags = LabelFlags;
+			Measured.m_CalculateVisualBoundingBox = true;
+			pTextRender->TextEx(&Measured, pText);
+			if(Measured.m_HasVisualBoundingBox)
+			{
+				const vec2 InkCenter((Measured.m_VisualLeft + Measured.m_VisualRight) * 0.5f, (Measured.m_VisualTop + Measured.m_VisualBottom) * 0.5f);
+				CTextCursor Cursor;
+				Cursor.SetPosition(EntryLabel.Center() - InkCenter);
+				Cursor.m_FontSize = Size;
+				Cursor.m_LineWidth = EntryLabel.w;
+				Cursor.m_Flags |= LabelFlags;
+				FlushQuadBatch();
+				pTextRender->TextEx(&Cursor, pText);
+			}
+		}
+	}
+	else if(MinimumFontSize > 0.0f)
 	{
 		SLabelProperties Props;
 		Props.m_MaxWidth = EntryLabel.w;
