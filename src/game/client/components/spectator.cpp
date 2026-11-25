@@ -854,7 +854,8 @@ void CSpectator::OnRender()
 		y += TitleLayout.m_Height;
 	};
 
-	int OldDDTeam = -1;
+	int TeamBandEnd = 0;
+	const auto TeamAt = [&](int Row) { return aDisplayPlayers[aDisplayOrder[Row]].m_DDTeam; };
 	int ColumnRow = 0;
 	for(int i = 0; i < DisplayCount; ++i)
 	{
@@ -882,19 +883,20 @@ void CSpectator::OnRender()
 		const SDisplayPlayer *pInfo = &aDisplayPlayers[aDisplayOrder[i]];
 		const int DDTeam = pInfo->m_DDTeam;
 		const bool IsGhost = pInfo->m_IsGhost;
-		const bool StartsGroup = ColumnRow == 0 || (FriendCount > 0 && FriendCount < GhostStartOrder && i == FriendCount) || (GhostCount > 0 && i == GhostStartOrder);
-		const bool EndsGroup = i + 1 == DisplayCount || ColumnRow + 1 >= PerLine ||
-				       (FriendCount > 0 && FriendCount < GhostStartOrder && i + 1 == FriendCount) ||
-				       (GhostCount > 0 && i + 1 == GhostStartOrder);
-		const int NextDDTeam = EndsGroup ? 0 : aDisplayPlayers[aDisplayOrder[i + 1]].m_DDTeam;
-
-		if(DDTeam != TEAM_FLOCK)
+		if(DDTeam != TEAM_FLOCK && i >= TeamBandEnd)
 		{
+			int GroupEnd = minimum(DisplayCount, i + PerLine - ColumnRow);
+			if(i < FriendCount)
+				GroupEnd = minimum(GroupEnd, FriendCount);
+			if(i < GhostStartOrder)
+				GroupEnd = minimum(GroupEnd, GhostStartOrder);
+			TeamBandEnd = qm_spectator_layout::TeamBandEnd(i, GroupEnd, TeamAt);
+
+			// 整段共用一个表面，队内行之间不再叠加两道抗锯齿边缘。
 			const ColorRGBA Color = GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ContentAlpha);
-			const auto TeamSurface = qm_spectator_layout::TeamRowSurface(RoundRadius, StartsGroup || OldDDTeam != DDTeam, EndsGroup || NextDDTeam != DDTeam);
-			DrawRoundedSurface(Ui(), CUIRect{CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight}, Color, ColorRGBA(), TeamSurface);
+			const CUIRect Band{CenterX + x - RowHitInset + BoxOffset, CenterY + y + BoxMove, RowWidth - BoxOffset, LineHeight * (TeamBandEnd - i)};
+			DrawRoundedSurface(Ui(), Band, Color, ColorRGBA(), minimum(RoundRadius, LineHeight * 0.5f));
 		}
-		OldDDTeam = DDTeam;
 
 		if((IsGhost ? ViewModeActive : !ViewModeActive) && SelectedId() == pInfo->m_Id)
 		{

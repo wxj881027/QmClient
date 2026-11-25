@@ -202,63 +202,73 @@ void CQmWeaponTrajectory::Render(
 
 		if(Weapon == WEAPON_GUN || Weapon == WEAPON_GRENADE)
 		{
-			const vec2 StartPos = Position + Direction * (CCharacterCore::PhysicalSize() * 0.75f);
+			vec2 StartPos = Position + Direction * (CCharacterCore::PhysicalSize() * 0.75f);
 			const float Curvature = Weapon == WEAPON_GUN ? pTuning->m_GunCurvature : pTuning->m_GrenadeCurvature;
 			const float Speed = Weapon == WEAPON_GUN ? pTuning->m_GunSpeed : pTuning->m_GrenadeSpeed;
 			const float Lifetime = Weapon == WEAPON_GUN ? pTuning->m_GunLifetime : pTuning->m_GrenadeLifetime * 10.0f;
 
 			constexpr int PointCount = 180;
-			vPoints.reserve(PointCount);
-			LandingPos = StartPos;
-
-			vec2 PrevPos = StartPos;
-			for(int i = 0; i < PointCount; ++i)
+			const bool DrawLine = QmWeaponTrajectoryUsesLineStyle(Weapon);
+			if(DrawLine)
+				vLineSegments.reserve(PointCount - 1);
+			else
 			{
-				const float U = PointCount > 1 ? (float)i / (float)(PointCount - 1) : 0.0f;
-				const float T = std::pow(U, 2.0f);
-				vec2 Pos = CalcPos(StartPos, Direction, Curvature, Speed, Lifetime * T);
-				if(!QmCollision::CanRoundPosition(Pos))
+				vPoints.reserve(PointCount);
+				vPoints.push_back(StartPos);
+			}
+			LandingPos = StartPos;
+			float StartTime = 0.0f;
+			vec2 PrevPos = StartPos;
+			for(int i = 1; i < PointCount; ++i)
+			{
+				const float U = (float)i / (float)(PointCount - 1);
+				const float TravelTime = Lifetime * std::pow(U, 2.0f);
+				const vec2 Pos = CalcPos(StartPos, Direction, Curvature, Speed, TravelTime - StartTime);
+				if(!TryUseLineSamples(PrevPos, Pos))
 					return false;
-				if(i > 0)
+
+				auto Hit = QmTraceWeaponTrajectorySegment(*Collision(), PrevPos, Pos);
+				if(Hit.m_Tile == TILE_TELEINWEAPON &&
+					(!Hit.m_TeleExit || Collision()->IsSolid(round_to_int(Hit.m_Impact.x), round_to_int(Hit.m_Impact.y))))
 				{
+					// 抛射物先处理实墙。无出口的入口也不截断这一段。
 					if(!TryUseLineSamples(PrevPos, Pos))
 						return false;
-					vec2 ColPos, BeforePos;
-					const bool CollidesWithWorld = Collision()->IntersectLine(PrevPos, Pos, &ColPos, &BeforePos);
-					const vec2 SegmentEnd = CollidesWithWorld ? ColPos : Pos;
-					vec2 TeeHitPos;
-					if(FindBlockingTee(PrevPos, SegmentEnd, true, TeeHitPos))
-					{
-						vPoints.push_back(TeeHitPos);
-						LandingPos = TeeHitPos;
-						HasValidHit = true;
-						break;
-					}
-					if(CollidesWithWorld)
-					{
-						vPoints.push_back(ColPos);
-						LandingPos = ColPos;
-						HasValidHit = IsValidTeleGunWallHit(ColPos, BeforePos, Pos);
-						break;
-					}
+					Hit.m_TeleExit.reset();
+					Hit.m_Tile = Collision()->IntersectLine(PrevPos, Pos, &Hit.m_Impact, &Hit.m_BeforeImpact);
 				}
-				vPoints.push_back(Pos);
-				LandingPos = Pos;
-				PrevPos = Pos;
+				const vec2 SegmentEnd = Hit.m_Tile ? Hit.m_Impact : Pos;
+				vec2 TeeHitPos;
+				const bool HitsTee = FindBlockingTee(PrevPos, SegmentEnd, true, TeeHitPos);
+				LandingPos = HitsTee ? TeeHitPos : SegmentEnd;
+				if(!DrawLine)
+					vPoints.push_back(LandingPos);
+				else if(distance(PrevPos, LandingPos) >= 0.0001f)
+					vLineSegments.emplace_back(PrevPos, LandingPos);
+
+				if(HitsTee)
+				{
+					HasValidHit = true;
+					break;
+				}
+				if(Hit.m_TeleExit)
+				{
+					// 从出口重启抛物线，但总飞行时间照常消耗。
+					StartPos = *Hit.m_TeleExit;
+					StartTime = TravelTime;
+					LandingPos = StartPos;
+					if(!DrawLine)
+						vPoints.push_back(StartPos);
+				}
+				else if(Hit.m_Tile)
+				{
+					HasValidHit = IsValidTeleGunWallHit(Hit.m_Impact, Hit.m_BeforeImpact, Pos);
+					break;
+				}
+				PrevPos = LandingPos;
 			}
-
-			if(vPoints.empty())
-				return false;
-
-			if(!QmWeaponTrajectoryUsesLineStyle(Weapon))
+			if(!DrawLine)
 				return true;
-
-			vLineSegments.reserve(vPoints.size() - 1);
-			for(size_t i = 1; i < vPoints.size(); ++i)
-			{
-				if(distance(vPoints[i - 1], vPoints[i]) >= 0.0001f)
-					vLineSegments.emplace_back(vPoints[i - 1], vPoints[i]);
-			}
 		}
 		else
 		{
@@ -275,6 +285,7 @@ void CQmWeaponTrajectory::Render(
 			vec2 From = Position;
 			vec2 Dir = Direction;
 			bool ZeroEnergyBounceInLastTick = false;
+			bool CameFromTeleport = false;
 			int Bounces = 0;
 
 			while(Energy > 0.0f)
@@ -284,15 +295,15 @@ void CQmWeaponTrajectory::Render(
 				vec2 To = From + Dir * Energy;
 				if(!TryUseLineSamples(From, To))
 					return false;
-				vec2 ColTile;
-				vec2 HitPos;
-				int Res = Collision()->IntersectLineTeleWeapon(From, To, &ColTile, &HitPos);
-				vec2 SegmentEnd = Res ? HitPos : To;
+				const auto Hit = QmTraceWeaponTrajectorySegment(*Collision(), From, To);
+				const int Res = Hit.m_Tile;
+				const vec2 ColTile = Hit.m_Impact;
+				const vec2 SegmentEnd = Hit.m_TeleExit ? ColTile : Res ? Hit.m_BeforeImpact : To;
 				vec2 TeeHitPos;
 				// 官方 79184e826：old laser 状态来自服务器广播的 GameInfoEx，
 				// 不能再用本地 sv_old_laser 配置，否则预测轨迹与实际命中不一致。
 				const bool IgnoreShooter =
-					Bounces == 0 || GameClient()->m_GameWorld.m_WorldConfig.m_OldLaser || !GameClient()->m_GameWorld.m_WorldConfig.m_IsDDRace;
+					(Bounces == 0 && !CameFromTeleport) || GameClient()->m_GameWorld.m_WorldConfig.m_OldLaser || !GameClient()->m_GameWorld.m_WorldConfig.m_IsDDRace;
 				if(FindBlockingTee(From, SegmentEnd, IgnoreShooter, TeeHitPos))
 				{
 					vLineSegments.emplace_back(From, TeeHitPos);
@@ -307,7 +318,7 @@ void CQmWeaponTrajectory::Render(
 
 				vLineSegments.emplace_back(From, SegmentEnd);
 
-				vec2 TempPos = SegmentEnd;
+				vec2 TempPos = Hit.m_BeforeImpact;
 				vec2 TempDir = Dir * 4.0f;
 				if(!QmCollision::CanRoundPosition(ColTile) || !QmCollision::CanRoundPosition(TempPos) || !QmCollision::CanRoundPosition(TempPos + TempDir))
 					return false;
@@ -324,7 +335,7 @@ void CQmWeaponTrajectory::Render(
 				}
 				if(!QmCollision::CanRoundPosition(TempPos))
 					return false;
-				const bool ValidTeleGunWallHit = IsValidTeleGunWallHit(ColTile, TempPos, From);
+				const bool ValidTeleGunWallHit = !Hit.m_TeleExit && IsValidTeleGunWallHit(ColTile, TempPos, From);
 
 				const float Distance = distance(From, TempPos);
 				if(Distance == 0.0f && ZeroEnergyBounceInLastTick)
@@ -341,8 +352,7 @@ void CQmWeaponTrajectory::Render(
 					break;
 				}
 
-				Bounces++;
-				if(Bounces > BounceLimit)
+				if(!Hit.m_TeleExit && ++Bounces > BounceLimit)
 				{
 					HasValidHit = ValidTeleGunWallHit;
 					break;
@@ -355,7 +365,8 @@ void CQmWeaponTrajectory::Render(
 				}
 
 				Dir = normalize(TempDir);
-				From = TempPos;
+				From = Hit.m_TeleExit.value_or(TempPos);
+				CameFromTeleport = Hit.m_TeleExit.has_value();
 			}
 		}
 

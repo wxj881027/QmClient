@@ -125,6 +125,37 @@ TEST_F(WeaponTrajectoryPreparation, WeaponLineChecksTeleporterBeforeWallInSameTi
 	EXPECT_EQ(Before, vec2(30.5078125f, 16));
 }
 
+TEST_F(WeaponTrajectoryPreparation, WeaponTrajectoryResolvesTheEntryAndWallOnTheExitSide)
+{
+	m_Map.SetTeleTile(2, 0, g_Config.m_SvOldTeleportWeapons ? TILE_TELEIN : TILE_TELEINWEAPON);
+	m_Map.SetTeleTile(2, 3, TILE_TELEOUT);
+	m_Map.SetTeleTile(7, 4, TILE_TELEOUT);
+	m_Map.SetGameTile(4, 3, TILE_SOLID);
+	Initialize();
+
+	const auto Entry = QmTraceWeaponTrajectorySegment(m_Collision, vec2(16, 16), vec2(200, 16));
+	ASSERT_EQ(Entry.m_Tile, TILE_TELEINWEAPON);
+	EXPECT_NEAR(Entry.m_Impact.x, 64.0f, 1.0f);
+	EXPECT_FLOAT_EQ(Entry.m_Impact.y, 16.0f);
+	ASSERT_TRUE(Entry.m_TeleExit);
+	EXPECT_EQ(*Entry.m_TeleExit, vec2(80, 112));
+
+	const auto Wall = QmTraceWeaponTrajectorySegment(m_Collision, *Entry.m_TeleExit, vec2(200, 112));
+	EXPECT_EQ(Wall.m_Tile, TILE_SOLID);
+	EXPECT_FALSE(Wall.m_TeleExit);
+	EXPECT_NEAR(Wall.m_Impact.x, 128.0f, 1.0f);
+}
+
+TEST_F(WeaponTrajectoryPreparation, WeaponEntranceWithoutAnExitHasNoContinuation)
+{
+	m_Map.SetTeleTile(2, 0, g_Config.m_SvOldTeleportWeapons ? TILE_TELEIN : TILE_TELEINWEAPON);
+	Initialize();
+
+	const auto Hit = QmTraceWeaponTrajectorySegment(m_Collision, vec2(16, 16), vec2(200, 16));
+	EXPECT_EQ(Hit.m_Tile, TILE_TELEINWEAPON);
+	EXPECT_FALSE(Hit.m_TeleExit);
+}
+
 TEST_F(WeaponTrajectoryPreparation, NinjaStopsAtTheRealWallInsteadOfCrossingIt)
 {
 	for(int Y = 0; Y < 16; ++Y)
