@@ -4304,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == Tür-Laser-Konturfarbe
 
+Double-click to edit note
+== Notiz per Doppelklick bearbeiten
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == Drücke die belegte Taste innerhalb von 400 ms zweimal, um die aktuelle Liedzeile in den öffentlichen Chat zu senden
 

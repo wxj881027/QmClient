@@ -4304,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == 門的激光輪廓顏色
 
+Double-click to edit note
+== 雙擊修改備註
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == 在 400 毫秒內連按兩次綁定按鍵，將目前這句歌詞傳送到公開聊天
 

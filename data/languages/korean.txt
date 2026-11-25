@@ -4304,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == 문 레이저 외곽선 색상
 
+Double-click to edit note
+== 더블 클릭하여 메모 편집
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == 지정한 키를 400밀리초 안에 두 번 눌러 현재 가사를 전체 채팅으로 보냅니다
 

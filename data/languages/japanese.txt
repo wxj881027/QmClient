@@ -4304,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == ドアレーザーアウトライン色
 
+Double-click to edit note
+== ダブルクリックでメモを編集
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == 割り当てたキーを400ミリ秒以内に続けて二度押すと、現在の歌詞を全体チャットに送信します
 

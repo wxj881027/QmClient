@@ -69,7 +69,7 @@ namespace qm_card_catalog
 		}
 	} // namespace
 
-	bool QmCardRenderHook::Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly, bool DrawDivider)
+	bool QmCardRenderHook::Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly, bool DrawDivider, const char *pLabel)
 	{
 		bool *pSection = TryPersonalizationSection(pStableId);
 		if(pSection == nullptr)
@@ -81,9 +81,9 @@ namespace qm_card_catalog
 		const bool WasExpanded = *pSection;
 		const bool Expanded = SettingsPersonalizationSectionEx(s_Personalization, Content, pStableId, Metrics,
 			ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->m_MenuTextPlanCollecting, DrawDivider,
-			[pMenus, pStableId, &Metrics, &Style](const void *, const CUIRect &Row, bool Expanded, bool) {
+			[pMenus, pStableId, pLabel, &Metrics, &Style](const void *, const CUIRect &Row, bool Expanded, bool) {
 				// 调用点使用静态 ID，重载配置时按钮身份跟随卡片。
-				return SettingsFoldRow(pMenus->Ui(), pStableId, Row, Localize("Personal adjustments"), Metrics.m_SmallSize, Expanded, Style);
+				return SettingsFoldRow(pMenus->Ui(), pStableId, Row, pLabel != nullptr ? pLabel : Localize("Personal adjustments"), Metrics.m_SmallSize, Expanded, Style);
 			});
 		// 只在真切换时写回，避免每帧重排整串配置。
 		if(Expanded != WasExpanded && !TrySavePersonalization())
@@ -91,14 +91,20 @@ namespace qm_card_catalog
 		return *pSection;
 	}
 
-	bool QmCardRenderHook::PersonalizationReveal(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, float *pRevealOut, bool ReadOnly, bool DrawDivider)
+	bool QmCardRenderHook::PersonalizationReveal(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, float *pRevealOut, bool ReadOnly, bool DrawDivider, const char *pLabel)
 	{
-		const bool Expanded = Personalization(pMenus, Content, pStableId, Metrics, ReadOnly, DrawDivider);
+		const bool Expanded = Personalization(pMenus, Content, pStableId, Metrics, ReadOnly, DrawDivider, pLabel);
 		if(s_PersonalizationNeedsReload)
 		{
 			if(pRevealOut != nullptr)
 				*pRevealOut = 0.0f;
 			return false;
+		}
+		if(ReadOnly)
+		{
+			if(pRevealOut != nullptr)
+				*pRevealOut = Expanded ? 1.0f : 0.0f;
+			return Expanded;
 		}
 		const float FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
 		try

@@ -268,7 +268,7 @@ void CPieMenu::ExecuteOption(EMenuOption Option)
 		ExecuteTeamAction(Option);
 		break;
 	case EMenuOption::FOLLOW:
-		ToggleTargetFollow();
+		GameClient()->m_CrossServerFollow.ToggleByClientId(m_TargetClientId);
 		break;
 	case EMenuOption::SCORE:
 		RequestTargetPoints();

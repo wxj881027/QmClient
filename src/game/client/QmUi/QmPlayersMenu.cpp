@@ -171,8 +171,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		Label(Layout.m_Name, aName, ui_token::font::BODY);
 		Label(Layout.m_Clan, aClan, ui_token::font::SMALL, TEXTALIGN_ML, true);
 
-		const bool Following = GameClient()->m_PieMenu.IsFollowingPlayer(Player.m_aName, Player.m_aClan) ||
-				       (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Player.m_aName) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Player.m_aClan) == 0);
+		const bool Following = !GameClient()->IsLocalClientId(Id) && GameClient()->m_CrossServerFollow.IsFollowing(Player.m_aName, Player.m_aClan);
 		const bool ForcedMute = g_Config.m_ClShowChatFriends && !Player.m_Friend;
 		const bool ForcedChatMute = ForcedMute && !g_Config.m_QmChatRelatedOnly;
 		const bool CanCopySkin = Online && !Sixup;
@@ -217,11 +216,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 				Player.m_EmoticonIgnore ^= 1;
 				break;
 			case 3:
-				StopFriendAutoFollow(m_FriendAutoFollowState);
-				if(Following)
-					GameClient()->m_PieMenu.CancelFollow();
-				else
-					GameClient()->m_PieMenu.ToggleFollowPlayer(Id);
+				GameClient()->m_CrossServerFollow.ToggleByClientId(Id);
 				break;
 			case 4:
 				if(QmCopyScoreboardSkin(g_Config, Sixup, Player.m_aSkinName, Player.m_UseCustomColor, Player.m_ColorBody, Player.m_ColorFeet))

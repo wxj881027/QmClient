@@ -330,7 +330,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.4 个性调整（Personalization reveal）
 
 - 定义：整卡「个性调整」开关控制一整段内容的露头，不是单行从属关系。
-- 唯一实现：`CMenus::PersonalizationReveal`（`src/game/client/QmUi/cards/QmCardCatalog.h`）、渲染钩子版 `QmCardRenderHook::PersonalizationReveal`（`cards/QmCardCatalog.cpp`）。
+- 唯一实现：`CMenus::PersonalizationReveal`（`src/game/client/QmUi/cards/QmCardCatalog.h`）、渲染钩子版 `QmCardRenderHook::PersonalizationReveal`（`cards/QmCardCatalog.cpp`）。需要业务名称的折叠行可传入本地化标签，仍使用同一展开状态和显隐进度。
 - 禁止的反面写法：用它代替 `SettingsDependentRows` 写单行；展开状态不进 `qm_expanded_sections`。
 
 ### 3.4b 页面主标题组件（page title widget）

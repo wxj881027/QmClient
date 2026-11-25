@@ -3,10 +3,12 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_tclient_warlist[] = {
 		{Localizable("Allow Duplicate Entries"), nullptr, "允许重复条目"},
+		{Localizable("Add an entry manually"), nullptr, "手动新增条目"},
 		{Localizable("Are you sure that you want to remove '%s' from your war groups?"), nullptr, "您确定要从您的敌对群组中删除 '%s' 吗？"},
 		{Localizable("Block enemy chat"), nullptr, "屏蔽敌对玩家聊天"},
 		{Localizable("Fully block enemy players"), nullptr, "完全屏蔽敌对玩家 拉黑 默认皮肤 数字ID"},
 		{Localizable("Clan"), nullptr, "战队"},
+		{Localizable("Display and blocking rules"), nullptr, "显示与屏蔽规则 显示位置"},
 		{Localizable("Color"), nullptr, "颜色"},
 		{Localizable("Show enemy colors in chat"), nullptr, "聊天框中显示敌对玩家的颜色"},
 		{Localizable("Show enemy colors in scoreboard"), nullptr, "计分板中显示敌对玩家的颜色"},
@@ -16,8 +18,10 @@ namespace
 		{Localizable("Name"), nullptr, "名称"},
 		{Localizable("No"), nullptr, "否"},
 		{Localizable("Online Players"), nullptr, "在线玩家"},
+		{Localizable("Quick add"), nullptr, "快速添加 在线 好友 本体 分身"},
 		{Localizable("Reason"), nullptr, "原因"},
 		{Localizable("Settings"), nullptr, "设置"},
+		{Localizable("Target group"), nullptr, "目标群组"},
 		{Localizable("Show clan for enemies"), nullptr, "敌对玩家显示战队"},
 		{Localizable("Show enemy color in spectator menu"), nullptr, "旁观选择中显示颜色"},
 		{Localizable("Edit Entry"), nullptr, "编辑条目"},

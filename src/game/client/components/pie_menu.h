@@ -44,9 +44,6 @@ private:
 	std::vector<qm_pie_menu::SRenameOption> m_vRenameQueue;
 	std::array<EMenuOption, qm_pie_menu::OPTION_COUNT> m_vVisibleOptions{};
 	int m_VisibleOptionCount = 0;
-	qm_pie_menu::SFollowState m_FollowState;
-	double m_NextFollowScan = 0.0;
-	double m_NextFollowRefresh = 0.0;
 	qm_pie_menu::CPointsRequest m_PointsRequest;
 
 	// Menu parameters (in screen pixels) - scaled 1.8x
@@ -66,15 +63,12 @@ private:
 
 	// Console command handlers
 	static void ConKeyPieMenu(IConsole::IResult *pResult, void *pUserData);
-	static void ConStopFollow(IConsole::IResult *pResult, void *pUserData);
 
 	// Helper methods
 	int FindNearestPlayer();
 	void OpenMenu();
 	void CloseMenu(bool HasExecuted = false);
 	void RefreshVisibleOptions();
-	void UpdateFollowState();
-	void ToggleTargetFollow();
 	void RequestTargetPoints();
 	void UpdatePointsRequest();
 	void ExecuteTeamAction(EMenuOption Option);
@@ -109,7 +103,6 @@ public:
 	CPieMenu();
 	int Sizeof() const override { return sizeof(*this); }
 
-	void OnInit() override;
 	void OnReset() override;
 	void OnConsoleInit() override;
 	void OnUpdate() override;
@@ -119,10 +112,6 @@ public:
 	void OnRelease() override;
 
 	bool IsActive() const { return m_Lifecycle.IsVisible(); }
-	bool IsFollowing() const { return m_FollowState.m_Active; }
-	bool IsFollowingPlayer(const char *pName, const char *pClan) const;
-	void ToggleFollowPlayer(int ClientId);
-	void CancelFollow();
 };
 
 #endif

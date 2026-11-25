@@ -71,6 +71,7 @@
 #include <game/client/components/qmclient/bind_index.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
+#include <game/client/components/qmclient/favorite_map_note_input.h>
 #include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/media_paths.h>
 #if defined(CONF_VIDEORECORDER)
@@ -6532,6 +6533,8 @@ void CMenus::SetActive(bool Active)
 		m_QmVoteMenu.m_Loader.Suspend();
 	if(Active != m_MenuActive)
 	{
+		if(!Active)
+			QmFinishFavoriteMapNoteFrame(*Ui(), GameClient()->m_TClient);
 		Ui()->CancelTouchInput();
 		if(Active)
 		{
@@ -9309,6 +9312,7 @@ void CMenus::OnRender()
 	{
 		CPerfTimer StageTimer;
 		Render();
+		QmFinishFavoriteMapNoteFrame(*Ui(), GameClient()->m_TClient);
 		LogPerfStage(Client(), "render_body", StageTimer.ElapsedMs());
 	}
 

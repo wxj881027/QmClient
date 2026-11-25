@@ -261,6 +261,31 @@ def scenario_failed_refresh_retains_consumer(s: Scenario):
 	s.quit()
 
 
+def scenario_cross_server_follow_uses_cached_players_during_failed_refresh(s: Scenario):
+	s.sources("/list")
+	payload = json.loads(s.payload("Follow destination"))
+	payload["servers"][0]["info"]["clients"] = [
+		{"name": "Follow Target", "clan": "Clan", "country": 0, "score": 0, "is_player": True}
+	]
+	s.http.set("/list", 200, json.dumps(payload).encode(), Age="0")
+	s.start()
+	s.list("Follow destination")
+	assert s.client
+	s.client.command("qm_friend_online_auto_refresh 0")
+	s.client.command("qm_friend_auto_follow_delay 30")
+	s.http.set("/list", 503, b"master unavailable")
+	s.client.command("qm_serverlist_refresh")
+	s.until(lambda state: state["error"] == 1 and state["count"] == 1)
+
+	s.client.command('qm_follow "Follow Target" Clan')
+	address = f"127.0.0.1:{s.udp.getsockname()[1]}"
+	s.client.wait_for(lambda line: f"connecting to '{address}'" in line, "immediate follow from the cached roster", 10)
+	assert not any("Cross-server following stopped" in line for line in s.client._lines), "automatic connection cancelled following"
+	s.client.command("disconnect")
+	s.client.wait_for(lambda line: "Cross-server following stopped" in line, "manual disconnect stops following", 5)
+	s.quit()
+
+
 def scenario_older_refresh_retains_fresher_consumer(s: Scenario):
 	s.sources("/list")
 	s.http.set("/list", 200, s.payload("Fresh"), Age="0")
@@ -343,6 +368,7 @@ SCENARIOS = {
 	"failed_sources_publish_age_only": scenario_failed_sources_publish_age_only,
 	"automatic_retry_recovers_without_refresh": scenario_automatic_retry_recovers_without_refresh,
 	"failed_refresh_retains_consumer": scenario_failed_refresh_retains_consumer,
+	"cross_server_follow_uses_cached_players_during_failed_refresh": scenario_cross_server_follow_uses_cached_players_during_failed_refresh,
 	"older_refresh_retains_fresher_consumer": scenario_older_refresh_retains_fresher_consumer,
 	"restart_loads_cache_when_network_fails": scenario_restart_loads_cache_when_network_fails,
 	"valid_source_publishes_while_other_source_pending": scenario_valid_source_publishes_while_other_source_pending,

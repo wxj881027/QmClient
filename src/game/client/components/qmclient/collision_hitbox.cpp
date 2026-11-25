@@ -58,11 +58,6 @@ bool CCollisionHitbox::HitboxModeEnabled() const
 	return g_Config.m_QmHitboxMode != 0;
 }
 
-bool CCollisionHitbox::LegacyModeEnabled() const
-{
-	return !HitboxModeEnabled() && g_Config.m_QmShowCollisionHitbox != 0;
-}
-
 bool CCollisionHitbox::ShouldRenderClient(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
@@ -390,20 +385,13 @@ void CCollisionHitbox::RenderTileHitboxes()
 	Graphics()->LinesEnd();
 }
 
-void CCollisionHitbox::RenderTeeHitboxes()
+void CCollisionHitbox::RenderTeeHitboxes(const SQmCollisionHitboxVisibility &Visibility)
 {
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
 	const float Alpha = HitboxAlpha();
 	if(Alpha <= 0.0f)
-		return;
-
-	const bool Legacy = LegacyModeEnabled();
-	const bool ShowTeeCollision = Legacy || g_Config.m_QmHitboxShowTeeCollision;
-	const bool ShowTeeFreeze = Legacy || g_Config.m_QmHitboxShowTeeFreeze;
-	const bool ShowTeeDeath = Legacy || g_Config.m_QmHitboxShowTeeDeath;
-	if(!ShowTeeCollision && !ShowTeeFreeze && !ShowTeeDeath)
 		return;
 
 	Graphics()->TextureClear();
@@ -442,12 +430,12 @@ void CCollisionHitbox::RenderTeeHitboxes()
 		vec2 Position = Player.m_RenderPos;
 		if(!QmCollision::CanRoundPosition(Position))
 			continue;
-		if(ShowTeeCollision && HitboxModeEnabled())
+		if(Visibility.m_TeeCircle)
 			DrawCircleOutline(Position, CCharacterCore::PhysicalSize(), TeeColor(ClientId, PlayerAlpha), 36);
 
-		if(ShowTeeFreeze)
+		if(Visibility.m_TeeCheckPoints)
 		{
-			// Freeze: center sample (tile-based)
+			// 冻结判定取角色中心所在的地图格。
 			const int Index = Collision()->GetPureMapIndex(Position);
 			const int Tile = Collision()->GetTileIndex(Index);
 			const int FrontTile = Collision()->GetFrontTileIndex(Index);
@@ -455,11 +443,8 @@ void CCollisionHitbox::RenderTeeHitboxes()
 			const bool FreezeHit = IsFreezeTile(Tile) || IsFreezeTile(FrontTile) || IsFreezeTile(SwitchTile);
 			const float FreezeAlpha = FreezeHit ? PlayerAlpha : PlayerAlpha * 0.35f;
 			DrawCross(Position, PointSize, FreezeColor(FreezeAlpha));
-		}
 
-		if(ShowTeeDeath)
-		{
-			// Death: 4-point samples (collision-based)
+			// 死亡判定取角色周围的四个采样点。
 			const vec2 DeathOffsets[4] = {
 				{SampleOffset, SampleOffset},
 				{SampleOffset, -SampleOffset},
@@ -576,7 +561,7 @@ void CCollisionHitbox::RenderHammerHitboxes()
 	}
 }
 
-void CCollisionHitbox::RenderProjectileHitboxes()
+void CCollisionHitbox::RenderProjectileHitboxes(const SQmCollisionHitboxVisibility &Visibility)
 {
 	const float Alpha = HitboxAlpha();
 	static constexpr float ExplosionRadius = 135.0f;
@@ -593,7 +578,7 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 
 		const CProjectileData Data = ExtractProjectileInfo(Item.m_Type, Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
 		const bool FreezeActive = IsSuper || Data.m_SwitchNumber <= 0 || Data.m_SwitchNumber >= (int)aSwitchers.size() || aSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam];
-		const SQmProjectileHitboxDisplay Display = ResolveQmProjectileHitboxDisplay(Data, g_Config.m_QmHitboxShowProjectiles != 0, g_Config.m_QmHitboxShowFreezeProjectiles != 0, FreezeActive);
+		const SQmProjectileHitboxDisplay Display = ResolveQmProjectileHitboxDisplay(Data, Visibility.m_ProjectilesAndLasers, Visibility.m_FreezeProjectilesAndLasers, FreezeActive);
 		if(!Display.m_ShowTrail && Display.m_FreezeRadius <= 0.0f)
 			continue;
 		if(Data.m_ExtraInfo && Data.m_Owner >= 0 && !ShouldRenderClient(Data.m_Owner))
@@ -634,7 +619,7 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 	}
 }
 
-void CCollisionHitbox::RenderLaserHitboxes()
+void CCollisionHitbox::RenderLaserHitboxes(const SQmCollisionHitboxVisibility &Visibility)
 {
 	const float Alpha = HitboxAlpha();
 	if(Alpha <= 0.0f)
@@ -662,7 +647,7 @@ void CCollisionHitbox::RenderLaserHitboxes()
 			continue;
 
 		const bool FreezeLaser = IsFreezeLaser(Data);
-		if((FreezeLaser && !g_Config.m_QmHitboxShowFreezeLasers) || (!FreezeLaser && !g_Config.m_QmHitboxShowLasers))
+		if(!Visibility.ShowLaser(FreezeLaser))
 			continue;
 		if(Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !IsSuper && !aSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam])
 			continue;
@@ -747,21 +732,22 @@ void CCollisionHitbox::RenderHookHitboxes()
 	}
 }
 
-void CCollisionHitbox::RenderWeaponHitboxes()
+void CCollisionHitbox::RenderWeaponHitboxes(const SQmCollisionHitboxVisibility &Visibility)
 {
 	const float Alpha = HitboxAlpha();
-	if(Alpha <= 0.0f || (!g_Config.m_QmHitboxShowHammer && !g_Config.m_QmHitboxShowProjectiles && !g_Config.m_QmHitboxShowFreezeProjectiles && !g_Config.m_QmHitboxShowLasers && !g_Config.m_QmHitboxShowFreezeLasers && !g_Config.m_QmHitboxShowHook))
+	if(Alpha <= 0.0f)
 		return;
 
 	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
-	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_QmHitboxShowHammer)
+	if(Visibility.m_HammerAndHook)
 		RenderHammerHitboxes();
-	if(g_Config.m_QmHitboxShowProjectiles || g_Config.m_QmHitboxShowFreezeProjectiles)
-		RenderProjectileHitboxes();
-	if(g_Config.m_QmHitboxShowLasers || g_Config.m_QmHitboxShowFreezeLasers)
-		RenderLaserHitboxes();
-	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_QmHitboxShowHook)
+	if(Visibility.m_ProjectilesAndLasers || Visibility.m_FreezeProjectilesAndLasers)
+	{
+		RenderProjectileHitboxes(Visibility);
+		RenderLaserHitboxes(Visibility);
+	}
+	if(Visibility.m_HammerAndHook)
 		RenderHookHitboxes();
 	Graphics()->LinesEnd();
 }
@@ -786,11 +772,10 @@ void CCollisionHitbox::OnRender()
 		return;
 #endif
 
-	const bool HitboxMode = HitboxModeEnabled();
-	const bool LegacyMode = LegacyModeEnabled();
-	if(!HitboxMode && !LegacyMode)
+	if(!HitboxModeEnabled() && !g_Config.m_QmShowCollisionHitbox)
 		return;
 
+	const auto Visibility = ResolveQmCollisionHitboxVisibility(g_Config, GameClient()->ReplaySessionStatus().ViewMode());
 	float SavedScreenX0, SavedScreenY0, SavedScreenX1, SavedScreenY1;
 	Graphics()->GetScreen(&SavedScreenX0, &SavedScreenY0, &SavedScreenX1, &SavedScreenY1);
 	float aPoints[4];
@@ -802,29 +787,17 @@ void CCollisionHitbox::OnRender()
 		Graphics()->GameScreenAspect(), GameClient()->m_Camera.m_Zoom, aPoints);
 	Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
 
-	if(LegacyMode || g_Config.m_QmHitboxShowMap)
-	{
-		// 绘制地图tile的碰撞体积
+	if(Visibility.m_MapBorders)
 		RenderTileHitboxes();
-	}
 
-	if(!GameClient()->ReplaySessionStatus().ViewMode() && (LegacyMode || g_Config.m_QmHitboxShowTeeCollision || g_Config.m_QmHitboxShowTeeFreeze || g_Config.m_QmHitboxShowTeeDeath))
-	{
-		// 按 Tee↔Tee、Tee↔Freeze 和 Tee↔Death 语义分别绘制。
-		RenderTeeHitboxes();
-	}
+	if(Visibility.m_TeeCircle || Visibility.m_TeeCheckPoints)
+		RenderTeeHitboxes(Visibility);
 
-	if(LegacyMode || g_Config.m_QmHitboxShowPickups)
-	{
-		// 绘制盾牌拾取的碰撞体积
+	if(Visibility.m_ShieldPickups)
 		RenderPickupHitboxes();
-	}
 
-	if(HitboxMode && (g_Config.m_QmHitboxShowHammer || g_Config.m_QmHitboxShowProjectiles || g_Config.m_QmHitboxShowFreezeProjectiles || g_Config.m_QmHitboxShowLasers || g_Config.m_QmHitboxShowFreezeLasers || g_Config.m_QmHitboxShowHook))
-	{
-		// 各类武器交互范围由独立开关控制。
-		RenderWeaponHitboxes();
-	}
+	if(Visibility.m_HammerAndHook || Visibility.m_ProjectilesAndLasers || Visibility.m_FreezeProjectilesAndLasers)
+		RenderWeaponHitboxes(Visibility);
 
 	Graphics()->MapScreen(SavedScreenX0, SavedScreenY0, SavedScreenX1, SavedScreenY1);
 }

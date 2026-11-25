@@ -10405,6 +10405,11 @@ turkish = "Başlangıçta istemci takılma tanılamasını etkinleştir"
 polish = "Włącz diagnostykę przycięć klienta przy uruchamianiu"
 
 [[message]]
+key = "Enable collision hitboxes"
+[message.translations]
+simplified_chinese = "启用碰撞箱"
+
+[[message]]
 key = "Enable dummy skin queue rotation"
 [message.translations]
 simplified_chinese = "启用分身皮肤队列轮换"
@@ -12965,6 +12970,16 @@ turkish = "Serbest görünüm"
 polish = "Swobodny widok"
 
 [[message]]
+key = "Freeze and death borders"
+[message.translations]
+simplified_chinese = "冻结与死亡边界"
+
+[[message]]
+key = "Freeze and death check points"
+[message.translations]
+simplified_chinese = "角色冻结与死亡判定点"
+
+[[message]]
 key = "Freeze border color"
 [message.translations]
 simplified_chinese = "冻结边框颜色"
@@ -13013,6 +13028,11 @@ turkish = "Donduran kalp / can alma"
 polish = "Zamrażające serce / podniesienie zdrowia"
 
 [[message]]
+key = "Freeze hitbox color"
+[message.translations]
+simplified_chinese = "冻结判定颜色"
+
+[[message]]
 key = "Freeze laser collision volume"
 [message.translations]
 simplified_chinese = "冻结激光碰撞体积"
@@ -13059,6 +13079,11 @@ brazilian_portuguese = "Volume de colisão dos projéteis Freeze"
 portuguese = "Volume de colisão dos projéteis Freeze"
 turkish = "Freeze mermilerinin çarpışma hacmi"
 polish = "Objętość kolizji pocisków Freeze"
+
+[[message]]
+key = "Freeze projectiles and lasers"
+[message.translations]
+simplified_chinese = "冻结子弹与激光"
 
 [[message]]
 key = "Freeze tile outline width"
@@ -14062,6 +14087,11 @@ brazilian_portuguese = "Disparo de pistola"
 portuguese = "Disparo de pistola"
 turkish = "Tabanca ateşi"
 polish = "Strzał z pistoletu"
+
+[[message]]
+key = "Hammer and hook range"
+[message.translations]
+simplified_chinese = "锤击与钩索范围"
 
 [[message]]
 key = "Hammer hit"
@@ -15152,6 +15182,11 @@ turkish = "İsabet bildirimi"
 polish = "Potwierdzenie trafienia"
 
 [[message]]
+key = "Hitbox line opacity"
+[message.translations]
+simplified_chinese = "线条不透明度"
+
+[[message]]
 key = "Hitbox mode"
 [message.translations]
 simplified_chinese = "碰撞箱模式"
@@ -15262,6 +15297,11 @@ brazilian_portuguese = "Cor da interação com armas no modo Hitbox"
 portuguese = "Cor da interação de armas no modo de caixa de colisão"
 turkish = "Hitbox modu silah etkileşim rengi"
 polish = "Kolor interakcji broni w trybie hitboxów"
+
+[[message]]
+key = "Hitbox player scope: 0=self only, 1=self and dummy, 2=all players"
+[message.translations]
+simplified_chinese = "显示哪些玩家的碰撞箱：0=仅自己，1=自己与分身，2=所有玩家"
 
 [[message]]
 key = "HJ Assist"
@@ -20245,6 +20285,11 @@ turkish = "Bildirim çubuğu kenara yaslandığında kenar boşluğu bırak"
 polish = "Margines przy krawędzi ekranu dla panelu powiadomień"
 
 [[message]]
+key = "Mark the freeze check at the center and the four death checks around each Tee"
+[message.translations]
+simplified_chinese = "用十字标出角色中心的冻结判定点和四角的死亡判定点"
+
+[[message]]
 key = "Marquee for long lyrics"
 [message.translations]
 simplified_chinese = "歌词超长时跑马灯"
@@ -23557,6 +23602,11 @@ turkish = "Anahat opaklığı"
 polish = "Nieprzezroczystość konturu"
 
 [[message]]
+key = "Outline where freeze, deep freeze and death tiles take effect"
+[message.translations]
+simplified_chinese = "描出地图上冻结块、深冻块和死亡块生效的边缘"
+
+[[message]]
 key = "Output device"
 [message.translations]
 simplified_chinese = "输出设备"
@@ -26216,6 +26266,11 @@ brazilian_portuguese = "Alcance do projétil / explosão"
 portuguese = "Alcance do projétil / explosão"
 turkish = "Mermi / patlama menzili"
 polish = "Zasięg pocisku / eksplozji"
+
+[[message]]
+key = "Projectiles, explosions and regular lasers"
+[message.translations]
+simplified_chinese = "子弹、爆炸与普通激光"
 
 [[message]]
 key = "ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
@@ -29823,6 +29878,11 @@ turkish = "Seçim arka plan rengi"
 polish = "Kolor tła zaznaczenia"
 
 [[message]]
+key = "Self and dummy"
+[message.translations]
+simplified_chinese = "自己与分身"
+
+[[message]]
 key = "Self and friends"
 [message.translations]
 simplified_chinese = "自己和好友"
@@ -30685,6 +30745,11 @@ brazilian_portuguese = "Migração do valor padrão de pré-aquecimento das conf
 portuguese = "Migração do valor predefinido de pré-aquecimento das configurações concluída"
 turkish = "Ayarlar ön ısıtma varsayılanı taşıması tamamlandı"
 polish = "Migracja domyślnej wartości wstępnego ładowania ustawień zakończona"
+
+[[message]]
+key = "Shield pickup range"
+[message.translations]
+simplified_chinese = "护盾拾取范围"
 
 [[message]]
 key = "Shimmer speed"
@@ -31598,6 +31663,11 @@ turkish = "Çekiç durumunu göster"
 polish = "Pokaż status młotka"
 
 [[message]]
+key = "Show hazard borders, character check points and weapon ranges"
+[message.translations]
+simplified_chinese = "显示地形危险边界、角色判定点与武器范围"
+
+[[message]]
 key = "Show hint at random top-left/right of player when main or dummy is hammered awake"
 [message.translations]
 simplified_chinese = "本体或分身被锤醒时，在对应玩家随机的左上或右上角显示提示"
@@ -31628,6 +31698,11 @@ brazilian_portuguese = "Mostrar modo de hitbox"
 portuguese = "Mostrar modo de caixa de colisão"
 turkish = "Hitbox modunu göster"
 polish = "Pokaż tryb hitboxów"
+
+[[message]]
+key = "Show hitboxes for"
+[message.translations]
+simplified_chinese = "显示对象"
 
 [[message]]
 key = "Show hookable tile outlines"
@@ -32689,6 +32764,11 @@ brazilian_portuguese = "Mostrar Tees no quadro de afogamentos da equipe Gores"
 portuguese = "Mostrar Tees no quadro de afogamentos da equipa Gores"
 turkish = "Gores takım boğulma panosunda Tee'leri göster"
 polish = "Pokaż Tees na tablicy utonięć drużyny Gores"
+
+[[message]]
+key = "Show the areas where freeze projectiles and lasers can freeze a Tee"
+[message.translations]
+simplified_chinese = "显示冰弹和冰激光能冻住角色的范围"
 
 [[message]]
 key = "Show the chat scrollbar on the right"
@@ -36145,6 +36225,16 @@ brazilian_portuguese = "Colisão de Tee (Tee contra Tee)"
 portuguese = "Colisão de Tee (Tee contra Tee)"
 turkish = "Tee çarpışması (Tee ile Tee)"
 polish = "Kolizja Tee (Tee z Tee)"
+
+[[message]]
+key = "Tee collision circle"
+[message.translations]
+simplified_chinese = "角色碰撞圆"
+
+[[message]]
+key = "Tee collision color"
+[message.translations]
+simplified_chinese = "角色碰撞颜色"
 
 [[message]]
 key = "Tee cry"
@@ -42620,6 +42710,12 @@ brazilian_portuguese = "Tecla de menu"
 portuguese = "Tecla de menu"
 turkish = "Menü tuşu"
 polish = "Klawisz menu"
+
+[[message]]
+key = "All players"
+context = "Collision hitbox"
+[message.translations]
+simplified_chinese = "所有玩家"
 
 [[message]]
 key = "Use style colors"

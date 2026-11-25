@@ -4304,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == Kapı lazer dış çizgi rengi
 
+Double-click to edit note
+== Notu düzenlemek için çift tıklayın
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == Geçerli şarkı sözü satırını genel sohbete göndermek için atanan tuşa 400 ms içinde iki kez basın
 

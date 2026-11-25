@@ -1,9 +1,11 @@
-// 碰撞体积可视化的几何辅助。
+// 碰撞体积可视化的显示策略与几何辅助。
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_COLLISION_HITBOX_LOGIC_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_COLLISION_HITBOX_LOGIC_H
 
 #include <base/dbg.h>
 #include <base/vmath.h>
+
+#include <engine/shared/config.h>
 
 #include <game/client/components/qmclient/tile_viewport_range.h>
 
@@ -12,6 +14,37 @@
 #include <cmath>
 #include <optional>
 #include <vector>
+
+struct SQmCollisionHitboxVisibility
+{
+	bool m_MapBorders;
+	bool m_TeeCircle;
+	bool m_TeeCheckPoints;
+	bool m_ShieldPickups;
+	bool m_HammerAndHook;
+	bool m_ProjectilesAndLasers;
+	bool m_FreezeProjectilesAndLasers;
+
+	bool ShowLaser(bool FreezeLaser) const
+	{
+		return FreezeLaser ? m_FreezeProjectilesAndLasers : m_ProjectilesAndLasers;
+	}
+};
+
+inline SQmCollisionHitboxVisibility ResolveQmCollisionHitboxVisibility(const CConfig &Config, bool ReplayView)
+{
+	const bool Enabled = Config.m_QmHitboxMode != 0;
+	const bool Legacy = !Enabled && Config.m_QmShowCollisionHitbox != 0;
+	return {
+		Legacy || (Enabled && Config.m_QmHitboxShowMap),
+		!ReplayView && Enabled && Config.m_QmHitboxShowTeeCollision,
+		!ReplayView && (Legacy || (Enabled && Config.m_QmHitboxShowTeeFreeze)),
+		Legacy || (Enabled && Config.m_QmHitboxShowPickups),
+		!ReplayView && Enabled && Config.m_QmHitboxShowHammer,
+		Enabled && Config.m_QmHitboxShowProjectiles,
+		Enabled && Config.m_QmHitboxShowFreezeProjectiles,
+	};
+}
 
 struct SQmHitboxTileRange
 {
