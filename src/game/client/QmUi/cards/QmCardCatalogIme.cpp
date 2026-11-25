@@ -8,6 +8,8 @@
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/components/menus.h>
+#include <game/client/gameclient.h>
+#include <game/client/qm_icon.h>
 #include <game/client/qm_ime_candidate_popup.h>
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
@@ -144,16 +146,16 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 	static std::array<int, 4> s_aOpacityIds;
 	const bool HasAlpha = s_Role != 0;
 	const SQmGradientPaletteBinding Palette{Settings.m_pColor, Settings.m_pGradient, Settings.m_GradientSize, HasAlpha};
-	if(Flow.Control("ime-color-reset", ResolveSettingsColorRowLayout(Content, Metrics, false).m_ConsumedHeight, Row))
+	if(Flow.Control("ime-color-reset", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
-		const auto ColorRow = ResolveSettingsColorRowLayout(Row, Metrics, false);
+		const auto ColorRow = ResolveSettingsColorRowLayout(Row, Metrics, false, false);
 		CUIRect ColorLabel = ColorRow.m_LabelRect;
 		ColorLabel.w = ColorRow.m_ColorButtonRect.x + ColorRow.m_ColorButtonRect.w - ColorLabel.x;
 		SLabelProperties ColorLabelProps;
 		ColorLabelProps.m_MaxWidth = ColorLabel.w;
 		ColorLabelProps.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&ColorLabel, apRoles[s_Role], BodySize, TEXTALIGN_ML, ColorLabelProps);
-		if(DoButton_Menu(&s_aReset[s_Role], Localize("Reset"), 0, &ColorRow.m_ResetButtonRect) && !ReadOnly)
+		if(Ui()->DoButton_QmIcon(&s_aReset[s_Role], EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ColorRow.m_ResetButtonRect, BUTTONFLAG_LEFT) && !ReadOnly)
 		{
 			*Settings.m_pColor = Settings.m_DefaultColor;
 			CMessageGradient::Reset(Settings.m_pGradient, Settings.m_GradientSize);
@@ -165,6 +167,8 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 			if(s_Role == 0)
 				g_Config.m_QmImeOpacity = DefaultConfig::QmImeOpacity;
 		}
+		if(!PrewarmOnly)
+			GameClient()->m_Tooltips.DoToolTip(&s_aReset[s_Role], &ColorRow.m_ResetButtonRect, Localize("Reset"));
 	}
 	DoColorGradientPalette(&Content, Settings.m_pColor, Settings.m_pGradient, Settings.m_GradientSize,
 		&s_aAdd[s_Role], &s_aRemove[s_Role], s_aColors[s_Role].data(), Metrics, false, HasAlpha);
@@ -191,10 +195,10 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 		DrawLabel(Localize("IME font size"));
 		RenderQmSettingsSliderWithValueInput(&g_Config.m_QmImeFontSize, Control, &g_Config.m_QmImeFontSize, 75, 200, "%", ReadOnly);
 	}
-	if(NextRow("ime-reset-all"))
+	if(Flow.Control("ime-reset-all", RowHeight, Row, ui_token::settings::ActionGap(LineSpacing)))
 	{
 		static CButtonContainer s_ResetAll;
-		if(DoButton_Menu(&s_ResetAll, Localize("Reset IME appearance"), 0, &Row) && !ReadOnly)
+		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_ResetAll, "ime-reset-all", Localize("Reset IME appearance"), 0, &Row, Metrics) && !ReadOnly)
 		{
 			for(const auto &Entry : aControls)
 			{

@@ -77,8 +77,8 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.3 内容度量（content metrics）
 
 - 定义：字号、控件高、标签列宽由视口缩放推导，不由各卡片自算。
-- 唯一实现：`SSettingsContentMetrics` + `CurrentSettingsContentMetrics()`（`src/game/client/QmUi/SettingsPageLayout.h`），派生函数 `ResolveSettingsControlHeight`、`ResolveSettingsControlFontSize`、`ResolveSettingsSmallFontSize`、`ResolveSettingsTextScale`、`ResolveSettingsCardLabelWidth`、`ResolveSettingsControlWidth`、`ResolveSettingsContentMetrics`；行切分用 `SplitSettingsControlRow`。
-- 禁止的反面写法：`TextRender()->TextWidth(12.0f, …)` 里写死字号；用 `Row.h * ms_FontmodHeight` 反推控件字号；同一卡片里混用两套 metrics。
+- 唯一实现：`SSettingsContentMetrics` + `CurrentSettingsContentMetrics()`（`src/game/client/QmUi/SettingsPageLayout.h`），派生函数 `ResolveSettingsControlHeight`、`ResolveSettingsControlFontSize`、`ResolveSettingsSmallFontSize`、`ResolveSettingsTextScale`、`ResolveSettingsCardLabelWidth`、`ResolveSettingsControlWidth`、`ResolveSettingsContentMetrics`；行切分用 `SplitSettingsControlRow`；设置卡片文字按钮用 `CMenus::DoSettingsButton_Menu(..., Metrics)`，字号取同一份 `m_BodySize`。
+- 禁止的反面写法：`TextRender()->TextWidth(12.0f, …)` 里写死字号；用 `Row.h * ms_FontmodHeight` 反推控件字号；设置卡片文字按钮直接调用未指定字号的 `DoButton_Menu`；同一卡片里混用两套 metrics。
 
 ### 2.4 行距档位（row gap tiers）
 
@@ -351,6 +351,18 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 定义：单行输入是胶囊、多行保持方角；聚焦光晕由 token 推导，开关 `qm_ui_focus_glow` 只关光晕、不关焦点描边与文本焦点。
 - 唯一实现：`ui_widget::InputField` / `ReadOnlyTextField` / `PasswordField` / `IntegerField`（`src/game/client/QmUi/UiForms.h`）、`ResolveInputFieldLayout`、`ResolveInputCapsuleRadius`、`ResolveInputFocusGlowLayers`、`ResolveInlineTrailingTextLayout`；光晕 `ui_token::glow::*`。
 - 禁止的反面写法：直接用 `CLineInput` 自绘外壳；单行输入写成方角；聚焦描边跟随强调色之外的第四种颜色；给光晕再开一条颜色配置；用强调色不透明度冒充光晕开关。
+
+### 3.9a 输入框同行动作（input actions row）
+
+- 定义：输入框填充余宽，右侧动作共用行高和间距；窄行保留输入空间，动作等宽收缩。
+- 唯一实现：`ResolveSettingsInputActionsLayout` + `SSettingsInputActionsLayout`（`src/game/client/QmUi/SettingsPageLayout.h`）；输入走 `ui_widget::InputField`，图标走 `CUi::DoButton_QmIcon`。关键词规则同行放重命名、正则与删除，前两项以选中态表示开关值，并提供 tooltip。
+- 禁止的反面写法：调用点用固定像素逐个切右侧按钮；按钮与输入框紧贴；为同行图标另设行高；图标开关缺少选中态或 tooltip。
+
+| 布局 | 主区域 | 右侧区域 | 唯一实现 |
+| --- | --- | --- | --- |
+| 标签与控件 | 设置标签 | 配置控件 | `SplitSettingsControlRow` |
+| 输入与动作 | 可编辑输入框 | 等高动作按钮 | `ResolveSettingsInputActionsLayout` |
+| 纯动作行 | 等分按钮 | 同组按钮 | `ResolveSettingsActionGroupLayout` |
 
 ### 3.10 开关（Toggle）
 

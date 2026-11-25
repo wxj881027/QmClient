@@ -328,7 +328,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			CodeOptions.m_Clearable = true;
 			ui_widget::PasswordField(TitleCtx, &Draft.m_Code, Row, &s_TitleCodeState, CodeOptions);
 			Hint(&Draft.m_Code, Row, Localize("Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate."));
-			if(pMenus->DoButton_Menu(&s_RedeemButton, Localize("Redeem"), 0, &Button) && Enabled && !Auth.TitleAuthenticated())
+			if(pMenus->DoSettingsButton_Menu(Page, Tab, Tab, &s_RedeemButton, "title-redeem", Localize("Redeem"), 0, &Button, Metrics) && Enabled && !Auth.TitleAuthenticated())
 				Auth.RedeemTitleCode(Draft.m_Code.GetString());
 		});
 		RowAction("title-label", [&](CUIRect Row) {
