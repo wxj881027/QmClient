@@ -3722,14 +3722,15 @@ if(CLIENT)
     components/qmclient/bind_mouse_diagram.h
     components/qmclient/bind_overview.h
     components/qmclient/bind_settings.cpp
-    components/qmclient/browser_score.h
     components/qmclient/bind_workshop.cpp
     components/qmclient/bind_workshop.h
     components/qmclient/bind_workshop_ui.cpp
     components/qmclient/bind_workshop_layout.cpp
-    components/qmclient/browser_status_layout.h
+    components/qmclient/browser_friend_actions.h
     components/qmclient/browser_map_preview.h
     components/qmclient/browser_map_preview_loader.h
+    components/qmclient/browser_score.h
+    components/qmclient/browser_status_layout.h
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_input_layout.h
     components/qmclient/chat_message_filter.h
@@ -5150,6 +5151,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_font_fit_test.cpp
     src/test/unit/qmclient/ui/qm_page_title_group_test.cpp
     src/test/unit/qmclient/ui/qm_browser_bottom_inset_test.cpp
+    src/test/unit/qmclient/ui/qm_browser_friend_actions_test.cpp
     src/test/unit/qmclient/ui/qm_gallery_layout_test.cpp
     src/test/unit/qmclient/ui/qm_ui_tag_test.cpp
     src/test/unit/qmclient/ui/qm_local_map_tags_test.cpp
@@ -6973,6 +6975,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_popup_callback_lifetime_test.cpp
       src/test/integration/qmclient/ui/qm_measurement_clip_failure_test.cpp
       src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
+      src/test/integration/qmclient/ui/qm_browser_friend_input_test.cpp
       src/test/integration/qmclient/ui/qm_favorite_map_note_input_test.cpp
       src/game/client/components/qmclient/favorite_map_note_input.cpp
       src/test/integration/qmclient/ui/qm_map_preview_draw_scope_test.cpp
