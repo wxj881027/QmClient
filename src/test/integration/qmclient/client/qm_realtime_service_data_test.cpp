@@ -213,7 +213,7 @@ TEST(QmRealtimeServiceData, ExplicitEmptyTitleKeepsSponsorProfileAuthenticated)
 
 TEST(QmRealtimeServiceData, TitleProfileRejectsOverlongOrNonSingleLineText)
 {
-	for(const char *pTitle : {"1234567890123456789012345", "bad\\ntext", "bad\\u0000text", "bad\\u202etext"})
+	for(const char *pTitle : {"123456789", "bad\\ntext", "bad\\u0000text", "bad\\u202etext"})
 	{
 		SCOPED_TRACE(pTitle);
 		const std::string Json = std::string(R"({"type":"title_profile","data":{"status":200,"title":")") + pTitle + R"("}})";
@@ -229,10 +229,7 @@ TEST(QmRealtimeServiceData, TitleProfileRejectsOverlongOrNonSingleLineText)
 
 TEST(QmRealtimeServiceData, TitleProfilePreservesSupplementaryAndCombiningCodePoints)
 {
-	std::string Title = "[";
-	for(int i = 0; i < 16; ++i)
-		Title += "𠮷";
-	Title += "文e\u0301\U0001f469\u200d\U0001f4bb]";
+	const std::string Title = "[𠮷e\u0301\U0001f469\u200d\U0001f4bb]";
 	const auto Input = Message("title_profile", std::string(R"("status":200,"title":")") + Title + '"');
 	const auto Data = ReadQmRealtimeServiceData(Input);
 	EXPECT_TRUE(Data.m_TitleAuthenticated);
