@@ -1623,10 +1623,10 @@ void CHud::RenderScoreHud()
 						{
 							str_copy(m_aScoreInfo[t].m_aPlayerNameText, pName);
 
-							float w = TextRender()->TextWidth(8.0f, pName, -1, -1.0f);
+							const float NameWidth = TextRender()->TextWidth(8.0f, pName, -1, -1.0f);
 
 							CTextCursor Cursor;
-							Cursor.SetPosition(vec2(minimum(m_Width - w - 1.0f, TeamBox.x), StartY + (t + 1) * 20.0f - 2.0f));
+							Cursor.SetPosition(vec2(QmScoreHudNameX(TeamBox.x, TeamBox.w, NameWidth, m_Width), StartY + (t + 1) * 20.0f - 2.0f));
 							Cursor.m_FontSize = 8.0f;
 							TextRender()->RecreateTextContainer(m_aScoreInfo[t].m_OptionalNameTextContainerIndex, &Cursor, pName);
 						}
@@ -1813,8 +1813,9 @@ void CHud::RenderScoreHud()
 						{
 							str_copy(m_aScoreInfo[t].m_aPlayerNameText, pName);
 
+							const float NameWidth = TextRender()->TextWidth(8.0f, pName, -1, -1.0f);
 							CTextCursor Cursor;
-							Cursor.SetPosition(vec2(minimum(m_Width - TextRender()->TextWidth(8.0f, pName) - 1.0f, ScoreLayout.m_BoxLeft), StartY + (t + 1) * 20.0f - 2.0f));
+							Cursor.SetPosition(vec2(QmScoreHudNameX(ScoreLayout.m_BoxLeft, ScoreLayout.m_BoxWidth, NameWidth, m_Width), StartY + (t + 1) * 20.0f - 2.0f));
 							Cursor.m_FontSize = 8.0f;
 							TextRender()->RecreateTextContainer(m_aScoreInfo[t].m_OptionalNameTextContainerIndex, &Cursor, pName);
 						}

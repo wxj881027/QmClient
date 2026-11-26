@@ -680,6 +680,21 @@ TEST(QmScoreHudLayout, TeamBoxRightAnchorsAndShrinksOnlyToTheLeft)
 	EXPECT_FLOAT_EQ(WithFlag.w - ShortScore.w, 16.0f - 3.0f);
 }
 
+TEST(QmScoreHudLayout, NameCentersUnderBarAndStaysOnScreen)
+{
+	constexpr float Screen = 300.0f;
+	const auto Bar = QmScoreHudTeamBoxRect(Screen, 229.0f, 24.0f, 16.0f, 18.0f);
+	constexpr float NameWidth = 40.0f;
+	EXPECT_FLOAT_EQ(QmScoreHudNameX(Bar.x, Bar.w, NameWidth, Screen), Bar.x + (Bar.w - NameWidth) * 0.5f);
+
+	// 名字比条还宽时按屏幕右缘兜底，但仍不从屏幕左边溢出。
+	const auto TinyBar = QmScoreHudTeamBoxRect(Screen, 229.0f, 0.0f, 0.0f, 18.0f);
+	constexpr float LongName = 200.0f;
+	const float LongX = QmScoreHudNameX(TinyBar.x, TinyBar.w, LongName, Screen);
+	EXPECT_LE(LongX + LongName, Screen);
+	EXPECT_GE(LongX, 0.0f);
+}
+
 TEST(QmInputOverlayLayout, MouseClassificationRequiresMouseOnlyInputs)
 {
 	EXPECT_TRUE(QmInputOverlay::IsMouseOnlyLayout(false, true));

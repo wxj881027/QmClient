@@ -33,4 +33,12 @@ inline SQmScoreHudLayout QmScoreHudLayout(float Right, float ScoreWidth, float R
 	return {BoxLeft, BoxWidth, BoxLeft + Split, Right - ScoreWidth - TeeSize / 2.0f - Split};
 }
 
+// 比分条下方的玩家名：在条内水平居中；名字比条还宽时按屏幕右缘兜底，
+// 但仍不允许从屏幕左边溢出。
+inline float QmScoreHudNameX(float BoxLeft, float BoxWidth, float NameWidth, float ScreenWidth)
+{
+	const float Centered = BoxLeft + (BoxWidth - NameWidth) * 0.5f;
+	return std::clamp(Centered, 0.0f, std::max(0.0f, ScreenWidth - NameWidth - 1.0f));
+}
+
 #endif
