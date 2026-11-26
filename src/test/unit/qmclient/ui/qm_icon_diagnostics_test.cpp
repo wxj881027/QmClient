@@ -1,6 +1,6 @@
-#include <game/client/qm_icon_prewarm.h>
-
 #include <engine/textrender.h>
+
+#include <game/client/qm_icon_prewarm.h>
 
 #include <gtest/gtest.h>
 

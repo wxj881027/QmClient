@@ -446,8 +446,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
-		{
-		},
+		{},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	// 计分板相关的 5 项（更好的计分板/积分检查/死亡后显示/滚轮滚动/过滤器）只在 qm:better_scoreboard 卡里渲染一次，
 	// 这里不再重复，避免同一条配置在两张卡里各出现一遍。

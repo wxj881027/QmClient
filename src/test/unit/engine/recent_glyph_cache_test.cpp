@@ -225,7 +225,8 @@ TEST(RecentGlyphCollection, WarmExceptionRestoresRecordingAndDoesNotConsumeTheEn
 	EXPECT_EQ(Collection.Prewarm(2, [&](int Chr, int) {
 		Calls.at(Count++) = Chr;
 		return QmRecentGlyphs::EPrewarmResult::READY;
-	}), 2);
+	}),
+		2);
 	EXPECT_EQ(Calls, (std::array<int, 2>{65, 66}));
 }
 
@@ -238,7 +239,8 @@ TEST(RecentGlyphCollection, NestedWarmingIsRejectedAndSuccessfulWarmStillRestore
 		EXPECT_EQ(Collection.Prewarm(1, [&](int, int) {
 			++NestedCalls;
 			return QmRecentGlyphs::EPrewarmResult::READY;
-		}), 0);
+		}),
+			0);
 		Collection.Record(66, 16);
 		return QmRecentGlyphs::EPrewarmResult::READY;
 	}),

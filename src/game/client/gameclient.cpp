@@ -605,15 +605,15 @@ void CGameClient::OnConsoleInit()
 	m_pConsole->Register("qm_pref", "i[0|1] ?i[20-400]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
 		const int ThresholdMs = pResult->NumArguments() > 1 ? pResult->GetInteger(1) : CConfig::ms_QmPerfDebugThresholdMs;
 		if(!QmApplyPerfPreferences(pResult->GetInteger(0), ThresholdMs))
-			static_cast<IConsole *>(pUserData)->Print(IConsole::OUTPUT_LEVEL_STANDARD, "qm_pref", Localize("Use qm_pref <0|1> [20-400] (milliseconds)"));
-	}, m_pConsole, "Use qm_pref <0|1> [20-400] (milliseconds)");
+			static_cast<IConsole *>(pUserData)->Print(IConsole::OUTPUT_LEVEL_STANDARD, "qm_pref", Localize("Use qm_pref <0|1> [20-400] (milliseconds)")); }, m_pConsole, "Use qm_pref <0|1> [20-400] (milliseconds)");
 	m_pConfigManager->RegisterCallback([](IConfigManager *pConfigManager, void *) {
 		if(!QmPerfEnabled() && g_Config.m_QmPerfDebugThresholdMs == CConfig::ms_QmPerfDebugThresholdMs)
 			return;
 		char aLine[64];
 		str_format(aLine, sizeof(aLine), "qm_pref %d %d", static_cast<int>(QmPerfEnabled()), g_Config.m_QmPerfDebugThresholdMs);
 		pConfigManager->WriteLine(aLine);
-	}, nullptr);
+	},
+		nullptr);
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pDemoPlayer = Kernel()->RequestInterface<IDemoPlayer>();
 	m_pServerBrowser = Kernel()->RequestInterface<IServerBrowser>();

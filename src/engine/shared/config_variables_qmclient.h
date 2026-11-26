@@ -906,7 +906,6 @@ MACRO_CONFIG_COL(QmChatBubbleBgColor, qm_chat_bubble_bg_color, 0xCC000000, CFGFL
 MACRO_CONFIG_COL(QmChatBubbleTextColor, qm_chat_bubble_text_color, 4294967295, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble text color")
 MACRO_CONFIG_INT(QmChatBubbleAnimation, qm_chat_bubble_animation, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble disappear animation (0=Fade, 1=Shrink, 2=Slide up)")
 
-
 // Dummy Mini View - 分身小窗
 MACRO_CONFIG_INT(QmDummyMiniView, qm_dummy_miniview, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show dummy mini view window")
 MACRO_CONFIG_INT(QmDummyMiniViewAuto, qm_dummy_miniview_auto, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show dummy mini view only when other tee leaves current view")

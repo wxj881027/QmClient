@@ -213,7 +213,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		if(!m_MenuTextPlanCollecting || pText == nullptr || pText[0] == '\0')
 			return;
 		uint32_t Identity = str_quickhash(pText);
-		Identity ^= static_cast<uint32_t>(static_cast<int>(Size * 16.0f)) * 0x9e3779b9u;
+		Identity ^= static_cast<uint32_t>(static_cast<int>(Size * ui_token::tclient::warlist::PLAN_TEXT_SIZE_SCALE)) * 0x9e3779b9u;
 		Identity ^= static_cast<uint32_t>(Align) * 0x85ebca6bu;
 		char aTextId[64];
 		str_format(aTextId, sizeof(aTextId), "tclient-warlist-%s-%08x", pTextId, Identity);
@@ -270,13 +270,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		const float Side = std::min({Metrics.m_SmallSize, Row.h, Row.w});
 		Row.VSplitLeft(Side, &Chip, &Row);
 		Row.VSplitLeft(std::min(Row.w, Gap), nullptr, &Row);
-		Chip.y += (Chip.h - Side) * 0.5f;
+		Chip.y += (Chip.h - Side) * ui_token::tclient::HALF;
 		Chip.h = Side;
 		return Chip;
 	};
 	const auto LabelledControl = [&](CUIRect Row, const char *pLabel) {
 		CUIRect Caption;
-		Row.VSplitLeft(std::min(Metrics.m_LabelWidth, Row.w * 0.36f), &Caption, &Row);
+		Row.VSplitLeft(std::min(Metrics.m_LabelWidth, Row.w * ui_token::tclient::warlist::LABEL_COLUMN_WIDTH_RATIO), &Caption, &Row);
 		Row.VSplitLeft(std::min(Gap, Row.w), nullptr, &Row);
 		Body(Caption, pLabel);
 		return Row;
@@ -528,7 +528,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				str_format(aClan, sizeof(aClan), "[%s]", Candidate.m_pClan);
 				const float NameWidth = TextRender()->TextWidth(Metrics.m_BodySize, pDisplayName);
 				CUIRect Clan;
-				Detail.VSplitLeft(std::min(NameWidth + Gap, Detail.w * 0.62f), &Detail, &Clan);
+				Detail.VSplitLeft(std::min(NameWidth + Gap, Detail.w * ui_token::tclient::warlist::CANDIDATE_NAME_WIDTH_RATIO), &Detail, &Clan);
 				Label(Clan, aClan, Metrics.m_SmallSize, ui_token::color::TEXT_SECONDARY);
 			}
 			Body(Detail, pDisplayName);
@@ -694,14 +694,14 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				if(!pType->m_Removable)
 				{
 					CUIRect Hint;
-					Detail.VSplitRight(std::min(Detail.w * 0.5f, Metrics.m_LabelWidth), &Detail, &Hint);
+					Detail.VSplitRight(std::min(Detail.w * ui_token::tclient::HALF, Metrics.m_LabelWidth), &Detail, &Hint);
 					DoSettingsInlineHint(Ui(), "warlist-fallback", Hint, 0.0f, Localize("Fallback group"), Metrics.m_SmallSize);
 					Tooltip(&Controls.m_Id, Item.m_Rect, Localize("Unassigned entries fall back to this built-in group. It cannot be edited or deleted."));
 				}
 				else if(i == Selected || Ui()->VisualSurfaceHovered(&Item.m_Rect))
 				{
 					auto &aActions = Controls.m_aActions;
-					const float Width = std::min(Metrics.m_ButtonHeight * aActions.size() + Gap * (aActions.size() - 1), Detail.w * 0.65f);
+					const float Width = std::min(Metrics.m_ButtonHeight * aActions.size() + Gap * (aActions.size() - 1), Detail.w * ui_token::tclient::warlist::ACTION_CLUSTER_WIDTH_RATIO);
 					CUIRect Actions;
 					Detail.VSplitRight(Width, &Detail, &Actions);
 					const auto Layout = ResolveSettingsActionGroupLayout(Actions, static_cast<int>(aActions.size()), Metrics, 0.0f);
@@ -733,7 +733,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				str_format(aCount, sizeof(aCount), Localize("%d entries"), It == s_GroupCounts.end() ? 0 : It->second);
 				CUIRect EntryCount;
 				const float NameWidth = TextRender()->TextWidth(Metrics.m_BodySize, pType->m_aWarName);
-				Detail.VSplitLeft(std::min(NameWidth + Gap, Detail.w * 0.66f), &Detail, &EntryCount);
+				Detail.VSplitLeft(std::min(NameWidth + Gap, Detail.w * ui_token::tclient::warlist::ENTRY_COUNT_WIDTH_RATIO), &Detail, &EntryCount);
 				Body(Detail, pType->m_aWarName);
 				Label(EntryCount, aCount, Metrics.m_SmallSize, ui_token::color::TEXT_SECONDARY);
 			}
@@ -864,7 +864,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			const auto Identity = EntryIdentity(Entry);
 			CUIRect Detail, Delete, Group, Avatar;
 			Item.m_ContentRect.VSplitRight(std::min(Metrics.m_ButtonHeight, Item.m_ContentRect.w), &Detail, &Delete);
-			Detail.VSplitRight(std::min(Metrics.m_LabelWidth, Detail.w * 0.28f), &Detail, &Group);
+			Detail.VSplitRight(std::min(Metrics.m_LabelWidth, Detail.w * ui_token::tclient::warlist::GROUP_TAG_WIDTH_RATIO), &Detail, &Group);
 			Detail.VSplitRight(std::min(Gap, Detail.w), &Detail, nullptr);
 			Detail.VSplitLeft(std::min(RowHeight, Detail.w), &Avatar, &Detail);
 			if(Flow.Drawing())
@@ -880,7 +880,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			{
 				CUIRect Reason;
 				const float NameWidth = TextRender()->TextWidth(Metrics.m_BodySize, aIdentity);
-				Detail.VSplitLeft(std::min(NameWidth + Gap, Detail.w * 0.65f), &Detail, &Reason);
+				Detail.VSplitLeft(std::min(NameWidth + Gap, Detail.w * ui_token::tclient::warlist::REASON_WIDTH_RATIO), &Detail, &Reason);
 				Label(Reason, Entry.m_aReason, Metrics.m_SmallSize, ui_token::color::TEXT_SECONDARY);
 				Tooltip(&Controls.m_Id, Item.m_Rect, Entry.m_aReason);
 			}
@@ -1029,7 +1029,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 
 	const float Width = pScope && pScope->m_pLayout ? pScope->m_pLayout->Width() : Content.w;
 	const float SectionGap = Metrics.m_SectionGap;
-	const float TwoColumnMinWidth = 2.0f * ResolveSettingsInlineRowMinimumWidth(Metrics.m_LabelWidth + Metrics.m_ButtonHeight * 4.0f, Gap, 3) + SectionGap;
+	const float TwoColumnMinWidth = ui_token::tclient::warlist::TWO_COLUMN_SPAN * ResolveSettingsInlineRowMinimumWidth(Metrics.m_LabelWidth + Metrics.m_ButtonHeight * ui_token::tclient::warlist::INLINE_ROW_ICON_SPANS, Gap, 3) + SectionGap;
 	const auto Columns = ResolveColumns(Width, TwoColumnMinWidth, SectionGap);
 	const std::array<const char *, SECTION_COUNT> apRegionIds = {"warlist-quick-add", "warlist-groups", "warlist-entries", "warlist-editor", "warlist-rules"};
 	const std::array<std::function<void(CUIRect &)>, SECTION_COUNT> aRender = {RenderQuickAdd, RenderGroups, RenderEntries, RenderEditor, RenderRules};

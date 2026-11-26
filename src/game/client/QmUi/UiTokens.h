@@ -868,6 +868,17 @@ namespace ui_token::tclient
 		inline constexpr float TWO_COLUMN_SPAN = 2.0f;
 		inline constexpr float TEE_RENDER_OFFSET_X = -1.0f;
 		inline constexpr float TEE_RENDER_OFFSET_Y = 2.5f;
+		// 文本计划 hash 把字号折进身份：16 = 1/16 像素的量化刻度。
+		inline constexpr float PLAN_TEXT_SIZE_SCALE = 16.0f;
+		// 行内列宽占比：左标签、候选名、动作按钮组、组名/条目计数、组标签、备注。
+		inline constexpr float LABEL_COLUMN_WIDTH_RATIO = 0.36f;
+		inline constexpr float CANDIDATE_NAME_WIDTH_RATIO = 0.62f;
+		inline constexpr float ACTION_CLUSTER_WIDTH_RATIO = 0.65f;
+		inline constexpr float ENTRY_COUNT_WIDTH_RATIO = 0.66f;
+		inline constexpr float GROUP_TAG_WIDTH_RATIO = 0.28f;
+		inline constexpr float REASON_WIDTH_RATIO = 0.65f;
+		// 双列最小宽度按行内图标按钮高度折算：4 个按钮位。
+		inline constexpr float INLINE_ROW_ICON_SPANS = 4.0f;
 	} // namespace ui_token::tclient::warlist
 
 	// —— 状态栏（Status bar）页 ——

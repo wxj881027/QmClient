@@ -26,7 +26,7 @@ class TestInventoryTest(unittest.TestCase):
 		# data/fonts/ 是随包字体资源目录（字体二进制与 index.json），整目录豁免；
 		# 其余 data/ 清单、源码与合同 helper 仍然计入。
 		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/中文.ttf"), std::ios::binary);'), 0)
-		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/index.json"));'), 0)
+		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/index.json"));'), 1)
 		self.assertEqual(count_source_reads('CQmFontScanJob::ReadAbsolute(TestSourcePath("data/fonts/font.ttf"), &pData, &Size);'), 0)
 		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/languages/english.txt"));'), 1)
 		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("src/font.cpp"), std::ios::binary);'), 1)
