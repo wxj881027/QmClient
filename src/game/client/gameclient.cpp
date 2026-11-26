@@ -3848,6 +3848,7 @@ static CGameInfo GetGameInfo(const CNetObj_GameInfoEx *pInfoEx, int InfoExSize, 
 	}
 
 	CGameInfo Info;
+	Info.m_Fng = FNG;
 	Info.m_FlagStartsRace = FastCap;
 	Info.m_TimeScore = Race;
 	Info.m_UnlimitedAmmo = Race;
@@ -4063,6 +4064,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 
 	bool FoundGameInfoEx = false;
 	bool GotSwitchStateTeam = false;
+	const CNetObj_DDNetPlayer *apDDNetPlayers[MAX_CLIENTS] = {};
 	bool HasUnsetDDNetFinishTimes = false;
 	bool HasTrueMillisecondFinishTimes = false;
 	bool GameOverStarted = false;
@@ -4157,6 +4159,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 					m_aClients[Item.m_Id].m_Afk = pInfo->m_Flags & EXPLAYERFLAG_AFK;
 					m_aClients[Item.m_Id].m_Paused = pInfo->m_Flags & EXPLAYERFLAG_PAUSED;
 					m_aClients[Item.m_Id].m_Spec = pInfo->m_Flags & EXPLAYERFLAG_SPEC;
+					apDDNetPlayers[Item.m_Id] = pInfo;
 					m_aClients[Item.m_Id].m_FinishTimeSeconds = pInfo->m_FinishTimeSeconds;
 					m_aClients[Item.m_Id].m_FinishTimeMillis = pInfo->m_FinishTimeMillis;
 
@@ -4534,64 +4537,49 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 			return str_comp_nocase(m_aClients[pPlayer1->m_ClientId].m_aName, m_aClients[pPlayer2->m_ClientId].m_aName) < 0;
 		});
 
-	bool TimeScore = m_GameInfo.m_TimeScore;
-	bool Race7 = Client()->IsSixup() && m_Snap.m_pGameInfoObj && m_Snap.m_pGameInfoObj->m_GameFlags & protocol7::GAMEFLAG_RACE;
-	const bool UsePointsSort = g_Config.m_QmScoreboardSortMode != 0;
+	const bool Race7 = Client()->IsSixup() && m_Snap.m_pGameInfoObj && (m_Snap.m_pGameInfoObj->m_GameFlags & protocol7::GAMEFLAG_RACE);
+	m_Snap.m_ScoreMode = m_GameInfo.ScoreboardMode(Race7, ServerInfo.m_aGameType);
+	const bool UseFinishFields = m_Snap.m_ScoreMode.UseFinishFields(m_ReceivedDDNetPlayer, m_ReceivedDDNetPlayerFinishTimes);
+	bool HasTime = false;
+	bool HasPoints = false;
+	for(const CNetObj_PlayerInfo *pPlayer : m_Snap.m_apInfoByName)
+	{
+		if(!pPlayer)
+			break;
+		const int ClientId = pPlayer->m_ClientId;
+		const CNetObj_DDNetPlayer *pDDNetPlayer = apDDNetPlayers[ClientId];
+		auto &Score = m_Snap.m_aPlayerScores[ClientId];
+		Score = m_Snap.m_ScoreMode.Resolve(pPlayer->m_Score, UseFinishFields,
+			pDDNetPlayer ? pDDNetPlayer->m_FinishTimeSeconds : FinishTime::UNSET, pDDNetPlayer ? pDDNetPlayer->m_FinishTimeMillis : 0);
+		if(QmScoreboardEffectivePlayerTeam(pPlayer->m_Team, m_aClients[ClientId].m_Spec, IsTeamPlay()) != TEAM_SPECTATORS)
+		{
+			HasTime |= Score.IsTime();
+			HasPoints |= Score.m_Kind == scoreboard_score::EKind::POINTS;
+		}
+	}
+	m_Snap.m_ScoreColumn = m_Snap.m_ScoreMode.Column(HasTime, HasPoints);
+	const bool UsePointsSort = m_Snap.m_ScoreMode.AllowsRankSort() && g_Config.m_QmScoreboardSortMode;
 
-	// sort player infos by score
 	mem_copy(m_Snap.m_apInfoByScore, m_Snap.m_apInfoByName, sizeof(m_Snap.m_apInfoByScore));
-	if(Race7)
-		std::stable_sort(m_Snap.m_apInfoByScore, m_Snap.m_apInfoByScore + MAX_CLIENTS,
-			[this, UsePointsSort](const CNetObj_PlayerInfo *pPlayer1, const CNetObj_PlayerInfo *pPlayer2) -> bool {
-				if(!pPlayer2)
-					return static_cast<bool>(pPlayer1);
-				if(!pPlayer1)
-					return false;
-				if(UsePointsSort)
-				{
-					const SPlayerPointsResult Points1 = m_PlayerPoints.GetPoints(m_aClients[pPlayer1->m_ClientId].m_aName);
-					const SPlayerPointsResult Points2 = m_PlayerPoints.GetPoints(m_aClients[pPlayer2->m_ClientId].m_aName);
-					const bool HasPoints1 = Points1.m_Status == EPointsStatus::READY;
-					const bool HasPoints2 = Points2.m_Status == EPointsStatus::READY;
-					if(HasPoints1 != HasPoints2)
-						return HasPoints1;
-					if(HasPoints1 && Points1.m_Points != Points2.m_Points)
-						return Points1.m_Points > Points2.m_Points;
-				}
-				return (((pPlayer1->m_Score == -1) ? std::numeric_limits<int>::max() : pPlayer1->m_Score) <
-					((pPlayer2->m_Score == -1) ? std::numeric_limits<int>::max() : pPlayer2->m_Score));
-			});
-	else
-		std::stable_sort(m_Snap.m_apInfoByScore, m_Snap.m_apInfoByScore + MAX_CLIENTS,
-			[this, TimeScore, UsePointsSort](const CNetObj_PlayerInfo *pPlayer1, const CNetObj_PlayerInfo *pPlayer2) -> bool {
-				if(!pPlayer2)
-					return static_cast<bool>(pPlayer1);
-				if(!pPlayer1)
-					return false;
-				if(UsePointsSort)
-				{
-					const SPlayerPointsResult Points1 = m_PlayerPoints.GetPoints(m_aClients[pPlayer1->m_ClientId].m_aName);
-					const SPlayerPointsResult Points2 = m_PlayerPoints.GetPoints(m_aClients[pPlayer2->m_ClientId].m_aName);
-					const bool HasPoints1 = Points1.m_Status == EPointsStatus::READY;
-					const bool HasPoints2 = Points2.m_Status == EPointsStatus::READY;
-					if(HasPoints1 != HasPoints2)
-						return HasPoints1;
-					if(HasPoints1 && Points1.m_Points != Points2.m_Points)
-						return Points1.m_Points > Points2.m_Points;
-				}
-				if(m_ReceivedDDNetPlayerFinishTimes)
-				{
-					int TimeSeconds1 = m_aClients[pPlayer1->m_ClientId].m_FinishTimeSeconds;
-					int TimeSeconds2 = m_aClients[pPlayer2->m_ClientId].m_FinishTimeSeconds;
-					TimeSeconds1 = TimeSeconds1 == FinishTime::NOT_FINISHED_MILLIS ? std::numeric_limits<int>::max() : TimeSeconds1;
-					TimeSeconds2 = TimeSeconds2 == FinishTime::NOT_FINISHED_MILLIS ? std::numeric_limits<int>::max() : TimeSeconds2;
-					if(TimeSeconds1 == TimeSeconds2)
-						return m_aClients[pPlayer1->m_ClientId].m_FinishTimeMillis < m_aClients[pPlayer2->m_ClientId].m_FinishTimeMillis;
-					return TimeSeconds1 < TimeSeconds2;
-				}
-				return (((TimeScore && pPlayer1->m_Score == FinishTime::NOT_FINISHED_TIMESCORE) ? std::numeric_limits<int>::min() : pPlayer1->m_Score) >
-					((TimeScore && pPlayer2->m_Score == FinishTime::NOT_FINISHED_TIMESCORE) ? std::numeric_limits<int>::min() : pPlayer2->m_Score));
-			});
+	std::stable_sort(m_Snap.m_apInfoByScore, m_Snap.m_apInfoByScore + MAX_CLIENTS,
+		[this, UsePointsSort](const CNetObj_PlayerInfo *pPlayer1, const CNetObj_PlayerInfo *pPlayer2) -> bool {
+			if(!pPlayer2)
+				return static_cast<bool>(pPlayer1);
+			if(!pPlayer1)
+				return false;
+			if(UsePointsSort)
+			{
+				const SPlayerPointsResult Points1 = m_PlayerPoints.GetPoints(m_aClients[pPlayer1->m_ClientId].m_aName);
+				const SPlayerPointsResult Points2 = m_PlayerPoints.GetPoints(m_aClients[pPlayer2->m_ClientId].m_aName);
+				const bool HasPoints1 = Points1.m_Status == EPointsStatus::READY;
+				const bool HasPoints2 = Points2.m_Status == EPointsStatus::READY;
+				if(HasPoints1 != HasPoints2)
+					return HasPoints1;
+				if(HasPoints1 && Points1.m_Points != Points2.m_Points)
+					return Points1.m_Points > Points2.m_Points;
+			}
+			return m_Snap.m_aPlayerScores[pPlayer1->m_ClientId].Precedes(m_Snap.m_aPlayerScores[pPlayer2->m_ClientId]);
+		});
 
 	// sort player infos by DDRace Team (and score between)
 	int Index = 0;

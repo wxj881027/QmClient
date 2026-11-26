@@ -1677,28 +1677,7 @@ void CHud::RenderScoreHud()
 			for(int t = 0; t < 2; ++t)
 			{
 				if(apPlayerInfo[t])
-				{
-					if(Client()->IsSixup() && GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & protocol7::GAMEFLAG_RACE)
-						str_time(absolute(static_cast<int64_t>(apPlayerInfo[t]->m_Score)) / 10, TIME_MINS_CENTISECS, aScore[t], sizeof(aScore[t]));
-					else if(GameClient()->m_GameInfo.m_TimeScore)
-					{
-						const CGameClient::CClientData &ClientData = GameClient()->m_aClients[apPlayerInfo[t]->m_ClientId];
-						if(GameClient()->m_ReceivedDDNetPlayerFinishTimes && ClientData.m_FinishTimeSeconds != FinishTime::NOT_FINISHED_MILLIS)
-						{
-							const int64_t TimeMillis = static_cast<int64_t>(ClientData.m_FinishTimeSeconds) * 1000 + ClientData.m_FinishTimeMillis % 1000;
-
-							str_time(TimeMillis / 10, TIME_HOURS, aScore[t], sizeof(aScore[t]));
-						}
-						else if(apPlayerInfo[t]->m_Score != FinishTime::NOT_FINISHED_TIMESCORE)
-						{
-							str_time(absolute(static_cast<int64_t>(apPlayerInfo[t]->m_Score)) * 100, TIME_HOURS, aScore[t], sizeof(aScore[t]));
-						}
-						else
-							aScore[t][0] = 0;
-					}
-					else
-						str_format(aScore[t], sizeof(aScore[t]), "%d", apPlayerInfo[t]->m_Score);
-				}
+					GameClient()->m_Snap.m_aPlayerScores[apPlayerInfo[t]->m_ClientId].Format(aScore[t], sizeof(aScore[t]));
 				else
 					aScore[t][0] = 0;
 			}
