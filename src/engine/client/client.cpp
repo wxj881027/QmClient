@@ -89,6 +89,8 @@
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
+#include <game/client/QmUi/UiTextRenderState.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/qmclient/perf_logging.h>
@@ -1868,36 +1870,49 @@ void CClient::RenderDebug()
 
 	UpdateNetStatsSnapshot();
 
+	const float Height = 300.0f;
+	const float Width = Height * Graphics()->ScreenAspect();
+	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
+	const CUiScopedTextRenderState TextState(*TextRender());
+	TextRender()->SetFontPreset(ui_token::hud::font::DEBUG_PRESET);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+
+	const float FontSize = ui_token::hud::font::DebugSize(Width, Height);
+	const float Gap = ui_token::spacing::XS;
+	const float RowHeight = FontSize * 1.2f;
+	const float PanelWidth = std::min(Width - 2.0f * Gap, ui_token::hud::font::DEBUG_TEXT_REFERENCE_WIDTH);
+	const float ColumnWidth = PanelWidth / 3.0f;
+	auto DrawCell = [&](float X, float Y, float Size, float Available, const char *pText) {
+		if(Available <= 0.0f)
+			return;
+		const float Measured = TextRender()->TextWidth(Size, pText);
+		if(Measured > Available && Measured > 0.0f)
+			Size *= Available / Measured;
+		TextRender()->Text(X, Y, Size, pText);
+	};
 	char aBuffer[512];
-	const float FontSize = 16.0f;
-
-	Graphics()->TextureSet(m_DebugFont);
-	Graphics()->MapScreen(0, 0, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
-	Graphics()->QuadsBegin();
-
-	str_format(aBuffer, sizeof(aBuffer), "Game/predicted tick: %d/%d", m_aCurGameTick[g_Config.m_ClDummy], m_aPredTick[g_Config.m_ClDummy]);
-	Graphics()->QuadsText(2, 2, FontSize, aBuffer);
-
-	str_format(aBuffer, sizeof(aBuffer), "Prediction time: %d ms", GetPredictionTime());
-	Graphics()->QuadsText(2, 2 + FontSize, FontSize, aBuffer);
-
-	str_format(aBuffer, sizeof(aBuffer), "FPS: %3d", round_to_int(1.0f / m_FrameTimeAverage));
-	Graphics()->QuadsText(20.0f * FontSize, 2, FontSize, aBuffer);
-
-	str_format(aBuffer, sizeof(aBuffer), "Frametime: %4d us", round_to_int(m_FrameTimeAverage * 1000000.0f));
-	Graphics()->QuadsText(20.0f * FontSize, 2 + FontSize, FontSize, aBuffer);
-
-	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Texture memory", Graphics()->TextureMemoryUsage() / 1024);
-	Graphics()->QuadsText(32.0f * FontSize, 2, FontSize, aBuffer);
-
-	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Buffer memory", Graphics()->BufferMemoryUsage() / 1024);
-	Graphics()->QuadsText(32.0f * FontSize, 2 + FontSize, FontSize, aBuffer);
-
-	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Streamed memory", Graphics()->StreamedMemoryUsage() / 1024);
-	Graphics()->QuadsText(32.0f * FontSize, 2 + 2 * FontSize, FontSize, aBuffer);
-
-	str_format(aBuffer, sizeof(aBuffer), "%16s: %" PRIu64 " KiB", "Staging memory", Graphics()->StagingMemoryUsage() / 1024);
-	Graphics()->QuadsText(32.0f * FontSize, 2 + 3 * FontSize, FontSize, aBuffer);
+	auto DrawStat = [&](int Column, int Row, const char *pLabel, const char *pValue) {
+		str_format(aBuffer, sizeof(aBuffer), "%s: %s", pLabel, pValue);
+		DrawCell(Gap + Column * ColumnWidth, Gap + Row * RowHeight, FontSize, ColumnWidth - Gap, aBuffer);
+	};
+	char aValue[64];
+	str_format(aValue, sizeof(aValue), "%d / %d", m_aCurGameTick[g_Config.m_ClDummy], m_aPredTick[g_Config.m_ClDummy]);
+	DrawStat(0, 0, Localize("Game / predicted tick"), aValue);
+	str_format(aValue, sizeof(aValue), "%d ms", GetPredictionTime());
+	DrawStat(0, 1, Localize("Prediction time"), aValue);
+	str_format(aValue, sizeof(aValue), "%d", round_to_int(1.0f / m_FrameTimeAverage));
+	DrawStat(1, 0, Localize("Frame rate"), aValue);
+	str_format(aValue, sizeof(aValue), "%d µs", round_to_int(m_FrameTimeAverage * 1000000.0f));
+	DrawStat(1, 1, Localize("Frame time"), aValue);
+	auto DrawMemory = [&](int Row, const char *pLabel, uint64_t Bytes) {
+		str_format(aValue, sizeof(aValue), "%" PRIu64 " KiB", Bytes / 1024);
+		DrawStat(2, Row, pLabel, aValue);
+	};
+	DrawMemory(0, Localize("Texture memory"), Graphics()->TextureMemoryUsage());
+	DrawMemory(1, Localize("Buffer memory"), Graphics()->BufferMemoryUsage());
+	DrawMemory(2, Localize("Streamed memory"), Graphics()->StreamedMemoryUsage());
+	DrawMemory(3, Localize("Staging memory"), Graphics()->StagingMemoryUsage());
 
 	// Network
 	{
@@ -1929,79 +1944,80 @@ void CClient::RenderDebug()
 		else
 			str_copy(aRecvRateBuf, "--");
 
-		str_format(aBuffer, sizeof(aBuffer), "Process UDP TX (estimated): %3" PRIu64 " %5" PRIu64 "+%4" PRIu64 "=%5" PRIu64 " (%s Kibit/s) avg payload: %5" PRIu64,
-			SendPackets, SendBytes, SendPackets * OverheadSize, SendTotal, aSendRateBuf, SendPackets == 0 ? 0 : SendBytes / SendPackets);
-		Graphics()->QuadsText(2, 2 + 3 * FontSize, FontSize, aBuffer);
-		str_format(aBuffer, sizeof(aBuffer), "Process UDP RX (estimated): %3" PRIu64 " %5" PRIu64 "+%4" PRIu64 "=%5" PRIu64 " (%s Kibit/s) avg payload: %5" PRIu64,
-			RecvPackets, RecvBytes, RecvPackets * OverheadSize, RecvTotal, aRecvRateBuf, RecvPackets == 0 ? 0 : RecvBytes / RecvPackets);
-		Graphics()->QuadsText(2, 2 + 4 * FontSize, FontSize, aBuffer);
+		auto DrawTraffic = [&](int Row, const char *pLabel, uint64_t Packets, uint64_t Bytes, uint64_t Total, const char *pRate) {
+			str_format(aBuffer, sizeof(aBuffer), "%s: %" PRIu64 " %s, %" PRIu64 " + %" PRIu64 " = %" PRIu64 " B (%s Kibit/s), %s: %" PRIu64 " B",
+				pLabel, Packets, Localize("packets"), Bytes, Total - Bytes, Total, pRate, Localize("Average payload"), Packets == 0 ? 0 : Bytes / Packets);
+			DrawCell(Gap, Gap + Row * RowHeight, FontSize, PanelWidth, aBuffer);
+		};
+		DrawTraffic(4, Localize("Process UDP send (estimated)"), SendPackets, SendBytes, SendTotal, aSendRateBuf);
+		DrawTraffic(5, Localize("Process UDP receive (estimated)"), RecvPackets, RecvBytes, RecvTotal, aRecvRateBuf);
 	}
 
-	// Snapshots
+	// 扩展对象的统计使用内部编号，显示时换成协议类型名。
+	struct SSnapshotStat
 	{
-		const float OffsetY = 2 + 6 * FontSize;
-		int Row = 0;
-		str_format(aBuffer, sizeof(aBuffer), "%5s %20s: %8s %8s %8s", "ID", "Name", "Rate", "Updates", "R/U");
-		Graphics()->QuadsText(2, OffsetY + Row * 12, FontSize, aBuffer);
-		Row++;
-		for(int i = 0; i < NUM_NETOBJTYPES; i++)
+		int m_Id;
+		const char *m_pName;
+		uint64_t m_Bytes;
+		uint64_t m_Updates;
+	};
+	SSnapshotStat aStats[NUM_NETOBJTYPES + 64];
+	int NumStats = 0;
+	auto AddStat = [&](int Id, const char *pName, uint64_t Bits, uint64_t Updates) {
+		aStats[NumStats++] = {Id, pName, Bits / 8, Updates};
+	};
+	for(int i = 0; i < NUM_NETOBJTYPES; ++i)
+	{
+		const uint64_t Bits = SnapshotDelta()->GetDataRate(i);
+		const uint64_t Updates = SnapshotDelta()->GetDataUpdates(i);
+		if(Bits && Updates)
+			AddStat(i, GameClient()->GetItemName(i), Bits, Updates);
+	}
+	const auto *pCurrent = m_aapSnapshots[g_Config.m_ClDummy][IClient::SNAP_CURRENT];
+	if(pCurrent)
+	{
+		for(int i = CSnapshot::MAX_TYPE; i > CSnapshot::MAX_TYPE - 64; --i)
 		{
-			const uint64_t DataRate = SnapshotDelta()->GetDataRate(i);
-			const uint64_t DataUpdates = SnapshotDelta()->GetDataUpdates(i);
-			if(DataRate && DataUpdates)
-			{
-				str_format(
-					aBuffer,
-					sizeof(aBuffer),
-					"%5d %20s: %8" PRIu64 " %8" PRIu64 " %8" PRIu64,
-					i,
-					GameClient()->GetItemName(i),
-					DataRate / 8, DataUpdates,
-					(DataRate / DataUpdates) / 8);
-				Graphics()->QuadsText(2, OffsetY + Row * 12, FontSize, aBuffer);
-				Row++;
-			}
-		}
-		for(int i = CSnapshot::MAX_TYPE; i > (CSnapshot::MAX_TYPE - 64); i--)
-		{
-			const uint64_t DataRate = SnapshotDelta()->GetDataRate(i);
-			const uint64_t DataUpdates = SnapshotDelta()->GetDataUpdates(i);
-			if(DataRate && DataUpdates && m_aapSnapshots[g_Config.m_ClDummy][IClient::SNAP_CURRENT])
-			{
-				const int Type = m_aapSnapshots[g_Config.m_ClDummy][IClient::SNAP_CURRENT]->m_pAltSnap->GetExternalItemType(i);
-				if(Type == UUID_INVALID)
-				{
-					str_format(
-						aBuffer,
-						sizeof(aBuffer),
-						"%5d %20s: %8" PRIu64 " %8" PRIu64 " %8" PRIu64,
-						i,
-						"Unknown UUID",
-						DataRate / 8,
-						DataUpdates,
-						(DataRate / DataUpdates) / 8);
-					Graphics()->QuadsText(2, OffsetY + Row * 12, FontSize, aBuffer);
-					Row++;
-				}
-				else if(Type != i)
-				{
-					str_format(
-						aBuffer,
-						sizeof(aBuffer),
-						"%5d %20s: %8" PRIu64 " %8" PRIu64 " %8" PRIu64,
-						Type,
-						GameClient()->GetItemName(Type),
-						DataRate / 8,
-						DataUpdates,
-						(DataRate / DataUpdates) / 8);
-					Graphics()->QuadsText(2, OffsetY + Row * 12, FontSize, aBuffer);
-					Row++;
-				}
-			}
+			const uint64_t Bits = SnapshotDelta()->GetDataRate(i);
+			const uint64_t Updates = SnapshotDelta()->GetDataUpdates(i);
+			if(!Bits || !Updates)
+				continue;
+			const int Type = pCurrent->m_pAltSnap->GetExternalItemType(i);
+			if(Type == UUID_INVALID)
+				AddStat(i, Localize("Unknown UUID"), Bits, Updates);
+			else if(Type != i)
+				AddStat(Type, GameClient()->GetItemName(Type), Bits, Updates);
 		}
 	}
 
-	Graphics()->QuadsEnd();
+	const float TableTop = Gap + 7.0f * RowHeight;
+	const float TableWidth = std::min(PanelWidth * 0.75f, Width * 0.55f);
+	const float TableRowHeight = std::min(RowHeight, (Height - TableTop - RowHeight - Gap) / (NumStats + 1));
+	const float TableFontSize = FontSize * TableRowHeight / RowHeight;
+	// 用实际列宽排版，中文与比例字体无需依赖空格对齐。
+	auto DrawRow = [&](int Row, const char *pId, const char *pName, const char *pBytes, const char *pUpdates, const char *pAverage) {
+		const float Y = TableTop + Row * TableRowHeight;
+		const float aColumnEnds[] = {0.09f, 0.44f, 0.63f, 0.81f, 1.0f};
+		const char *apCells[] = {pId, pName, pBytes, pUpdates, pAverage};
+		float X = Gap;
+		for(size_t Column = 0; Column < std::size(apCells); ++Column)
+		{
+			const float NextX = Gap + TableWidth * aColumnEnds[Column];
+			DrawCell(X, Y, TableFontSize, NextX - X - Gap, apCells[Column]);
+			X = NextX;
+		}
+	};
+	DrawRow(0, Localize("Type ID"), Localize("Name"), Localize("Total bytes"), Localize("Updates"), Localize("Bytes per update"));
+	for(int i = 0; i < NumStats; ++i)
+	{
+		const SSnapshotStat &Stat = aStats[i];
+		char aId[16], aBytes[32], aUpdates[32], aAverage[32];
+		str_format(aId, sizeof(aId), "%d", Stat.m_Id);
+		str_format(aBytes, sizeof(aBytes), "%" PRIu64, Stat.m_Bytes);
+		str_format(aUpdates, sizeof(aUpdates), "%" PRIu64, Stat.m_Updates);
+		str_format(aAverage, sizeof(aAverage), "%" PRIu64, Stat.m_Bytes / Stat.m_Updates);
+		DrawRow(i + 1, aId, Stat.m_pName, aBytes, aUpdates, aAverage);
+	}
 }
 
 void CClient::RenderGraphs()

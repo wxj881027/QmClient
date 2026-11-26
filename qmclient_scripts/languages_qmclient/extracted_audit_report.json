@@ -1,7 +1,7 @@
 {
   "summary": {
-    "must_i18n": 11339,
-    "business_data": 13625,
+    "must_i18n": 11364,
+    "business_data": 13621,
     "test_only": 9584,
     "needs_review": 5363,
     "violation": 0
@@ -72,127 +72,260 @@
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 1466,
+      "line": 1468,
       "text": "Could not resolve connect address '%s'. See local console for details.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 1467,
+      "line": 1469,
       "text": "Connect address error",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 3798,
+      "line": 1901,
+      "text": "Game / predicted tick",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1903,
+      "text": "Prediction time",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1905,
+      "text": "Frame rate",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1907,
+      "text": "Frame time",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1912,
+      "text": "Texture memory",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1913,
+      "text": "Buffer memory",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1914,
+      "text": "Streamed memory",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1915,
+      "text": "Staging memory",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1949,
+      "text": "Average payload",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1949,
+      "text": "packets",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1952,
+      "text": "Process UDP send (estimated)",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1953,
+      "text": "Process UDP receive (estimated)",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 1987,
+      "text": "Unknown UUID",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 2010,
+      "text": "Bytes per update",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 2010,
+      "text": "Name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 2010,
+      "text": "Total bytes",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 2010,
+      "text": "Type ID",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 2010,
+      "text": "Updates",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 3785,
       "text": "Could not save downloaded map. Try manually deleting this file: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 3993,
+      "line": 3980,
       "text": "Could not connect dummy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 4610,
+      "line": 4597,
       "text": "Failed to record video. See local console for details.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 4669,
+      "line": 4656,
       "text": "Error playing demo",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 4913,
+      "line": 4900,
       "text": "Successfully saved the replay!",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 4920,
+      "line": 4907,
       "text": "Failed saving the replay!",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 5226,
+      "line": 5210,
       "text": "Sound error",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 5226,
+      "line": 5210,
       "text": "The audio device couldn't be initialised.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 5800,
+      "line": 5783,
       "text": "Error saving settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 5864,
+      "line": 5847,
       "text": "Error saving settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 7182,
+      "line": 7165,
       "text": "Failed to save demo",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 7193,
+      "line": 7176,
       "text": "Replay feature is disabled!",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 7267,
+      "line": 7250,
       "text": "No demo with this filename exists",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 7332,
+      "line": 7315,
       "text": "Error playing demo",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 7353,
+      "line": 7336,
       "text": "Failed to save video",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 7365,
+      "line": 7348,
       "text": "Failed to save video",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/engine/client/client.cpp",
+      "line": 7420,
+      "text": "Failed to save demo",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -205,301 +338,294 @@
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 7454,
-      "text": "Failed to save demo",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/engine/client/client.cpp",
-      "line": 8111,
+      "line": 8094,
       "text": "Connect dummy",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8112,
+      "line": 8095,
       "text": "Disconnect dummy",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8113,
+      "line": 8096,
       "text": "Reset dummy",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8115,
+      "line": 8098,
       "text": "Quit the client",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8116,
+      "line": 8099,
       "text": "Quit the client",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8117,
+      "line": 8100,
       "text": "Restart the client",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8118,
+      "line": 8101,
       "text": "Minimize the client",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8119,
+      "line": 8102,
       "text": "Connect to the specified host/ip",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8120,
+      "line": 8103,
       "text": "Disconnect from the server",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8121,
+      "line": 8104,
       "text": "Silently disconnect from the current server while keeping Tee timeout protection",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8122,
+      "line": 8105,
       "text": "Show outgoing game traffic QoS status",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8123,
+      "line": 8106,
       "text": "Ping the current server",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8124,
+      "line": 8107,
       "text": "Take a screenshot",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8125,
+      "line": 8108,
       "text": "Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8127,
+      "line": 8110,
       "text": "Alias of poses_render",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8129,
+      "line": 8112,
       "text": "Show a MomentCap .poses file in game (no export)",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8130,
+      "line": 8113,
       "text": "Leave the pose session",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8132,
+      "line": 8115,
       "text": "Alias of poses_open",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8133,
+      "line": 8116,
       "text": "Alias of poses_close",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8134,
+      "line": 8117,
       "text": "Rebinds the client's listening address and port",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8137,
+      "line": 8120,
       "text": "Record a MomentCap .poses scene to a video",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8138,
+      "line": 8121,
       "text": "Alias of poses_video",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8141,
+      "line": 8124,
       "text": "Start recording a video",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8142,
+      "line": 8125,
       "text": "Stop recording a video",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8145,
+      "line": 8128,
       "text": "Send specified command to rcon",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8146,
+      "line": 8129,
       "text": "Authenticate to rcon",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8147,
+      "line": 8130,
       "text": "Authenticate to rcon with a username",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8148,
+      "line": 8131,
       "text": "Play back a demo",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8149,
+      "line": 8132,
       "text": "Start recording a demo",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8150,
+      "line": 8133,
       "text": "Stop recording a demo",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8151,
+      "line": 8134,
       "text": "Add demo timeline marker",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8152,
+      "line": 8135,
       "text": "Use this before `add_favorite` to group favorites. End with `end_favorite_group`",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8153,
+      "line": 8136,
       "text": "Use this after `add_favorite` to group favorites. Start with `begin_favorite_group`",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8154,
+      "line": 8137,
       "text": "Add a server as a favorite",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8155,
+      "line": 8138,
       "text": "Remove a server from favorites",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8156,
+      "line": 8139,
       "text": "Mark the beginning of a demo cut",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8157,
+      "line": 8140,
       "text": "Mark the end of a demo cut",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8158,
+      "line": 8141,
       "text": "Play/pause the current demo",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8159,
+      "line": 8142,
       "text": "Set current demo speed",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8161,
+      "line": 8144,
       "text": "Save a replay of the last defined amount of seconds",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 8162,
+      "line": 8145,
       "text": "Benchmark frame times for number of seconds to file, then quit",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/engine/client/client.cpp",
-      "line": 9131,
+      "line": 9114,
       "text": "Failed to save demo",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -604,7 +730,7 @@
     },
     {
       "file": "src/engine/client/graph.cpp",
-      "line": 301,
+      "line": 311,
       "text": "Avg %.*f   ↓ %.*f   ↑ %.*f",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -46321,161 +46447,203 @@
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 72,
+      "line": 67,
       "text": "%.0f Bps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 73,
+      "line": 68,
       "text": "Speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 75,
+      "line": 70,
       "text": "%.0f Bps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 76,
+      "line": 71,
       "text": "Horizontal speed × ramp",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 78,
+      "line": 73,
       "text": "%.0f Bps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 79,
+      "line": 74,
       "text": "Vertical speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 82,
+      "line": 77,
       "text": "Velocity ramp",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 85,
+      "line": 80,
       "text": "Teleport checkpoint",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 88,
+      "line": 83,
       "text": "Tune zone (map / override)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 91,
+      "line": 86,
       "text": "Position X",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 94,
+      "line": 89,
       "text": "Position Y",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 97,
+      "line": 92,
       "text": "Angle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 100,
+      "line": 95,
       "text": "Network object corrections",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 101,
+      "line": 96,
       "text": "Last corrected field",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 124,
+      "line": 119,
       "text": "Spawn events received",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 126,
+      "line": 121,
       "text": "Spawn particles dispatched",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 128,
+      "line": 123,
       "text": "Spawn effects filtered",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 130,
+      "line": 125,
       "text": "Spawn particle failures",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 131,
+      "line": 126,
       "text": "Invalid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 131,
+      "line": 126,
       "text": "Particle skin",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 131,
+      "line": 126,
       "text": "Valid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 314,
+      "line": 193,
+      "text": "Current",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/debughud.cpp",
+      "line": 193,
+      "text": "Standard",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/debughud.cpp",
+      "line": 193,
+      "text": "Tuning parameter",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/debughud.cpp",
+      "line": 286,
+      "text": "Horizontal speed × ramp (%d to %d blocks/s)",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/debughud.cpp",
+      "line": 288,
+      "text": "Peak speed: %.2f blocks/s",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/debughud.cpp",
+      "line": 290,
+      "text": "Turning point (%d to %d blocks/s)",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/debughud.cpp",
+      "line": 309,
       "text": "Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 348,
+      "line": 343,
       "text": "Switch tile: type=%d delay=%d number=%d (x=%d y=%d)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -68763,7 +68931,14 @@
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3365,
+      "line": 1133,
+      "text": "Hovered: %p   Next hovered: %p   Active: %p   Last active: %p",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/ui.cpp",
+      "line": 3371,
       "text": "Hold Shift to be more precise.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -109995,115 +110170,94 @@
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 81,
+      "line": 76,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 84,
+      "line": 79,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 87,
+      "line": 82,
       "text": "%d / %d",
       "category": "business_data",
       "reason": "debug HUD diagnostic text"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 90,
+      "line": 85,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 93,
+      "line": 88,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 96,
+      "line": 91,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 99,
+      "line": 94,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 123,
+      "line": 118,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 125,
+      "line": 120,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 127,
+      "line": 122,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 129,
+      "line": 124,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 213,
+      "line": 208,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/debughud.cpp",
-      "line": 215,
+      "line": 210,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/debughud.cpp",
-      "line": 291,
-      "text": "Velspeed.X * Ramp in Bps (Velspeed %d to %d)",
-      "category": "business_data",
-      "reason": "debug HUD diagnostic text"
-    },
-    {
-      "file": "src/game/client/components/debughud.cpp",
-      "line": 293,
-      "text": "Max Velspeed before it ramps off:  %.2f Bps",
-      "category": "business_data",
-      "reason": "debug HUD diagnostic text"
-    },
-    {
-      "file": "src/game/client/components/debughud.cpp",
-      "line": 295,
-      "text": "Zoomed in on turning point (Velspeed %d to %d)",
-      "category": "business_data",
-      "reason": "debug HUD diagnostic text"
     },
     {
       "file": "src/game/client/components/effects.cpp",
@@ -166191,133 +166345,119 @@
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 12,
+      "line": 13,
       "text": "components/qmclient/perf_logging.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 13,
+      "line": 14,
       "text": "components/tooltips.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 14,
+      "line": 15,
       "text": "qm_icon.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 15,
+      "line": 16,
       "text": "qm_icon_font_render.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 16,
+      "line": 17,
       "text": "qm_icon_label.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 17,
+      "line": 18,
       "text": "ui_font_fit.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 18,
+      "line": 19,
       "text": "ui_scrollregion.h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 59,
+      "line": 60,
       "text": "UI element can only be registered once.",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 71,
+      "line": 72,
       "text": "UI element rect count changed.",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 101,
+      "line": 102,
       "text": "UI rects can only be initialized once, create another ui element instead.",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 560,
+      "line": 561,
       "text": "gaussian blur scope underflow",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 567,
+      "line": 568,
       "text": "gaussian blur suppression scope underflow",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 710,
+      "line": 711,
       "text": "blur unavailable this frame (prepare failed)",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 710,
+      "line": 711,
       "text": "ui/blur",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 1130,
-      "text": "hot=%p nexthot=%p active=%p lastactive=%p",
-      "category": "business_data",
-      "reason": "log or telemetry payload"
-    },
-    {
-      "file": "src/game/client/ui.cpp",
-      "line": 1200,
+      "line": 1206,
       "text": "CUi::ConvertMouseMove CursorType %d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 1570,
+      "line": 1576,
       "text": "render-only UI scope underflow",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 1593,
-      "text": "no clip region",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/ui.cpp",
-      "line": 1607,
+      "line": 1599,
       "text": "no clip region",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
@@ -166331,91 +166471,98 @@
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 1766,
+      "line": 1619,
+      "text": "no clip region",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/ui.cpp",
+      "line": 1772,
       "text": "m_ActiveButtonLogicButton invalid",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 1830,
+      "line": 1836,
       "text": "m_ActiveDraggableButtonLogicButton invalid",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3050,
+      "line": 3056,
       "text": "%s %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3057,
+      "line": 3063,
       "text": "%s #%0*",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3059,
+      "line": 3065,
       "text": "%s %",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3062,
+      "line": 3068,
       "text": "#%0*",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3064,
+      "line": 3070,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3184,
+      "line": 3190,
       "text": "m_ActiveValueSelectorState.m_Button invalid",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3412,
+      "line": 3418,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3414,
+      "line": 3420,
       "text": "%s: %i%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3418,
+      "line": 3424,
       "text": "%s: ∞",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3558,
+      "line": 3564,
       "text": ".%02d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3560,
+      "line": 3566,
       "text": ".%03d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"

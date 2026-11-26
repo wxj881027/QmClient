@@ -1584,6 +1584,9 @@ Available rescue modes: auto, manual
 Available resolutions
 == 可用分辨率
 
+Average payload
+== 平均载荷
+
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 平均 %.*f ↓ %.*f ↑ %.*f
 
@@ -2034,6 +2037,9 @@ Brutal
 Bubble opacity
 == 气泡不透明度
 
+Buffer memory
+== 缓冲区内存
+
 Build the status text shown above Tees
 == 构建显示在 Tee 头顶的状态文本
 
@@ -2084,6 +2090,9 @@ By row
 
 Bytes in the generated bind line; over the limit the server rejects it.
 == 生成的 bind 指令有多少字节；超过上限服务器会拒收。
+
+Bytes per update
+== 每次更新字节数
 
 c = Player position
 == c = 玩家坐标
@@ -6423,6 +6432,9 @@ Fraction of players needed to pass a vote
 Frags
 == 击杀数
 
+Frame rate
+== 帧率
+
 Frame time
 == 帧耗时
 
@@ -6611,6 +6623,9 @@ Functions
 
 Game
 == 游戏
+
+Game / predicted tick
+== 游戏刻/预测刻
 
 Game assets
 == 游戏资源
@@ -7380,6 +7395,9 @@ Horizontal position
 Horizontal speed × ramp
 == 横向速度 × 速度倍率
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== 横向速度 × 速度倍率（%d 至 %d 格/秒）
+
 Hostname of DNSBL provider for IP verification
 == 用于 IP 验证的 DNSBL 提供商的主机名
 
@@ -7388,6 +7406,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == 悬停显示提示
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== 悬停：%p 下一悬停：%p 活动：%p 上次活动：%p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == 滚轮或拖拽能把内容推过末端多远（UI 像素）；0 关闭
@@ -10857,6 +10878,9 @@ p = Ping latency
 Pack name
 == 包名
 
+packets
+== 个包
+
 Panel
 == 面板
 
@@ -10991,6 +11015,9 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == 暂停/恢复游戏
+
+Peak speed: %.2f blocks/s
+== 峰值速度：%.2f 格/秒
 
 Penalty in seconds for saving or swapping positions
 == 保存或交换位置的惩罚时间（秒）
@@ -11661,6 +11688,9 @@ Prediction margin
 Prediction margin when frozen
 == 冻结时的预测边距
 
+Prediction time
+== 预测耗时
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == 预测是用准确性换响应速度；上行冗余会让上传流量翻三倍。「优先游戏流量」只在 Windows 上给数据包打标记，还需要路由器识别 QoS 才有效。
 
@@ -11874,8 +11904,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == 发送冻结聊天消息的概率（0-100%）
 
+Process UDP receive (estimated)
+== 进程 UDP 接收（估算）
+
 Process UDP RX (est.)
 == 进程 UDP 接收（估算）
+
+Process UDP send (estimated)
+== 进程 UDP 发送（估算）
 
 Process UDP TX (est.)
 == 进程 UDP 发送（估算）
@@ -14394,9 +14430,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == 在铭牌上显示国旗
 
-Show FPS, prediction time, and performance graphs
-== 显示 FPS、预测耗时和性能曲线
-
 Show freeze bar under frozen players indicating thaw time
 == 是否在冻结玩家下方显示冻结条以指示解冻时间
 
@@ -14804,6 +14837,9 @@ Show pending crash reports on startup
 
 Show per-character title waves locally
 == 本机显示头衔逐字波动
+
+Show performance graphs.
+== 显示性能图表
 
 Show pet
 == 显示宠物
@@ -15771,6 +15807,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 弹 Tee 形变强度
 
+Staging memory
+== 暂存内存
+
 Standalone
 == 独立显示
 
@@ -15983,6 +16022,9 @@ Store the current practice tee state as the respawn point
 
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == 把当前 Tee 状态（位置、武器、跳跃与移动状态）保存为练习重生点。
+
+Streamed memory
+== 流式内存
 
 Streamer mode
 == 主播模式
@@ -16619,6 +16661,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 
 Text is too long for the selected translation service.
 == 文本超过所选翻译服务的长度限制。
+
+Texture memory
+== 纹理内存
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == 感谢您的陪伴与信任。正是如此，才给了我继续前行的勇气
@@ -17295,6 +17340,9 @@ Top right
 Total
 == 总计
 
+Total bytes
+== 总字节数
+
 Total fonts:
 == 字体总数：
 
@@ -17496,6 +17544,9 @@ Tune variable to value or show current value
 Tune zone (map / override)
 == 调参区（地图/覆盖）
 
+Tuning parameter
+== 调校参数
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 机器较弱时关掉动效，卡片会立刻展开、滚动手感也随之关闭。光标形状只是外观：三种样式都占同一个字符格。
 
@@ -17586,6 +17637,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == 先开启声音，再选择设备；设备列表由音频后端在启动时提供。
 
+Turning point (%d to %d blocks/s)
+== 速度拐点（%d 至 %d 格/秒）
+
 Turning this off only changes your display.
 == 关闭后仅影响本机显示。
 
@@ -17624,6 +17678,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == 输入词语后，结果会随输入实时筛选卡片与配置名称。
+
+Type ID
+== 类型编号
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == 在搜索框输入或切换全部、收藏、最近，点一下皮肤立即套用，用加号图标把它排进队列。
@@ -17871,6 +17928,9 @@ Unknown status
 Unknown title style
 == 未知的头衔风格
 
+Unknown UUID
+== 未知 UUID
+
 Unlimited
 == 不限
 
@@ -17978,6 +18038,9 @@ Updated this configuration.
 
 Updated this phrase.
 == 已更新语录。
+
+Updates
+== 更新次数
 
 Updating preview…
 == 正在更新预览…

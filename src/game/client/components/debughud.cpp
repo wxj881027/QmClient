@@ -18,11 +18,6 @@ static constexpr int64_t GRAPH_MAX_VALUES = 128;
 
 namespace
 {
-	float DebugHudFontSize(float Width)
-	{
-		return ui_token::hud::font::CAPTION * std::clamp(Width / ui_token::hud::font::DEBUG_TEXT_REFERENCE_WIDTH, 0.65f, 1.0f);
-	}
-
 	void DrawDebugHudRow(ITextRender &TextRender, float ScreenWidth, float Y, float FontSize, const char *pLabel, const char *pValue)
 	{
 		const float Right = ScreenWidth - ui_token::spacing::SM;
@@ -57,7 +52,7 @@ float CDebugHud::RenderNetCorrections(float StartY)
 	const float Ramp = VelocityRamp(Velspeed, GameClient()->m_aTuning[g_Config.m_ClDummy].m_VelrampStart, GameClient()->m_aTuning[g_Config.m_ClDummy].m_VelrampRange, GameClient()->m_aTuning[g_Config.m_ClDummy].m_VelrampCurvature);
 	const CCharacter *pCharacter = GameClient()->m_GameWorld.GetCharacterById(GameClient()->m_Snap.m_LocalClientId);
 
-	const float FontSize = DebugHudFontSize(Width);
+	const float FontSize = ui_token::hud::font::DebugSize(Width, Height);
 	const float LineHeight = FontSize + 1.0f;
 
 	float y = StartY;
@@ -112,7 +107,7 @@ float CDebugHud::RenderParticleDiagnostics(float StartY)
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
-	const float FontSize = DebugHudFontSize(Width);
+	const float FontSize = ui_token::hud::font::DebugSize(Width, Height);
 	float y = StartY;
 	char aBuf[128];
 	const auto &&RenderRow = [&](const char *pLabel, const char *pValue) {
@@ -155,7 +150,7 @@ void CDebugHud::RenderTuning()
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
-	const float FontSize = DebugHudFontSize(Width);
+	const float FontSize = ui_token::hud::font::DebugSize(Width, Height);
 
 	const float StartY = 50.0f;
 	float y = StartY;
@@ -195,7 +190,7 @@ void CDebugHud::RenderTuning()
 		if(y == StartY)
 		{
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
-			RenderRow("Standard", "Current", "Tuning");
+			RenderRow(Localize("Standard"), Localize("Current"), Localize("Tuning parameter"));
 		}
 
 		ColorRGBA TextColor;
@@ -286,14 +281,14 @@ void CDebugHud::RenderTuning()
 		m_ZoomedInGraph.Scale(GRAPH_MAX_VALUES - 1);
 	}
 
-	const float GraphFontSize = 12.0f;
+	const float GraphFontSize = ui_token::hud::font::DebugSize(Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "Velspeed.X * Ramp in Bps (Velspeed %d to %d)", StepSizeRampGraph / 32, 128 * StepSizeRampGraph / 32);
-	m_RampGraph.Render(Graphics(), TextRender(), GraphX, GraphY, GraphW, GraphH, aBuf);
-	str_format(aBuf, sizeof(aBuf), "Max Velspeed before it ramps off:  %.2f Bps", m_SpeedTurningPoint / 32);
-	TextRender()->Text(GraphX + 2.0f, GraphY + GraphH - GraphFontSize - 2.0f, GraphFontSize, aBuf);
-	str_format(aBuf, sizeof(aBuf), "Zoomed in on turning point (Velspeed %d to %d)", ((int)m_MiddleOfZoomedInGraph - 64 * StepSizeZoomedInGraph) / 32, ((int)m_MiddleOfZoomedInGraph + 64 * StepSizeZoomedInGraph) / 32);
-	m_ZoomedInGraph.Render(Graphics(), TextRender(), GraphX + GraphW + GraphSpacing, GraphY, GraphW, GraphH, aBuf);
+	str_format(aBuf, sizeof(aBuf), Localize("Horizontal speed × ramp (%d to %d blocks/s)"), StepSizeRampGraph / 32, 128 * StepSizeRampGraph / 32);
+	char aPeak[128];
+	str_format(aPeak, sizeof(aPeak), Localize("Peak speed: %.2f blocks/s"), m_SpeedTurningPoint / 32);
+	m_RampGraph.Render(Graphics(), TextRender(), GraphX, GraphY, GraphW, GraphH, GraphFontSize, aBuf, aPeak);
+	str_format(aBuf, sizeof(aBuf), Localize("Turning point (%d to %d blocks/s)"), ((int)m_MiddleOfZoomedInGraph - 64 * StepSizeZoomedInGraph) / 32, ((int)m_MiddleOfZoomedInGraph + 64 * StepSizeZoomedInGraph) / 32);
+	m_ZoomedInGraph.Render(Graphics(), TextRender(), GraphX + GraphW + GraphSpacing, GraphY, GraphW, GraphH, GraphFontSize, aBuf);
 }
 
 void CDebugHud::RenderHint()
@@ -305,7 +300,7 @@ void CDebugHud::RenderHint()
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
-	const float FontSize = DebugHudFontSize(Width);
+	const float FontSize = ui_token::hud::font::DebugSize(Width, Height);
 	const float Spacing = 5.0f;
 	// TClient：状态栏渲染在屏幕最底部，底部提示文本需要向上避让
 	const float StatusBarHeight = g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f;
@@ -342,7 +337,7 @@ void CDebugHud::RenderSwitchTileInfo()
 	const float WidthScreen = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, WidthScreen, Height);
 
-	const float FontSize = DebugHudFontSize(WidthScreen);
+	const float FontSize = ui_token::hud::font::DebugSize(WidthScreen, Height);
 	const float Spacing = 5.0f;
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), Localize("Switch tile: type=%d delay=%d number=%d (x=%d y=%d)"), SwitchType, SwitchDelay, SwitchNumber, TileX, TileY);

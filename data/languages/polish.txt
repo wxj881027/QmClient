@@ -1542,6 +1542,9 @@ Available rescue modes: auto, manual
 Available resolutions
 == Dostępne rozdzielczości
 
+Average payload
+== Średni ładunek danych
+
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Średnia %.*f   ↓ %.*f   ↑ %.*f
 
@@ -1968,6 +1971,9 @@ Brutal
 Bubble opacity
 == Nieprzezroczystość dymka
 
+Buffer memory
+== Pamięć buforów
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
@@ -2012,6 +2018,9 @@ By player name
 
 By row
 == Wiersz po wierszu
+
+Bytes per update
+== Bajty na aktualizację
 
 c = Player position
 == c = Pozycja gracza
@@ -6198,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == Zabójstwa
 
+Frame rate
+== Liczba klatek na sekundę
+
 Frame time
 == Czas klatki
 
@@ -6383,6 +6395,9 @@ Functions
 
 Game
 == Gra
+
+Game / predicted tick
+== Tik gry / przewidywany tik
 
 Game assets
 == Zasoby gry
@@ -7128,6 +7143,9 @@ Horizontal position
 Horizontal speed × ramp
 == Prędkość pozioma × mnożnik
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== Prędkość pozioma × mnożnik (od %d do %d bloków/s)
+
 Hostname of DNSBL provider for IP verification
 == Nazwa hosta dostawcy DNSBL do weryfikacji IP
 
@@ -7136,6 +7154,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == Najedź, aby zobaczyć podpowiedź
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== Pod kursorem: %p   Następny: %p   Aktywny: %p   Ostatnio aktywny: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == Jak daleko kółko lub przeciąganie może wyjść za koniec, w pikselach UI; 0 wyłącza
@@ -10419,6 +10440,9 @@ p = Ping latency
 Pack name
 == Nazwa pakietu
 
+packets
+== pak.
+
 Panel
 == Panel
 
@@ -10550,6 +10574,9 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == Wstrzymaj/wznów grę
+
+Peak speed: %.2f blocks/s
+== Prędkość szczytowa: %.2f bloków/s
 
 Penalty in seconds for saving or swapping positions
 == Kara w sekundach za zapisywanie lub zamianę pozycji
@@ -11208,6 +11235,9 @@ Prediction margin
 Prediction margin when frozen
 == Margines predykcji podczas zamrożenia
 
+Prediction time
+== Czas predykcji
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == Predykcja wymienia dokładność na responsywność; nadmiarowość może potroić ruch wychodzący. „Priorytet ruchu gry” tylko znakuje pakiety w Windows i wymaga routera obsługującego QoS.
 
@@ -11412,8 +11442,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == Prawdopodobieństwo wysłania wiadomości o zamrożeniu (0-100%)
 
+Process UDP receive (estimated)
+== Ruch UDP odebrany przez proces (szac.)
+
 Process UDP RX (est.)
 == Odbiór UDP przez proces (szac.)
+
+Process UDP send (estimated)
+== Ruch UDP wysłany przez proces (szac.)
 
 Process UDP TX (est.)
 == Wysyłanie UDP przez proces (szac.)
@@ -13878,9 +13914,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == Pokaż flagę na tabliczce z nazwą
 
-Show FPS, prediction time, and performance graphs
-== Pokaż FPS, czas predykcji i wykresy wydajności
-
 Show freeze bar under frozen players indicating thaw time
 == Pokaż pasek zamrożenia pod zamrożonymi graczami wskazujący czas rozmrożenia
 
@@ -14285,6 +14318,9 @@ Show pending crash reports on startup
 
 Show per-character title waves locally
 == Pokazuj falowanie liter tytułów na moim ekranie
+
+Show performance graphs.
+== Pokaż wykresy wydajności.
 
 Show pet
 == Pokaż zwierzaka
@@ -15246,6 +15282,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Siła deformacji sprężystego Tee
 
+Staging memory
+== Pamięć staging
+
 Standalone
 == Osobno
 
@@ -15443,6 +15482,9 @@ Store the current practice tee state as the respawn point
 
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == Zapisuje bieżący stan Tee (pozycję, broń, skoki i stan ruchu) jako punkt odrodzenia ćwiczeń.
+
+Streamed memory
+== Pamięć strumieniowana
 
 Streamer mode
 == Tryb streamera
@@ -16049,6 +16091,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 
 Text is too long for the selected translation service.
 == Tekst przekracza limit długości wybranej usługi tłumaczenia.
+
+Texture memory
+== Pamięć tekstur
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Dziękuję za Twoje towarzystwo i zaufanie. To daje mi odwagę, by iść dalej.
@@ -16695,6 +16740,9 @@ Top right
 Total
 == Łącznie
 
+Total bytes
+== Łącznie bajtów
+
 Total fonts:
 == Łączna liczba czcionek:
 
@@ -16896,6 +16944,9 @@ Tune variable to value or show current value
 Tune zone (map / override)
 == Strefa ustawień (mapa / nadpisanie)
 
+Tuning parameter
+== Parametr strojenia
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == Na słabszych komputerach wyłącz: karty otwierają się i przewijają natychmiast. Kształt kursora jest tylko estetyczny: wszystkie trzy style mieszczą się w tej samej komórce znaku.
 
@@ -16986,6 +17037,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == Włącz dźwięk i wybierz urządzenie; lista pochodzi z backendu audio przy starcie.
 
+Turning point (%d to %d blocks/s)
+== Punkt przegięcia (od %d do %d bloków/s)
+
 Turning this off only changes your display.
 == Wyłączenie zmienia tylko wyświetlanie u ciebie.
 
@@ -17024,6 +17078,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == Wpisz słowo; wyniki filtrują się na bieżąco po kartach i nazwach konfiguracji.
+
+Type ID
+== ID typu
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == Wpisz tekst w wyszukiwaniu lub przełączaj Wszystkie, Ulubione i Ostatnie, kliknij skórkę, by ją zastosować, a ikoną plusa dodaj ją do kolejki.
@@ -17265,6 +17322,9 @@ Unknown status
 Unknown title style
 == Nieznany styl tytułu
 
+Unknown UUID
+== Nieznany UUID
+
 Unlimited
 == Bez ograniczeń
 
@@ -17363,6 +17423,9 @@ Updated this configuration.
 
 Updated this phrase.
 == Zaktualizowano frazę.
+
+Updates
+== Aktualizacje
 
 Updating preview…
 == Aktualizowanie podglądu…

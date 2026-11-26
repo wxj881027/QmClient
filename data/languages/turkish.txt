@@ -1542,6 +1542,9 @@ Available rescue modes: auto, manual
 Available resolutions
 == Kullanılabilir çözünürlükler
 
+Average payload
+== Ortalama veri yükü
+
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Ort. %.*f   ↓ %.*f   ↑ %.*f
 
@@ -1968,6 +1971,9 @@ Brutal
 Bubble opacity
 == Balon opaklığı
 
+Buffer memory
+== Arabellek belleği
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
@@ -2012,6 +2018,9 @@ By player name
 
 By row
 == Satır satır
+
+Bytes per update
+== Güncelleme başına bayt
 
 c = Player position
 == c = Oyuncu konumu
@@ -6198,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == Öldürme
 
+Frame rate
+== Kare hızı
+
 Frame time
 == Kare süresi
 
@@ -6383,6 +6395,9 @@ Functions
 
 Game
 == Oyun
+
+Game / predicted tick
+== Oyun tiki / tahmini tik
 
 Game assets
 == Oyun varlıkları
@@ -7128,6 +7143,9 @@ Horizontal position
 Horizontal speed × ramp
 == Yatay hız × çarpan
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== Yatay hız × hız çarpanı (%d ile %d blok/sn)
+
 Hostname of DNSBL provider for IP verification
 == IP doğrulaması için DNSBL sağlayıcısının ana bilgisayar adı
 
@@ -7136,6 +7154,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == İpucu için üzerine gel
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== İşaretçinin altında: %p   Sıradaki: %p   Etkin: %p   Son etkin: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == Tekerlek veya sürüklemenin sonu ne kadar aşabileceği, UI pikseli cinsinden; 0 kapatır
@@ -10419,6 +10440,9 @@ p = Ping latency
 Pack name
 == Paket adı
 
+packets
+== paket
+
 Panel
 == Panel
 
@@ -10550,6 +10574,9 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == Oyunu duraklat/duraklatmayı kaldır
+
+Peak speed: %.2f blocks/s
+== En yüksek hız: %.2f blok/sn
 
 Penalty in seconds for saving or swapping positions
 == Konum kaydetme veya değiştirme için saniye cinsinden ceza
@@ -11208,6 +11235,9 @@ Prediction margin
 Prediction margin when frozen
 == Donduğunda tahmin marjı
 
+Prediction time
+== Tahmin süresi
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == Tahmin doğruluğu tepki hızıyla takas eder; yukarı yönlü yedeklilik uploadı üç katına çıkarır. "Oyun trafiğini önceliklendir" yalnızca Windows'ta paketleri işaretler ve QoS destekli bir yönlendirici gerektirir.
 
@@ -11412,8 +11442,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == Donma sohbet mesajı gönderme olasılığı (0-100%)
 
+Process UDP receive (estimated)
+== İşlemin aldığı UDP trafiği (tahmini)
+
 Process UDP RX (est.)
 == İşlem UDP RX (tahmini)
+
+Process UDP send (estimated)
+== İşlemin gönderdiği UDP trafiği (tahmini)
 
 Process UDP TX (est.)
 == İşlem UDP TX (tahmini)
@@ -13878,9 +13914,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == İsim plakasında bayrak göster
 
-Show FPS, prediction time, and performance graphs
-== FPS, tahmin süresi ve performans grafiklerini göster
-
 Show freeze bar under frozen players indicating thaw time
 == Donmuş oyuncuların altında çözülme süresini belirten donma çubuğunu göster
 
@@ -14285,6 +14318,9 @@ Show pending crash reports on startup
 
 Show per-character title waves locally
 == Unvan harflerini kendi ekranımda dalgalandır
+
+Show performance graphs.
+== Performans grafiklerini göster.
 
 Show pet
 == Evcil hayvanı göster
@@ -15246,6 +15282,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Zıpzıp Tee deformasyon şiddeti
 
+Staging memory
+== Hazırlama belleği
+
 Standalone
 == Ayrı göster
 
@@ -15443,6 +15482,9 @@ Store the current practice tee state as the respawn point
 
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == Mevcut Tee durumunu (konum, silahlar, zıplamalar ve hareket durumu) pratik yeniden doğma noktası olarak kaydeder.
+
+Streamed memory
+== Akış belleği
 
 Streamer mode
 == Yayıncı modu
@@ -16049,6 +16091,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 
 Text is too long for the selected translation service.
 == Metin seçilen çeviri hizmetinin uzunluk sınırını aşıyor.
+
+Texture memory
+== Doku belleği
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Arkadaşlığınız ve güveniniz için teşekkür ederim. Devam etme cesaretini bana veren şey budur.
@@ -16695,6 +16740,9 @@ Top right
 Total
 == Toplam
 
+Total bytes
+== Toplam bayt
+
 Total fonts:
 == Toplam yazı tipi:
 
@@ -16896,6 +16944,9 @@ Tune variable to value or show current value
 Tune zone (map / override)
 == Ayar bölgesi (harita / geçersiz kılma)
 
+Tuning parameter
+== Ayar parametresi
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırılır. İmleç biçimi yalnızca görseldir: üç stil de aynı karakter hücresine sığar.
 
@@ -16986,6 +17037,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == Sesi açın, ardından bir cihaz seçin; liste açılışta ses arka ucundan alınır.
 
+Turning point (%d to %d blocks/s)
+== Dönüm noktası (%d ile %d blok/sn)
+
 Turning this off only changes your display.
 == Kapatmak yalnızca senin ekranını etkiler.
 
@@ -17024,6 +17078,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == Bir sözcük yazın; yazdıkça sonuçlar kartlar ve yapılandırma adları arasında filtrelenir.
+
+Type ID
+== Tür kimliği
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == Arama alanına yaz ya da Tümü, Favoriler ve Son kullanılanlar arasında geçiş yap; bir skine tıklayınca hemen uygulanır, artı simgesiyle sıraya alınır.
@@ -17265,6 +17322,9 @@ Unknown status
 Unknown title style
 == Bilinmeyen unvan stili
 
+Unknown UUID
+== Bilinmeyen UUID
+
 Unlimited
 == Sınırsız
 
@@ -17363,6 +17423,9 @@ Updated this configuration.
 
 Updated this phrase.
 == İfade güncellendi.
+
+Updates
+== Güncellemeler
 
 Updating preview…
 == Önizleme güncelleniyor…
