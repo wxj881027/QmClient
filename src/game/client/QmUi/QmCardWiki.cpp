@@ -632,6 +632,7 @@ namespace
 			"qm:mini_features",
 			Localizable("Convenience options for chat, the scoreboard and tune zones."),
 			Localizable("Switch on only the ones you recognize; chat completion affects the chat input, and \"Show Qm badge\" adds the Qm marker next to names on the scoreboard."),
+			Localizable("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"),
 		},
 		{
 			"qm:pie_menu",
