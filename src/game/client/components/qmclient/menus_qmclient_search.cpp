@@ -88,7 +88,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 
 	CLineInputBuffered<128> &ModuleSearchInput = m_GlobalCardSearchInput;
 	const char *pModuleSearch = ModuleSearchInput.GetString();
-	const bool HasSearchQuery = pModuleSearch != nullptr && pModuleSearch[0] != '\0';
+	const bool HasSearchQuery = !ModuleSearchInput.IsEmpty();
 	static CSettingsGlobalSearchCache s_GlobalSearchCache;
 	static std::shared_ptr<qm_card_catalog::SSearchAnswerCardState> s_GlobalSearchAnswerCardState;
 	static qm_card_catalog::SQmCardBuildContext s_GlobalSearchCardBuild;
@@ -382,7 +382,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		SSettingsCardVisualState InputVisualState;
 		InputVisualState.m_Collapsed = s_GlobalSearchInputCollapsed;
 		InputVisualState.m_ClipContent = true;
-		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, MatchCountGap, SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount, ShowMatchCount, ReadOnly](CUIRect Content) {
+		const auto RenderInputContent = [this, UiScale, Metrics, PrewarmOnly, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, MatchCountGap, SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount, ShowMatchCount, ReadOnly](CUIRect Content) {
 			if(Content.h <= 0.0f || Content.w <= 0.0f)
 				return;
 			CUIRect Row;
@@ -398,8 +398,22 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 			InputOptions.m_Clearable = true;
 			InputOptions.m_SearchHotkeyEnabled = !ReadOnly && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive();
 			InputOptions.m_FontSize = SearchInputFontSize;
+			InputOptions.m_MinTextWidth = SearchInputFontSize * 2.0f;
 			InputOptions.m_pPlaceholder = m_GlobalSearchHeaderSession.Placeholder();
-			ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Row, InputOptions);
+			const auto Layout = ResolveSettingsInputActionsLayout(Row, 1, Metrics);
+			const CUiScopedMeasurement PrewarmInput(Ui(), PrewarmOnly && !Ui()->RenderOnly());
+			const ui_widget::SInputFieldResult Result = ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Layout.m_Input, InputOptions);
+			static CButtonContainer s_SearchButton;
+			const CUIRect &Button = Layout.m_Actions.m_aButtons[0];
+			const bool Clicked = Ui()->DoButton_QmIcon(&s_SearchButton, EQmIcon::SEARCH, FontIcons::FONT_ICON_MAGNIFYING_GLASS, 0, &Button, BUTTONFLAG_LEFT);
+			if(!ReadOnly)
+			{
+				GameClient()->m_Tooltips.DoToolTip(&s_SearchButton, &Button, Localize("Search"));
+				if(const char *pQuery = m_GlobalSearchHeaderSession.PlaceholderForSubmit(m_GlobalCardSearchInput.GetString(), Result.m_Submitted, Clicked))
+					m_GlobalCardSearchInput.Set(pQuery);
+				if(Clicked)
+					Ui()->ReleaseActiveTextInput(&m_GlobalCardSearchInput);
+			}
 			if(!ShowMatchCount)
 				return;
 			Content.HSplitTop(MatchCountGap, nullptr, &Content);

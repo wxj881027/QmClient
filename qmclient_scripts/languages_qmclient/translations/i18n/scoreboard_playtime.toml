@@ -1,8 +1,8 @@
 [[message]]
 key = "Playtime (h)"
 [message.translations]
-simplified_chinese = "游玩（小时）"
-traditional_chinese = "遊玩（小時）"
+simplified_chinese = "游玩小时"
+traditional_chinese = "遊玩小時"
 japanese = "プレイ時間 (h)"
 korean = "플레이 시간(h)"
 russian = "Время игры (ч)"

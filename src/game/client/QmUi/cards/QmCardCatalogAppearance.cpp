@@ -392,6 +392,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					const CSettingsContentRevealScope AppearanceAlwaysShowChatRevealScope(Ui(), Flow, s_AppearanceAlwaysShowChatRows.Fade(g_Config.m_QmUiMotionLevel));
 					if(Flow.Control("appearance-always-show-chat", LineSize, Button, RowSpacing))
 					{
+						Ui()->DoConfigTooltip(&s_AppearanceAlwaysShowChat, &Button, &g_Config.m_ClShowChat);
 						if(DoSettingsButton_CheckBox(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, &s_AppearanceAlwaysShowChat, "appearance-always-show-chat", Localize("Always show chat"), g_Config.m_ClShowChat == 2, &Button))
 							g_Config.m_ClShowChat = g_Config.m_ClShowChat != 2 ? 2 : 1;
 					}
@@ -1022,6 +1023,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					const CSettingsContentRevealScope AppearanceHookCollOwnRevealScope(Ui(), Flow, s_AppearanceHookCollOwnRows.Fade(g_Config.m_QmUiMotionLevel));
 					if(Flow.Control("appearance-always-show-own-hook-collision", LineSize, Button, RowSpacing))
 					{
+						Ui()->DoConfigTooltip(&s_AppearanceAlwaysShowHookCollOwn, &Button, &g_Config.m_ClShowHookCollOwn);
 						if(DoSettingsButton_CheckBox(SETTINGS_APPEARANCE, APPEARANCE_TAB_HOOK_COLLISION, &s_AppearanceAlwaysShowHookCollOwn, "appearance-always-show-own-hook-collision", Localize("Always show own player's hook collision line"), g_Config.m_ClShowHookCollOwn == 2, &Button))
 							g_Config.m_ClShowHookCollOwn = g_Config.m_ClShowHookCollOwn != 2 ? 2 : 1;
 					}
@@ -1041,6 +1043,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					const CSettingsContentRevealScope AppearanceHookCollOtherRevealScope(Ui(), Flow, s_AppearanceHookCollOtherRows.Fade(g_Config.m_QmUiMotionLevel));
 					if(Flow.Control("appearance-always-show-other-hook-collision", LineSize, Button, RowSpacing))
 					{
+						Ui()->DoConfigTooltip(&s_AppearanceAlwaysShowHookCollOther, &Button, &g_Config.m_ClShowHookCollOther);
 						if(DoSettingsButton_CheckBox(SETTINGS_APPEARANCE, APPEARANCE_TAB_HOOK_COLLISION, &s_AppearanceAlwaysShowHookCollOther, "appearance-always-show-other-hook-collision", Localize("Always show other players' hook collision lines"), g_Config.m_ClShowHookCollOther == 2, &Button))
 							g_Config.m_ClShowHookCollOther = g_Config.m_ClShowHookCollOther != 2 ? 2 : 1;
 					}
@@ -1102,9 +1105,6 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						{
 							g_Config.m_QmHookCollPressedCustom = g_Config.m_QmHookCollPressedCustom ? 0 : 1;
 						}
-						static int s_HookCollPressedCustomToolTip;
-						Ui()->RegisterPassiveHotItem(&s_HookCollPressedCustomToolTip, &Button);
-						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedCustomToolTip, &Button, Localize("Use the custom colors below while the hook key is held"));
 					}
 				}
 				// 按下后四行取色器仅在"自定义按下后颜色"开启时渲染；关闭时不占用布局，

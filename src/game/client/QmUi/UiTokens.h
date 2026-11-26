@@ -1019,6 +1019,21 @@ namespace ui_token::console_remote
 
 // 确认弹窗（删除、覆盖、退出确认）的尺寸档：宽度按内容在上下限之间自适应，
 // 标题与按钮各自固定高度，保证不同长度的提示文案排版一致。
+namespace ui_token::assets_editor
+{
+	inline constexpr float BORDER_WIDTH = 1.0f;
+	// 画布内部角色色，随贴图表达透明度与槽位状态。
+	inline constexpr ColorRGBA CHECKER_DARK{0.12f, 0.13f, 0.15f, 1.0f};
+	inline constexpr ColorRGBA CHECKER_LIGHT{0.18f, 0.19f, 0.21f, 1.0f};
+	inline constexpr ColorRGBA SLOT{1.0f, 1.0f, 1.0f, 0.24f};
+	inline constexpr ColorRGBA GRID{1.0f, 1.0f, 1.0f, 0.14f};
+	inline constexpr auto HOVER = feedback::ACTIVE_BORDER;
+	inline constexpr auto SELECTED = color::BORDER_FOCUS;
+	inline constexpr auto DROP_VALID = color::SUCCESS;
+	inline constexpr auto DROP_INVALID = color::DANGER;
+	inline constexpr auto GHOST = color::SURFACE_ELEVATED;
+}
+
 namespace ui_token::confirm_dialog
 {
 	// 单行短提示时的最小宽度，低于它按钮会挤在一行挤不开。

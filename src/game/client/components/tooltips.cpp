@@ -4,6 +4,7 @@
 
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiConfigHint.h>
+#include <game/client/QmUi/UiSwitchTipPolicy.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
@@ -157,7 +158,7 @@ void CTooltips::DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const
 	DoToolTip(pId, pNearRect, nullptr, -1.0f, ui_token::tooltip::FONT_SIZE, false, true, false, true);
 }
 
-void CTooltips::DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect, const void *pConfigValue, const CUIRect *pAnchor, const void *pSecondConfigValue)
+void CTooltips::DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect, const void *pConfigValue, const CUIRect *pAnchor, const void *pSecondConfigValue, const char *pSwitchLabel)
 {
 	if(Ui()->RenderOnly() || pId == nullptr || !GameClient()->m_Menus.IsSettingsPageActive())
 		return;
@@ -204,7 +205,14 @@ void CTooltips::DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect
 	const float FontSize = ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale));
 	// 设置页配置说明一律「可读宽度 + 自动换行」：WidthHint 传 -1 表示随字号缩放的阅读行宽，
 	// 绝不退化成行矩形/控件宽度（长说明必须换行成多行，见 QmResolveTooltipText）。
-	DoToolTip(pId, pRect, pKey != nullptr ? Localize(pKey) : nullptr, -1.0f, FontSize, true, true, true, true, pAnchor);
+	const char *pHelp = pKey != nullptr ? Localize(pKey) : nullptr;
+	if(pSwitchLabel != nullptr && pCommand != nullptr && Iter != m_ConfigHelp.end() && Iter->second->m_Type == SConfigVariable::VAR_INT)
+	{
+		const auto &Variable = *static_cast<const SIntConfigVariable *>(Iter->second);
+		if(Variable.m_Min == 0 && Variable.m_Max == 1)
+			pHelp = ui_switch_tip::Fallback(pCommand, pKey, pSwitchLabel, pHelp);
+	}
+	DoToolTip(pId, pRect, pHelp, -1.0f, FontSize, true, true, true, true, pAnchor);
 }
 
 void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, const float FontSize, const bool SmallInstant, const bool HoverByRect, const bool Immediate, const bool Fallback, const CUIRect *pAnchor, const EQmTooltipPlacement Placement, const bool ForceHover)

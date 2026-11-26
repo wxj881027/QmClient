@@ -815,26 +815,10 @@ turkish = "Değişiklikleri Uygula"
 polish = "Zastosuj zmiany"
 
 [[message]]
-key = "Apply input early before next tick for prediction"
-[message.translations]
-simplified_chinese = "在下一 tick 前提前应用输入进行预测"
-traditional_chinese = "在下一 tick 前提前應用輸入進行預測"
-japanese = "予測のために次の tick の前に早期に入力を適用"
-korean = "예측을 위해 다음 틱 전에 입력을 미리 적용"
-russian = "Применять ввод заранее до следующего тика для предсказания"
-german = "Eingabe vor dem nächsten Tick zur Vorhersage frühzeitig anwenden"
-spanish = "Aplicar entrada temprano antes del próximo tick para predicción"
-french = "Appliquer l'entrée tôt avant le prochain tick pour la prédiction"
-brazilian_portuguese = "Aplicar entrada antecipada antes do próximo tick para predição"
-portuguese = "Aplicar entrada cedo antes do próximo tick para previsão"
-turkish = "Tahmin için bir sonraki tick'ten önce girdiyi erken uygula"
-polish = "Zastosuj dane wejściowe wcześniej przed następnym tickiem do przewidywania"
-
-[[message]]
 key = "Apply quick input to other Tees as well"
 [message.translations]
-simplified_chinese = "对其他 Tee 也应用快速输入"
-traditional_chinese = "對其他 Tee 也應用快速輸入"
+simplified_chinese = "开启快速输入时，也将提前预测用于其他角色，让画面中的位置按相同的预测时刻显示。"
+traditional_chinese = "開啟快速輸入時，也將提前預測用於其他角色，讓畫面中的位置按相同的預測時刻顯示。"
 japanese = "他の Tee にもクイック入力を適用"
 korean = "다른 Tee에도 빠른 입력 적용"
 russian = "Также применять быстрый ввод к другим Tee"
@@ -2821,8 +2805,8 @@ polish = "Wyświetla twój ping do bieżącego serwera"
 [[message]]
 key = "Do not predict other players when frozen"
 [message.translations]
-simplified_chinese = "自己被冻结时不预测其他玩家"
-traditional_chinese = "自己被凍結時不預測其他玩家"
+simplified_chinese = "自己的角色被冻结期间，其他玩家按服务器位置显示。解冻后恢复原来的移动预测。"
+traditional_chinese = "自己的角色被凍結期間，其他玩家按伺服器位置顯示。解凍後恢復原來的移動預測。"
 japanese = "自分がフリーズ中の他のプレイヤーを予測しない"
 korean = "프리즈 시 다른 플레이어 예측 안 함"
 russian = "Не предсказывать других игроков при заморозке"
@@ -3747,22 +3731,6 @@ turkish = "Yazı tipi kalınlığı:"
 polish = "Grubość czcionki:"
 
 [[message]]
-key = "For Gores"
-[message.translations]
-simplified_chinese = "用于 Gores"
-traditional_chinese = "用於 Gores"
-japanese = "Gores 用"
-korean = "Gores용"
-russian = "для Gores"
-german = "für Gores"
-spanish = "para Gores"
-french = "pour les Gores"
-brazilian_portuguese = "para Gores"
-portuguese = "para Gores"
-turkish = "Gores için"
-polish = "dla Gores"
-
-[[message]]
 key = "FPS"
 [message.translations]
 simplified_chinese = "FPS"
@@ -4032,22 +4000,6 @@ brazilian_portuguese = "Manuscrita"
 portuguese = "Manuscrito"
 turkish = "El yazısı"
 polish = "Odręczna"
-
-[[message]]
-key = "Helpful for Gores: allow negative internal certainty for more conservative prediction"
-[message.translations]
-simplified_chinese = "对 Gores 有帮助：允许内部确定性为负值，使预测更保守"
-traditional_chinese = "對 Gores 有幫助：允許內部確定性為負值，使預測更保守"
-japanese = "Gores に役立つ：より保守的な予測のために内部確実性を負の値にする"
-korean = "Gores에 유용: 더 보수적인 예측을 위해 내부 확신도를 음수로 허용"
-russian = "Полезно для Gores: разрешить отрицательную внутреннюю уверенность для более консервативного предсказания"
-german = "Hilfreich für Gores: negative interne Sicherheit für konservativere Vorhersage erlauben"
-spanish = "Útil para Gores: permitir certeza interna negativa para una predicción más conservadora"
-french = "Utile pour Gores : permet une certitude interne négative pour une prédiction plus conservatrice"
-brazilian_portuguese = "Útil para Gores: permitir certeza interna negativa para uma predição mais conservadora"
-portuguese = "Útil para Gores: permitir certeza interna negativa para uma previsão mais conservadora"
-turkish = "Gores için faydalı: daha muhafazakar tahmin için negatif iç kesinliğe izin ver"
-polish = "Pomocne dla Gores: zezwól na ujemną pewność wewnętrzną dla bardziej konserwatywnego przewidywania"
 
 [[message]]
 key = "Hide ghosts of frozen players"
@@ -5264,22 +5216,6 @@ turkish = "Hızlı girişi erken uygulamak için milisaniye"
 polish = "Milisekundy do wcześniejszego zastosowania szybkiego wprowadzania"
 
 [[message]]
-key = "Mini debug"
-[message.translations]
-simplified_chinese = "小型调试"
-traditional_chinese = "小型調試"
-japanese = "ミニデバッグ"
-korean = "미니 디버그"
-russian = "мини-отладка"
-german = "Mini-Debug"
-spanish = "mini depuración"
-french = "mini débogage"
-brazilian_portuguese = "mini debug"
-portuguese = "mini debug"
-turkish = "küçük hata ayıklama"
-polish = "mini debug"
-
-[[message]]
 key = "Mini voting UI"
 [message.translations]
 simplified_chinese = "缩小投票界面"
@@ -6226,8 +6162,8 @@ polish = "Piksele: przesunięcie warstw"
 [[message]]
 key = "Play rank ghost replay sounds and hit effects locally"
 [message.translations]
-simplified_chinese = "在本地播放 Rank 1 影子的回放音效和命中特效"
-traditional_chinese = "在本機播放 Rank 1 影子的回放音效和命中特效"
+simplified_chinese = "查看排名幽灵回放时，在本机播放幽灵的音效和命中特效。关闭游戏音效也会关闭这项反馈。"
+traditional_chinese = "查看排名幽靈回放時，在本機播放幽靈的音效和命中特效。關閉遊戲音效也會關閉這項回饋。"
 japanese = "Rank 1 ゴーストリプレイの効果音とヒットエフェクトをローカルで再生"
 korean = "Rank 1 고스트 리플레이의 효과음과 피격 효과를 로컬에서 재생"
 russian = "Локально воспроизводить звуки и эффекты попаданий повтора призрака Rank 1"
@@ -6880,22 +6816,6 @@ turkish = "Kırmızı"
 polish = "Czerwony"
 
 [[message]]
-key = "Reduce antiping and player prediction when frozen"
-[message.translations]
-simplified_chinese = "冻结时减少 antiping 和玩家预测"
-traditional_chinese = "凍結時減少 antiping 和玩家預測"
-japanese = "フリーズ時にアンチピンとプレイヤー予測を軽減"
-korean = "얼었을 때 안티핑 및 플레이어 예측 감소"
-russian = "Уменьшить антипинг и предсказание игрока при заморозке"
-german = "Antiping und Spielervorhersage bei eingefrorenem Zustand reduzieren"
-spanish = "Reducir antiping y predicción de jugador cuando está congelado"
-french = "Réduire l'antiping et la prédiction du joueur lorsqu'il est gelé"
-brazilian_portuguese = "Reduzir antiping e previsão do jogador quando congelado"
-portuguese = "Reduzir antiping e previsão do jogador quando congelado"
-turkish = "Donduğunda antiping ve oyuncu tahminini azalt"
-polish = "Zmniejsz antiping i predykcję gracza podczas zamrożenia"
-
-[[message]]
 key = "Reduce prediction while frozen"
 [message.translations]
 simplified_chinese = "冻结时降低预测量"
@@ -6910,22 +6830,6 @@ brazilian_portuguese = "Reduzir a previsão enquanto estiver congelado"
 portuguese = "Reduzir a previsão enquanto estiver congelado"
 turkish = "Donmuşken tahmini azalt"
 polish = "Zmniejszaj predykcję podczas zamrożenia"
-
-[[message]]
-key = "Reduce visual latency"
-[message.translations]
-simplified_chinese = "降低视觉延迟"
-traditional_chinese = "降低視覺延遲"
-japanese = "視覚的な遅延を低減"
-korean = "시각적 지연 감소"
-russian = "уменьшает визуальную задержку"
-german = "reduziert visuelle Latenz"
-spanish = "reduce la latencia visual"
-french = "réduit la latence visuelle"
-brazilian_portuguese = "reduz latência visual"
-portuguese = "reduz latência visual"
-turkish = "görsel gecikmeyi azaltır"
-polish = "zmniejsza opóźnienie wizualne"
 
 [[message]]
 key = "Remove [group] [clan]:"
@@ -7506,8 +7410,8 @@ polish = "Przywrócić zapis dla dwóch graczy? /qm Yes wczyta najnowszy; /qm Ye
 [[message]]
 key = "Restore old single-segment hook collision line behavior"
 [message.translations]
-simplified_chinese = "恢复旧版单段钩子辅助线行为"
-traditional_chinese = "恢復舊版單段鉤子輔助線行為"
+simplified_chinese = "钩索碰撞辅助线采用旧版单段画法，整条线使用同一颜色。关闭后可用不同颜色标出末段。"
+traditional_chinese = "鉤索碰撞輔助線採用舊版單段畫法，整條線使用同一顏色。關閉後可用不同顏色標出末段。"
 japanese = "旧式の単一セグメントフック衝突線動作を復元"
 korean = "이전 단일 세그먼트 갈고리 충돌선 동작 복원"
 russian = "Восстановить старое поведение линии столкновения крюка с одним сегментом"
@@ -8525,22 +8429,6 @@ turkish = "Donmuş Tee HUD'unu yalnızca takımda göster"
 polish = "Pokaż HUD zamrożonego Tee tylko w drużynie"
 
 [[message]]
-key = "Show ghost at unpredictable position of other players"
-[message.translations]
-simplified_chinese = "在其他玩家的不可预测位置显示幽灵"
-traditional_chinese = "在其他玩家的不可預測位置顯示幽靈"
-japanese = "他のプレイヤーの予測不可能な位置にゴーストを表示"
-korean = "다른 플레이어의 예측 불가능한 위치에 유령 표시"
-russian = "Показывать призрака в непредсказуемой позиции других игроков"
-german = "Geist an unvorhersehbarer Position anderer Spieler anzeigen"
-spanish = "Mostrar fantasma en posición impredecible de otros jugadores"
-french = "Afficher un fantôme à la position imprévisible des autres joueurs"
-brazilian_portuguese = "Mostrar fantasma na posição imprevisível de outros jogadores"
-portuguese = "Mostrar fantasma na posição imprevisível de outros jogadores"
-turkish = "Diğer oyuncuların tahmin edilemeyen konumunda hayalet göster"
-polish = "Pokaż ducha w nieprzewidywalnej pozycji innych graczy"
-
-[[message]]
 key = "Show hookable tile outlines"
 [message.translations]
 traditional_chinese = "顯示可鉤方塊描邊"
@@ -8666,22 +8554,6 @@ brazilian_portuguese = "Mostrar tiles móveis nas entidades"
 portuguese = "Mostrar tiles móveis nas entidades"
 turkish = "Varlıklarda hareketli karoları göster"
 polish = "Pokaż ruchome kafelki w obiektach"
-
-[[message]]
-key = "Show moving tiles in entity layer"
-[message.translations]
-simplified_chinese = "在实体层显示移动图块"
-traditional_chinese = "在實體層顯示移動圖塊"
-japanese = "エンティティレイヤーに移動タイルを表示"
-korean = "엔티티 레이어에 움직이는 타일 표시"
-russian = "Показывать движущиеся тайлы в слое сущностей"
-german = "Bewegliche Blöcke in der Entitätsebene anzeigen"
-spanish = "Mostrar losetas en movimiento en la capa de entidades"
-french = "Afficher les tuiles mobiles dans la couche d'entités"
-brazilian_portuguese = "Mostrar tiles em movimento na camada de entidades"
-portuguese = "Mostrar tiles em movimento na camada de entidades"
-turkish = "Varlık katmanında hareket eden döşemeleri göster"
-polish = "Pokaż ruchome kafelki w warstwie encji"
 
 [[message]]
 key = "Show notification when only one Tee alive"
@@ -8890,38 +8762,6 @@ brazilian_portuguese = "Mostrar posição e ângulo (mini debug)"
 portuguese = "Mostrar posição e ângulo (mini debug)"
 turkish = "Konum ve açıyı göster (küçük hata ayıklama)"
 polish = "Pokaż pozycję i kąt (mini debug)"
-
-[[message]]
-key = "Show position and angle debug info"
-[message.translations]
-simplified_chinese = "显示位置和角度调试信息"
-traditional_chinese = "顯示位置和角度調試信息"
-japanese = "位置と角度のデバッグ情報を表示"
-korean = "위치 및 각도 디버그 정보 표시"
-russian = "Показывать отладочную информацию о позиции и угле"
-german = "Positions- und Winkel-Debug-Info anzeigen"
-spanish = "Mostrar información de depuración de posición y ángulo"
-french = "Afficher les infos de débogage de position et d'angle"
-brazilian_portuguese = "Mostrar informações de depuração de posição e ângulo"
-portuguese = "Mostrar informações de depuração de posição e ângulo"
-turkish = "Konum ve açı hata ayıklama bilgisini göster"
-polish = "Pokaż informacje debugowania pozycji i kąta"
-
-[[message]]
-key = "Show predicted position as ghost, original as unpredictable player"
-[message.translations]
-simplified_chinese = "将预测位置显示为幽灵，原始位置显示为不可预测玩家"
-traditional_chinese = "將預測位置顯示為幽靈，原始位置顯示為不可預測玩家"
-japanese = "予測位置をゴーストとして表示、元の位置を予測不可能なプレイヤーとして表示"
-korean = "예측 위치를 유령으로, 원본 위치를 예측 불가능한 플레이어로 표시"
-russian = "Показывать предсказанную позицию как призрака, оригинальную как непредсказуемого игрока"
-german = "Vorhergesagte Position als Geist anzeigen, Original als unvorhersehbaren Spieler"
-spanish = "Mostrar posición predicha como fantasma, original como jugador impredecible"
-french = "Afficher la position prédite en fantôme, l'original en joueur imprévisible"
-brazilian_portuguese = "Mostrar posição prevista como fantasma, original como jogador imprevisível"
-portuguese = "Mostrar posição prevista como fantasma, original como jogador imprevisível"
-turkish = "Tahmin edilen konumu hayalet olarak, orijinali tahmin edilemez oyuncu olarak göster"
-polish = "Pokaż przewidywaną pozycję jako ducha, oryginalną jako nieprzewidywalnego gracza"
 
 [[message]]
 key = "Show QmClient config variables"
@@ -9324,8 +9164,8 @@ polish = "Mniejsze tee"
 [[message]]
 key = "Smooth prediction margin (weakens ping jitter correction, restores old behavior)"
 [message.translations]
-simplified_chinese = "平滑过渡预测边距（会削弱 ping 抖动修正，恢复旧行为）"
-traditional_chinese = "平滑過渡預測邊距（會削弱 ping 抖動修正，恢復舊行為）"
+simplified_chinese = "网络延迟突然变化时逐步调整预测余量，减轻画面跳变，代价是修正跟得更慢。"
+traditional_chinese = "網路延遲突然變化時逐步調整預測餘量，減輕畫面跳變，代價是修正跟得更慢。"
 japanese = "スムーズ予測マージン（Ping ジッター補正を弱め、旧動作に戻す）"
 korean = "부드러운 예측 여백 (핑 지터 보정을 약화시키고 이전 동작으로 복원)"
 russian = "Запас плавного предсказания (ослабляет коррекцию дрожания пинга, восстанавливает старое поведение)"
@@ -11613,3 +11453,115 @@ simplified_chinese = "该玩家没有战队，请切换为「按玩家」添加"
 key = "Unassigned entries fall back to this built-in group. It cannot be edited or deleted."
 [message.translations]
 simplified_chinese = "未分配群组的条目归入此处，内置兜底组不可修改或删除"
+
+[[message]]
+key = "At full entity overlay, draw supported moving blocks and freeze zones so they remain visible without map artwork."
+[message.translations]
+simplified_chinese = "实体层显示比例为 100% 时，仍绘制可识别的移动方块和冻结区，方便在隐藏地图美术后看清障碍。"
+traditional_chinese = "實體層顯示比例為 100% 時，仍繪製可識別的移動方塊和凍結區，方便在隱藏地圖美術後看清障礙。"
+japanese = "エンティティ表示が 100% のときも、対応する移動ブロックや凍結エリアを描画します。"
+korean = "엔티티 표시가 100%일 때도 지원하는 이동 블록과 동결 구역을 그립니다."
+russian = "При отображении слоя сущностей на 100% сохраняет видимость поддерживаемых движущихся блоков и зон заморозки."
+german = "Zeigt bei vollständig eingeblendeter Entitätsebene weiterhin unterstützte bewegliche Blöcke und Gefrierzonen an."
+spanish = "Al mostrar solo la capa de entidades, mantiene visibles los bloques móviles y las zonas de congelación compatibles."
+french = "Lorsque seule la couche des entités est affichée, garde visibles les blocs mobiles et les zones de gel pris en charge."
+brazilian_portuguese = "Quando apenas a camada de entidades está visível, continua a mostrar os blocos móveis e as zonas de congelamento compatíveis."
+portuguese = "Quando apenas a camada de entidades está visível, continua a mostrar os blocos móveis e as zonas de congelamento compatíveis."
+turkish = "Varlık katmanı tamamen açıkken desteklenen hareketli blokları ve donma bölgelerini görünür tutar."
+polish = "Przy pełnym widoku warstwy obiektów nadal pokazuje obsługiwane ruchome bloki i strefy zamrożenia."
+
+[[message]]
+key = "Draw a ghost at the server position of other tees so you can compare it with their predicted position."
+[message.translations]
+simplified_chinese = "在其他玩家的服务器位置画出影子，方便和本地预测的位置对照。"
+traditional_chinese = "在其他玩家的伺服器位置畫出影子，方便和本機預測的位置對照。"
+japanese = "他のティーのサーバー位置にゴーストを表示し、予測位置と見比べられるようにします。"
+korean = "다른 티의 서버 위치에 잔상을 표시해 예측 위치와 비교할 수 있습니다."
+russian = "Показывает призрака в серверной позиции другого игрока для сравнения с предсказанной позицией."
+german = "Zeigt an der Serverposition anderer Tees einen Geist zum Vergleich mit der vorhergesagten Position."
+spanish = "Dibuja un fantasma en la posición de los demás tees según el servidor para compararla con la predicción."
+french = "Affiche un fantôme à la position serveur des autres tees pour la comparer à leur position prédite."
+brazilian_portuguese = "Mostra um fantasma na posição dos outros tees indicada pelo servidor para comparar com a posição prevista."
+portuguese = "Mostra um fantasma na posição dos outros tees indicada pelo servidor para comparar com a posição prevista."
+turkish = "Diğer teelerin sunucudaki konumunda bir hayalet göstererek tahmin edilen konumla karşılaştırmanızı sağlar."
+polish = "Pokazuje ducha w pozycji innych tee podanej przez serwer, aby można było porównać ją z przewidywaną."
+
+[[message]]
+key = "Show your coordinates and aim angle on the HUD, or those of the tee you are watching. Free view shows coordinates only."
+[message.translations]
+simplified_chinese = "在 HUD 上查看自己的坐标和瞄准角度。跟随观战时显示目标的数据，自由视角只显示坐标。"
+traditional_chinese = "在 HUD 上查看自己的座標和瞄準角度。跟隨觀戰時顯示目標的資料，自由視角只顯示座標。"
+japanese = "HUD に自分または観戦中のティーの座標と照準角度を表示します。自由視点では座標のみ表示します。"
+korean = "HUD에 자신이나 관전 중인 티의 좌표와 조준 각도를 표시합니다. 자유 시점에서는 좌표만 표시합니다."
+russian = "Показывает на HUD координаты и угол прицела вашего tee или игрока, за которым вы наблюдаете. В свободной камере видны только координаты."
+german = "Zeigt Koordinaten und Zielwinkel deines Tees oder des beobachteten Tees im HUD. In der freien Ansicht erscheinen nur die Koordinaten."
+spanish = "Muestra en el HUD tus coordenadas y ángulo de puntería, o los del tee observado. En vista libre solo muestra coordenadas."
+french = "Affiche sur le HUD les coordonnées et l’angle de visée de votre tee ou du tee suivi. En vue libre, seules les coordonnées apparaissent."
+brazilian_portuguese = "Mostra no HUD as coordenadas e o ângulo de mira do tee controlado ou observado. Na câmera livre, mostra apenas as coordenadas."
+portuguese = "Mostra no HUD as coordenadas e o ângulo de mira do tee controlado ou observado. Na câmara livre, mostra apenas as coordenadas."
+turkish = "HUD'da kendi tee'nizin ya da izlediğiniz tee'nin koordinatlarını ve nişan açısını gösterir. Serbest görüşte yalnızca koordinatlar görünür."
+polish = "Wyświetla na HUD współrzędne i kąt celowania własnego lub obserwowanego tee. W widoku swobodnym pokazuje tylko współrzędne."
+
+[[message]]
+key = "Use your latest input in local prediction before the next tick so movement appears sooner."
+[message.translations]
+simplified_chinese = "在下一个游戏刻之前把最新输入用于本地预测，按键后能更早看到角色动作。"
+traditional_chinese = "在下一個遊戲刻之前把最新輸入用於本機預測，按鍵後能更早看到角色動作。"
+japanese = "次のティックを待たずに最新の入力を手元の予測に反映し、動きを早く表示します。"
+korean = "다음 틱 전에 최신 입력을 로컬 예측에 반영해 움직임이 더 빨리 보입니다."
+russian = "Учитывает последний ввод в локальном предсказании до следующего тика, чтобы движение раньше появлялось на экране."
+german = "Bezieht die letzte Eingabe schon vor dem nächsten Tick in die lokale Vorhersage ein. Dadurch wird die Bewegung früher sichtbar."
+spanish = "Usa la última entrada en la predicción local antes del siguiente tick para mostrar antes el movimiento."
+french = "Prend en compte la dernière commande dans la prédiction locale avant le prochain tick pour afficher le mouvement plus tôt."
+brazilian_portuguese = "Usa o comando mais recente na previsão local antes do próximo tick para mostrar o movimento mais cedo."
+portuguese = "Usa o comando mais recente na previsão local antes do próximo tick para mostrar o movimento mais cedo."
+turkish = "Hareketin daha erken görünmesi için son girdiyi bir sonraki oyun adımından önce yerel tahmine katar."
+polish = "Uwzględnia ostatnie polecenie w lokalnej predykcji jeszcze przed następnym krokiem symulacji, aby wcześniej pokazać ruch."
+
+[[message]]
+key = "When other players' ghosts are visible, draw the solid tee at the server position and the ghost at the predicted position."
+[message.translations]
+simplified_chinese = "显示他人影子时，实体角色画在服务器位置，影子画在本地预测位置。"
+traditional_chinese = "顯示他人影子時，實體角色畫在伺服器位置，影子畫在本機預測位置。"
+japanese = "他のプレイヤーのゴーストを表示している間、ティー本体をサーバー位置に、ゴーストを予測位置に描きます。"
+korean = "다른 플레이어의 잔상 표시가 켜져 있으면 티 본체는 서버 위치에, 잔상은 예측 위치에 표시합니다."
+russian = "Когда включены призраки других игроков, сам tee отображается в серверной позиции, а призрак — в предсказанной."
+german = "Wenn die Geister anderer Spieler sichtbar sind, erscheint der Tee an der Serverposition und der Geist an der vorhergesagten Position."
+spanish = "Al mostrar los fantasmas de otros jugadores, dibuja el tee en la posición del servidor y el fantasma en la posición predicha."
+french = "Lorsque les fantômes des autres joueurs sont visibles, affiche le tee à sa position serveur et le fantôme à sa position prédite."
+brazilian_portuguese = "Quando os fantasmas dos outros jogadores estão visíveis, mostra o tee na posição do servidor e o fantasma na posição prevista."
+portuguese = "Quando os fantasmas dos outros jogadores estão visíveis, mostra o tee na posição do servidor e o fantasma na posição prevista."
+turkish = "Diğer oyuncuların hayaletleri açıkken tee'yi sunucudaki konumda, hayaleti ise tahmin edilen konumda gösterir."
+polish = "Gdy duchy innych graczy są widoczne, wyświetla tee w pozycji z serwera, a ducha w pozycji przewidywanej."
+
+[[message]]
+key = "While your tee is frozen, gradually shorten prediction up to the configured limit so displayed movement stays closer to server updates."
+[message.translations]
+simplified_chinese = "自己的角色被冻结后，按设定的时长逐步缩短预测提前量，直到设定上限，使画面更接近服务器位置。"
+traditional_chinese = "自己的角色被凍結後，按設定的時間逐步縮短預測提前量，直到設定上限，使畫面更接近伺服器位置。"
+japanese = "自分のティーが凍っている間は予測の先読み時間を設定した上限まで徐々に短くし、表示をサーバー位置に近づけます。"
+korean = "자신의 티가 얼어 있는 동안 설정한 한도까지 예측 시간을 서서히 줄여 화면 위치를 서버 정보에 가깝게 표시합니다."
+russian = "Пока ваш tee заморожен, постепенно сокращает упреждение до заданного предела, приближая отображаемое движение к данным сервера."
+german = "Verkürzt die Vorhersage bei eingefrorenem eigenem Tee schrittweise bis zur eingestellten Grenze. Die angezeigte Bewegung bleibt näher an den Serverdaten."
+spanish = "Mientras tu tee está congelado, reduce gradualmente el adelanto de predicción hasta el límite elegido para acercar el movimiento mostrado a los datos del servidor."
+french = "Quand votre tee est gelé, réduit progressivement l’avance de prédiction jusqu’à la limite choisie pour afficher un mouvement plus proche des données serveur."
+brazilian_portuguese = "Enquanto o tee estiver congelado, reduz gradualmente o tempo de antecipação até o limite definido para aproximar o movimento apresentado dos dados do servidor."
+portuguese = "Enquanto o tee estiver congelado, reduz gradualmente o tempo de antecipação até ao limite definido para aproximar o movimento apresentado dos dados do servidor."
+turkish = "Tee'niz donmuşken tahmin süresini ayarlanan sınıra kadar kademeli olarak kısaltır, böylece görünen hareket sunucu verilerine daha yakın kalır."
+polish = "Gdy twój tee jest zamrożony, stopniowo skraca wyprzedzenie predykcji do ustawionego limitu, aby wyświetlany ruch był bliższy danym serwera."
+
+[[message]]
+key = "With improved smoothing, erratic movement keeps other tees near their server positions for longer. This can help in Gores but makes network jitter more visible."
+[message.translations]
+simplified_chinese = "使用新版平滑算法时，对方频繁变向后会更久地显示在服务器报告的位置附近。在 Gores 中方便判断救人位置，但网络抖动也可能更明显。"
+traditional_chinese = "使用新版平滑算法時，對方頻繁變向後會更久地顯示在伺服器報告的位置附近。在 Gores 中方便判斷救人位置，但網路抖動也可能更明顯。"
+japanese = "新しい平滑化方式で相手が頻繁に方向を変えた際、サーバー位置に近い表示を長く保ちます。Gores の救助時に役立ちますが、通信の揺らぎが目立つことがあります。"
+korean = "새 평활화 방식에서 상대가 자주 방향을 바꾸면 서버 위치에 가깝게 더 오래 표시합니다. Gores 구조에 도움이 되지만 네트워크 흔들림이 더 눈에 띌 수 있습니다."
+russian = "При новом сглаживании игрок, часто меняющий направление, дольше отображается вблизи серверной позиции. Это помогает при спасении в Gores, но колебания задержки могут стать заметнее."
+german = "Mit der neuen Glättung bleiben Tees nach häufigen Richtungswechseln länger nahe der Serverposition. Das hilft bei Rettungen in Gores, kann aber Netzwerkschwankungen sichtbarer machen."
+spanish = "Con el nuevo suavizado, los tees que cambian mucho de dirección se muestran más tiempo cerca de su posición en el servidor. Ayuda al rescatar en Gores, aunque puede hacer más visibles los saltos por latencia."
+french = "Avec le nouveau lissage, les tees qui changent souvent de direction restent affichés plus longtemps près de leur position serveur. Cela aide à les secourir en Gores, mais peut rendre les à-coups du réseau plus visibles."
+brazilian_portuguese = "Com a nova suavização, os tees que mudam muito de direção ficam mais tempo perto da posição indicada pelo servidor. Isso ajuda nos resgates em Gores, mas pode tornar as oscilações da rede mais visíveis."
+portuguese = "Com a nova suavização, os tees que mudam muito de direção ficam mais tempo perto da posição indicada pelo servidor. Isso ajuda nos resgates em Gores, mas pode tornar as oscilações da rede mais visíveis."
+turkish = "Yeni yumuşatma açıkken sık yön değiştiren teeler daha uzun süre sunucudaki konumlarına yakın gösterilir. Bu, Gores kurtarmalarında işe yarayabilir ancak ağ dalgalanmaları daha belirgin olabilir."
+polish = "Przy nowym wygładzaniu tee często zmieniający kierunek dłużej pozostaje blisko pozycji z serwera. Pomaga to przy ratowaniu w Gores, ale wahania opóźnienia mogą być bardziej widoczne."

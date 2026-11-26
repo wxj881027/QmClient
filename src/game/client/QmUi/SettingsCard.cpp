@@ -8,6 +8,7 @@
 #include "SettingsCardSubtitle.h"
 #include "SettingsIconFeedback.h"
 #include "SettingsPageLayout.h"
+#include "SettingsToggleInput.h"
 #include "UiButtons.h"
 #include "UiContext.h"
 #include "UiSurface.h"
@@ -242,15 +243,14 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 		const bool HasRow = Flow.Control(pRowId, Metrics.m_LineHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing));
 		if(HasRow && Pass == ESettingsToggleGroupPass::RENDER && Entry.m_pValue != nullptr)
 		{
-			ProcessInput = ProcessInput && Flow.Input();
-			const int Checked = Entry.m_Mask != 0 ? (*Entry.m_pValue & Entry.m_Mask) != 0 : *Entry.m_pValue != 0;
-			const void *pId = Entry.m_pId != nullptr ? Entry.m_pId : Entry.m_pValue;
-			const char *pOverrideTooltip = TemporaryOverrideTooltip(Entry.m_pValue);
-			const int Clicked = DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pRowId, Entry.m_pLabel, Checked, &Row);
-			if(ApplySettingsToggleEntry(Entry, Clicked != 0, ProcessInput && !m_MenuTextPlanCollecting && !Ui()->RenderOnly(), pOverrideTooltip != nullptr))
-				Changed = true;
-			if(Entry.m_pTooltip != nullptr && !m_MenuTextPlanCollecting)
-				Ui()->DoConfigTooltip(pId, &Row, Entry.m_pValue);
+			const char *pOverride = TemporaryOverrideTooltip(Entry.m_pValue);
+			const bool RowChanged = DoSettingsToggleRow(*Ui(), Entry, Row, pOverride, ProcessInput && Flow.Input(), m_MenuTextPlanCollecting, [&](const void *pId, const void *pConfigValue, bool Checked, bool Enabled) {
+				SLabelProperties Props;
+				if(!Enabled)
+					Props.SetColor(ui_token::color::TEXT_DISABLED);
+				return DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pRowId, Entry.m_pLabel, Checked, &Row, Props, Enabled, -1.0f, true, pConfigValue) != 0;
+			});
+			Changed |= RowChanged;
 		}
 	}
 	// 组尾不再补一档行距：组和普通行一样只在自己开头声明行距，
@@ -328,17 +328,10 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	const bool CanProcessInput = ProcessInput && !m_MenuTextPlanCollecting && !Ui()->RenderOnly();
 	const void *pId = Entry.m_pId != nullptr ? Entry.m_pId : Entry.m_pValue;
 	const char *pOverrideTooltip = TemporaryOverrideTooltip(Entry.m_pValue);
-	bool Changed = false;
-	if(!m_MenuTextPlanCollecting && !Ui()->RenderOnly())
-	{
-		Ui()->DoConfigTooltip(pId, &Button, Entry.m_pValue);
-		const bool Clicked = CanProcessInput && Ui()->DoButtonLogic(pId, 0, &Button, pOverrideTooltip == nullptr ? BUTTONFLAG_LEFT : BUTTONFLAG_NONE);
-		Changed = ApplySettingsToggleEntry(Entry, Clicked, CanProcessInput, pOverrideTooltip != nullptr);
-	}
-	if(Pass == ESettingsToggleGroupPass::INPUT)
-		return Changed;
 	CUIRect FlowRect = Button;
-	if(!CSettingsContentLayoutFlow(FlowRect).Drawing())
+	const CSettingsContentLayoutFlow Flow(FlowRect);
+	const bool Changed = !m_MenuTextPlanCollecting && DoSettingsToggleButtonInput(*Ui(), Flow, Entry, Button, Label, pOverrideTooltip, IsSettingsPageActive(), ProcessInput);
+	if(Pass == ESettingsToggleGroupPass::INPUT || !Flow.Drawing())
 		return Changed;
 	ui_widget::SButtonSurfaceOptions Options;
 	Options.m_Enabled = pOverrideTooltip == nullptr;
@@ -409,14 +402,5 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	ExecuteSettingsCardLabel(Label, [&]() {
 		DoSettingsMenuLabel(Page, Tab, Subtab, Entry.m_pTextId, &Label, Entry.m_pLabel, Metrics.m_BodySize, TEXTALIGN_ML, Props);
 	});
-	if(!m_MenuTextPlanCollecting && !Ui()->RenderOnly() && Context.m_pTooltips != nullptr)
-	{
-		if(pOverrideTooltip != nullptr)
-			Context.m_pTooltips->DoToolTip(pId, &Button, pOverrideTooltip);
-		else if(Entry.m_pTooltip != nullptr)
-			Context.m_pTooltips->DoToolTip(pId, &Button, Entry.m_pTooltip);
-		else
-			Context.m_pTooltips->DoSettingsToolTipForConfig(pId, &Button, Entry.m_pValue, &Label);
-	}
 	return Changed;
 }

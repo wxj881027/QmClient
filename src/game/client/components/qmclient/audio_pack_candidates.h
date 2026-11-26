@@ -30,6 +30,28 @@ namespace qm_audio_pack
 		const char *m_pOutputPrefix;
 	};
 
+	struct SFilteredCandidates
+	{
+		std::vector<int> m_vIndices;
+		int m_SelectedRow = -1;
+	};
+
+	inline SFilteredCandidates FilterCandidates(const std::vector<SCandidateEntry> &vEntries, const char *pQuery, int SelectedIndex)
+	{
+		SFilteredCandidates Result;
+		for(int Index = 0; Index < (int)vEntries.size(); ++Index)
+		{
+			if(!str_utf8_find_nocase(vEntries[Index].m_Path.c_str(), pQuery))
+				continue;
+			if(Index == SelectedIndex)
+				Result.m_SelectedRow = (int)Result.m_vIndices.size();
+			Result.m_vIndices.push_back(Index);
+		}
+		if(Result.m_SelectedRow < 0 && !Result.m_vIndices.empty())
+			Result.m_SelectedRow = 0;
+		return Result;
+	}
+
 	inline constexpr std::array<SScanRoot, 2> CandidateScanRoots()
 	{
 		return {{
@@ -172,6 +194,36 @@ namespace qm_audio_pack
 		{
 			return false;
 		}
+	}
+
+	struct SEditorCandidates
+	{
+		std::vector<std::string> m_vCandidatePaths;
+		std::vector<SCandidateEntry> m_vCandidateEntries;
+		int m_SelectedCandidateIndex = -1;
+		char m_aCurrentPath[IO_MAX_PATH_LENGTH] = "";
+
+		template<typename TScan>
+		bool Update(bool Rescan, const char *pPack, const char *pCurrentPath, TScan &&Scan)
+		{
+			const bool Published = Rescan ?
+						       TryRefreshCandidates(m_vCandidatePaths, m_vCandidateEntries, m_SelectedCandidateIndex, pPack, pCurrentPath, std::forward<TScan>(Scan)) :
+						       TryRebuildCandidates(m_vCandidatePaths, m_vCandidateEntries, m_SelectedCandidateIndex, pPack, pCurrentPath);
+			if(Published)
+				str_copy(m_aCurrentPath, pCurrentPath);
+			return Published;
+		}
+	};
+
+	struct SPreviewSource
+	{
+		const char *m_pPath;
+		int m_StorageType;
+	};
+
+	inline SPreviewSource ResolvePreviewSource(const char *pPath, bool Manual)
+	{
+		return {pPath ? pPath : "", Manual ? IStorage::TYPE_ABSOLUTE : IStorage::TYPE_ALL};
 	}
 
 	struct SScanDirectory

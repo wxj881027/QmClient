@@ -2,7 +2,7 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_tee_trails[] = {
-		{Localizable("Enable tee trails"), nullptr, "启用 Tee 拖尾"},
+		{Localizable("Enable tee trails"), nullptr, "启用 Tee 拖尾 角色拖尾 移动拖尾"},
 		{Localizable("Fade trail alpha"), nullptr, "淡化拖尾"},
 		{Localizable("Magic: Spirit Script"), nullptr, "魔法风：灵文游丝"},
 		{Localizable("Manga: Ink Slash"), nullptr, "漫画风：墨斩"},

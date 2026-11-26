@@ -1023,22 +1023,6 @@ turkish = "Gölge patlaması"
 polish = "Wyskakujące powidoki"
 
 [[message]]
-key = "AGC, experimental"
-[message.translations]
-simplified_chinese = "AGC，实验性"
-traditional_chinese = "AGC，實驗性"
-japanese = "AGC、実験的"
-korean = "AGC, 실험적"
-russian = "AGC, экспериментально"
-german = "AGC, experimentell"
-spanish = "AGC, experimental"
-french = "CAG, expérimental"
-brazilian_portuguese = "AGC, experimental"
-portuguese = "AGC, experimental"
-turkish = "AGC, deneysel"
-polish = "AGC, eksperymentalne"
-
-[[message]]
 key = "Air jump"
 [message.translations]
 simplified_chinese = "空中跳跃"
@@ -1103,20 +1087,20 @@ turkish = "Tüm silahlar"
 polish = "Wszystkie bronie"
 
 [[message]]
-key = "Allow FTAPI auto-translate (may cause overload)"
+key = "Allow FTAPI to auto-translate received chat messages. Busy chats can overload the free service. Outgoing auto-translation is controlled separately."
 [message.translations]
-simplified_chinese = "允许 FTAPI 自动翻译（可能导致过载）"
-traditional_chinese = "允許 FTAPI 自動翻譯（可能導致過載）"
-japanese = "FTAPI 自動翻訳を許可（過負荷の可能性あり）"
-korean = "FTAPI 자동 번역 허용 (과부하 가능성)"
-russian = "Разрешить автоматический перевод FTAPI (может вызвать перегрузку)"
-german = "FTAPI-automatische Übersetzung erlauben (kann Überlastung verursachen)"
-spanish = "Permitir auto-traducción de FTAPI (puede causar sobrecarga)"
-french = "Autoriser la traduction automatique FTAPI (peut provoquer une surcharge)"
-brazilian_portuguese = "Permitir tradução automática do FTAPI (pode causar sobrecarga)"
-portuguese = "Permitir tradução automática do FTAPI (pode causar sobrecarga)"
-turkish = "FTAPI otomatik çeviriye izin ver (aşırı yüklenmeye neden olabilir)"
-polish = "Zezwól na automatyczne tłumaczenie FTAPI (może spowodować przeciążenie)"
+simplified_chinese = "允许用 FTAPI 自动翻译收到的聊天消息。消息过多可能使免费服务过载。发送消息的自动翻译由另一项设置控制。"
+traditional_chinese = "允許使用 FTAPI 自動翻譯收到的聊天訊息。訊息過多可能使免費服務超載。傳送訊息的自動翻譯由另一項設定控制。"
+japanese = "受信したチャットの FTAPI 自動翻訳を許可します。メッセージが多いと無料サービスに負荷がかかります。送信時の自動翻訳は別の設定です。"
+korean = "받은 채팅 메시지를 FTAPI로 자동 번역하도록 허용합니다. 메시지가 많으면 무료 서비스에 과부하가 걸릴 수 있습니다. 보낼 메시지의 자동 번역은 별도 설정입니다."
+russian = "Разрешает FTAPI автоматически переводить входящие сообщения чата. Активный чат может перегрузить бесплатный сервис. Автоперевод исходящих настраивается отдельно."
+german = "Erlaubt FTAPI, empfangene Chatnachrichten automatisch zu übersetzen. Viel Verkehr kann den kostenlosen Dienst überlasten. Die Übersetzung ausgehender Nachrichten wird separat eingestellt."
+spanish = "Permite traducir automáticamente con FTAPI los mensajes recibidos. Un chat muy activo puede sobrecargar el servicio gratuito. La traducción automática al enviar se configura aparte."
+french = "Autorise FTAPI à traduire automatiquement les messages reçus. Un chat très actif peut surcharger le service gratuit. La traduction automatique à l’envoi se règle séparément."
+brazilian_portuguese = "Permite que a FTAPI traduza automaticamente as mensagens recebidas. Um chat movimentado pode sobrecarregar o serviço gratuito. A tradução automática ao enviar é configurada separadamente."
+portuguese = "Permite à FTAPI traduzir automaticamente as mensagens recebidas. Uma conversa muito ativa pode sobrecarregar o serviço gratuito. A tradução automática ao enviar configura-se à parte."
+turkish = "Gelen sohbet iletilerinin FTAPI ile otomatik çevrilmesine izin verir. Yoğun sohbet ücretsiz hizmeti aşırı yükleyebilir. Giden iletilerin otomatik çevirisi ayrı ayarlanır."
+polish = "Pozwala FTAPI automatycznie tłumaczyć odebrane wiadomości. Duży ruch na czacie może przeciążyć bezpłatną usługę. Automatyczne tłumaczenie wysyłanych wiadomości ustawia się osobno."
 
 [[message]]
 key = "Allow mic permission in system settings, then reopen voice"
@@ -1871,22 +1855,6 @@ turkish = "Yetkili oyuncu '%s' oylamasını zorla başlattı"
 polish = "Upoważniony gracz wymusił głosowanie '%s'"
 
 [[message]]
-key = "Auto adjust prediction margin (fixed base margin when off)"
-[message.translations]
-simplified_chinese = "自动调整预测边距（关闭后固定使用基础预测边距）"
-traditional_chinese = "自動調整預測邊距（關閉後固定使用基礎預測邊距）"
-japanese = "予測マージンを自動調整（オフ時は基本予測マージンを固定使用）"
-korean = "예측 여백 자동 조정 (비활성화 시 기본 예측 여백 고정 사용)"
-russian = "Автоматическая регулировка предсказательного отступа (при выключении используется фиксированный базовый отступ)"
-german = "Vorhersagerand automatisch anpassen (bei Deaktivierung wird fester Basis-Vorhersagerand verwendet)"
-spanish = "Ajuste automático del margen de predicción (al desactivarlo, se usa el margen de predicción base fijo)"
-french = "Ajustement automatique de la marge de prédiction (désactivé pour utiliser la marge de prédiction de base fixe)"
-brazilian_portuguese = "Ajustar automaticamente a margem de previsão (quando desligado, usa margem de previsão base fixa)"
-portuguese = "Ajuste automático da margem de previsão (quando desativado, usa sempre a margem de previsão base)"
-turkish = "Tahmin marjını otomatik ayarla (kapalıyken sabit temel tahmin marjı kullanılır)"
-polish = "Automatyczne dostosowywanie marginesu przewidywania (po wyłączeniu używany jest stały podstawowy margines przewidywania)"
-
-[[message]]
 key = "Auto chat in water"
 [message.translations]
 simplified_chinese = "水中自动发言"
@@ -2575,22 +2543,6 @@ turkish = "Otomatik kayıt geçmiş sayısı (0=devre dışı)"
 polish = "Liczba historii do auto-zapisu (0=wyłącz)"
 
 [[message]]
-key = "Auto-switch to first unfrozen when both frozen"
-[message.translations]
-simplified_chinese = "本体和分身都被冻结时，自动切换到先解冻的那个"
-traditional_chinese = "本體和分身都被凍結時，自動切換到先解凍的那個"
-japanese = "本体とダミーの両方が凍結された場合、自動的に先に解凍された方に切り替え"
-korean = "본체와 더미가 모두 얼었을 때, 먼저 해동되는 쪽으로 자동 전환"
-russian = "Если оба в freeze — к размороженному"
-german = "Bei beider Freeze: zum Ungefrorenen"
-spanish = "Si ambos congelados, ir al no congelado"
-french = "Si les deux gelés, aller au non gelé"
-brazilian_portuguese = "Se ambos frozen, ir ao descongelado"
-portuguese = "Se ambos frozen, ir ao descongelado"
-turkish = "Ana karakter ve Dummy donduğunda, önce çözülenine otomatik geç"
-polish = "Gdy zarówno postać główna, jak i kukła są zamrożone, automatycznie przełącz na tę, która pierwsza się rozmrozi"
-
-[[message]]
 key = "Auto-toggle fast input"
 [message.translations]
 simplified_chinese = "自动开关快速输入"
@@ -2639,22 +2591,6 @@ turkish = "Otomatik Çeviri Modu (0=Yalnızca yaygın kaynak dil girdisinde teti
 polish = "Tryb automatycznego tłumaczenia (0=tylko przy częstym źródle, 1=zawsze tłumacz)"
 
 [[message]]
-key = "Auto-unspec when unfrozen"
-[message.translations]
-simplified_chinese = "被解冻时自动取消旁观"
-traditional_chinese = "被解凍時自動取消旁觀"
-japanese = "フリーズ解除時に自動で観戦解除"
-korean = "해동 시 자동으로 관전 해제"
-russian = "Автоматически выходить из режима наблюдателя при разморозке"
-german = "Beim Auftauen automatisch den Zuschauermodus beenden"
-spanish = "Salir automáticamente del espectador al ser descongelado"
-french = "Quitter automatiquement le mode spectateur lors du dégel"
-brazilian_portuguese = "Cancelar automaticamente espectador ao ser descongelado"
-portuguese = "Sair automaticamente do modo espectador ao ser descongelado"
-turkish = "Çözülünce Otomatik Seyirci Modundan Çık"
-polish = "Automatyczne wyłączanie widza po rozmrożeniu"
-
-[[message]]
 key = "Automate demos, screenshots, and match exports"
 [message.translations]
 simplified_chinese = "自动处理录像、截图和比赛导出"
@@ -2669,22 +2605,6 @@ brazilian_portuguese = "Automate demos, screenshots, and match exports"
 portuguese = "Automate demos, screenshots, and match exports"
 turkish = "Automate demos, screenshots, and match exports"
 polish = "Automate demos, screenshots, and match exports"
-
-[[message]]
-key = "Automatic gain control (0=off 1=on)"
-[message.translations]
-simplified_chinese = "自动增益控制（0=关闭 1=开启）"
-traditional_chinese = "自動增益控制（0=關閉 1=開啟）"
-japanese = "自動ゲインコントロール（0=オフ 1=オン）"
-korean = "자동 이득 제어 (0=끄기, 1=켜기)"
-russian = "Автоматическая регулировка усиления (0=выкл 1=вкл)"
-german = "Automatische Verstärkungsregelung (0=Aus 1=Ein)"
-spanish = "Control automático de ganancia (0=desactivado 1=activado)"
-french = "Contrôle automatique du gain (0=désactivé 1=activé)"
-brazilian_portuguese = "Controle automático de ganho (0=desligado 1=ligado)"
-portuguese = "Controlo de ganho automático (0=desligado 1=ligado)"
-turkish = "Otomatik Kazanç Kontrolü (0=Kapalı 1=Açık)"
-polish = "Automatyczna kontrola wzmocnienia (0=wyłączone, 1=włączone)"
 
 [[message]]
 key = "Automatic updates"
@@ -2801,8 +2721,8 @@ polish = "Automatycznie włączaj przełączanie Gores w trybie gry Gores"
 [[message]]
 key = "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"
 [message.translations]
-simplified_chinese = "自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）"
-traditional_chinese = "自訂資源的貼圖全透明時自動回退到預設資源；關閉後空白貼圖保持不可見（可用於遮蔽特效）"
+simplified_chinese = "自定义贴图中的图块完全透明时，改用对应的默认图块。想用透明图块隐藏雪花等特效时可关闭此项。"
+traditional_chinese = "自訂貼圖中的圖塊完全透明時，改用對應的預設圖塊。想用透明圖塊隱藏雪花等特效時可關閉此項。"
 japanese = "カスタムアセットのスプライトが完全に透明な場合は自動的に既定のアセットへ戻します。オフにすると空白スプライトは非表示のままになります（エフェクトを隠す用途など）"
 korean = "사용자 지정 에셋 스프라이트가 완전히 투명하면 자동으로 기본 에셋으로 대체합니다. 끄면 빈 스프라이트가 보이지 않는 상태로 유지됩니다 (효과 숨기기 등)"
 russian = "Автоматически возвращаться к ресурсу по умолчанию, когда спрайт пользовательского ресурса полностью прозрачен; отключите, чтобы пустые спрайты оставались невидимыми (например, для скрытия эффектов)"
@@ -2845,22 +2765,6 @@ brazilian_portuguese = "Remove automaticamente um registro salvo local após car
 portuguese = "Remove automaticamente um registo guardado localmente após o carregar com sucesso (0 = manter e marcar como usado, 1 = remover)"
 turkish = "Yüklendikten sonra yerel kayıt girişini otomatik sil (0 = tut ve kullanıldı olarak işaretle, 1 = sil)"
 polish = "Automatycznie usuń lokalny zapis po pomyślnym wczytaniu (0 = zachowaj i oznacz jako użyty, 1 = usuń)"
-
-[[message]]
-key = "Automatically switch hammer/gun in Gores mode"
-[message.translations]
-simplified_chinese = "Gores 模式下自动锤枪切换"
-traditional_chinese = "Gores 模式下自動錘槍切換"
-japanese = "Gores モードで自動ハンマー・ガン切り替え"
-korean = "Gores 모드에서 자동 해머/건 전환"
-russian = "Автоматическое переключение молот/пистолет в режиме Gores"
-german = "Automatischer Hammer-Gewehr-Wechsel im Gores-Modus"
-spanish = "Cambio automático de martillo/escopeta en modo Gores"
-french = "Changement automatique marteau/fusil en mode Gores"
-brazilian_portuguese = "Alternância automática de martelo/arma no modo Gores"
-portuguese = "Alternar automaticamente entre martelo e arma no modo Gores"
-turkish = "Gores modunda otomatik çekiç/silah değiştirme"
-polish = "Automatyczne przełączanie młotka/broni w trybie Gores"
 
 [[message]]
 key = "Axiom auto login failed: already in game"
@@ -3583,20 +3487,20 @@ turkish = "Boş varlık için otomatik geri dönüş"
 polish = "Automatyczny powrót pustego zasobu"
 
 [[message]]
-key = "Block client-initiated self-kill (K key / kill command)"
+key = "Block the K key and kill command in normal play. In fast practice, the practice reset takes priority."
 [message.translations]
-simplified_chinese = "拦截客户端发起的自杀（K 键 / kill 命令）"
-traditional_chinese = "攔截用戶端發起的自殺（K 鍵 / kill 命令）"
-japanese = "クライアント発の自殺をブロック（K キー / kill コマンド）"
-korean = "클라이언트 발 자살 차단 (K 키 / kill 명령)"
-russian = "Блокировать самоубийство со стороны клиента (клавиша K / команда kill)"
-german = "Clientseitige Selbsttötung blockieren (K-Taste / kill-Befehl)"
-spanish = "Bloquear el suicidio iniciado por el cliente (tecla K / comando kill)"
-french = "Bloquer le suicide initié par le client (touche K / commande kill)"
-brazilian_portuguese = "Bloquear a morte iniciada pelo cliente (tecla K / comando kill)"
-portuguese = "Bloquear a morte iniciada pelo cliente (tecla K / comando kill)"
-turkish = "İstemci kaynaklı intiharı engelle (K tuşu / kill komutu)"
-polish = "Blokuj samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"
+simplified_chinese = "普通对局中拦截 K 键和 kill 命令。快速练习模式仍优先执行练习重置。"
+traditional_chinese = "一般對局中攔截 K 鍵與 kill 指令。快速練習模式仍優先執行練習重設。"
+japanese = "通常のプレイでは K キーと kill コマンドによる自滅を防ぎます。高速練習モードでは練習のリセットが優先されます。"
+korean = "일반 게임에서는 K 키와 kill 명령으로 자살하는 것을 막습니다. 빠른 연습 모드에서는 연습 초기화가 우선합니다."
+russian = "В обычной игре блокирует самоубийство клавишей K и командой kill. В быстрой тренировке приоритет имеет сброс тренировки."
+german = "Blockiert im normalen Spiel die Selbsttötung per K-Taste oder kill-Befehl. Im Schnelltraining hat das Zurücksetzen der Übung Vorrang."
+spanish = "Bloquea el suicidio con la tecla K y el comando kill en partidas normales. En la práctica rápida tiene prioridad el reinicio de la práctica."
+french = "Bloque le suicide par la touche K ou la commande kill en partie normale. En entraînement rapide, la réinitialisation de l’exercice reste prioritaire."
+brazilian_portuguese = "Bloqueia a tecla K e o comando kill nas partidas normais. No treino rápido, a reinicialização do treino tem prioridade."
+portuguese = "Bloqueia a tecla K e o comando kill durante o jogo normal. No treino rápido, a reposição do treino tem prioridade."
+turkish = "Normal oyunda K tuşuyla veya kill komutuyla kendini öldürmeyi engeller. Hızlı alıştırmada öncelik alıştırmayı sıfırlamaya verilir."
+polish = "Podczas zwykłej gry blokuje samobójstwo klawiszem K i poleceniem kill. W szybkim treningu pierwszeństwo ma reset ćwiczenia."
 
 [[message]]
 key = "Border"
@@ -5773,8 +5677,8 @@ polish = "Przezroczystość linii obszarów kolizji"
 [[message]]
 key = "Color map tune zones by their tune zone number"
 [message.translations]
-simplified_chinese = "按 Tune Zone 编号给地图上的对应区块着色"
-traditional_chinese = "按 Tune Zone 編號給地圖上的對應區塊著色"
+simplified_chinese = "按物理调参区的编号给地图区块着色，方便辨认不同规则的分界。颜色只影响显示。"
+traditional_chinese = "按物理調參區的編號給地圖區塊著色，方便辨認不同規則的分界。顏色只影響顯示。"
 japanese = "tune zone の番号でマップの tune 領域を色分け"
 korean = "tune zone 번호로 맵의 tune 영역에 색상 적용"
 russian = "Раскрашивать tune-зоны карты по номеру tune zone"
@@ -5939,8 +5843,8 @@ polish = "Linki społecznościowe, aktualizacje i sponsorzy przeniesiono do zak�
 [[message]]
 key = "Compatible with single-player area hints from other servers"
 [message.translations]
-simplified_chinese = "兼容其他服务器的类似单人区域提示"
-traditional_chinese = "兼容其他伺服器的類似單人區域提示"
+simplified_chinese = "进入或离开单人区域时，也识别其他社区服使用的提示文本，并按单人区域通知设置显示。"
+traditional_chinese = "進入或離開單人區域時，也識別其他社群伺服器使用的提示文字，並按單人區域通知設定顯示。"
 japanese = "他のサーバーの類似シングルエリア通知と互換性を持たせる"
 korean = "다른 서버의 유사한 싱글 플레이어 영역 알림과 호환"
 russian = "Совместимость с подсказками одиночной зоны на других серверах"
@@ -6531,8 +6435,8 @@ polish = "Bézier stożkowa"
 [[message]]
 key = "Connect dummy automatically for solo split mode"
 [message.translations]
-simplified_chinese = "单刷模式自动连接分身"
-traditional_chinese = "單刷模式自動連接分身"
+simplified_chinese = "进入单刷分队模式时，如果分身尚未连接，就先连接分身，待两个角色都就绪后继续分队。"
+traditional_chinese = "進入單刷分隊模式時，如果分身尚未連接，就先連接分身，待兩個角色都就緒後繼續分隊。"
 japanese = "ソロスプリット時にダミーを自動接続"
 korean = "솔로 스플릿 모드에서 더미 자동 연결"
 russian = "Автоматически подключать двойника в режиме соло-разделения"
@@ -8885,22 +8789,6 @@ turkish = "Diğer silahları aldıktan sonra devre dışı bırak"
 polish = "Wyłącz po podniesieniu innej broni"
 
 [[message]]
-key = "Disable Gores auto-switch when picking up extra weapon"
-[message.translations]
-simplified_chinese = "拿到额外武器时停用 Gores 自动切换"
-traditional_chinese = "拿到額外武器時停用 Gores 自動切換"
-japanese = "追加武器取得時に Gores 自動切り替えを無効化"
-korean = "추가 무기 획득 시 Gores 자동 전환 비활성화"
-russian = "Отключить автосмену Gores при получении дополнительного оружия"
-german = "Gores automatischen Waffenwechsel bei Aufnahme einer zusätzlichen Waffe deaktivieren"
-spanish = "Desactivar cambio automático de Gores al obtener arma extra"
-french = "Désactiver le changement automatique Gores lors de l'obtention d'une arme supplémentaire"
-brazilian_portuguese = "Desativar troca automática de Gores ao pegar arma extra"
-portuguese = "Desativar troca automática do Gores ao obter arma extra"
-turkish = "Ekstra silah alındığında Gores otomatik değiştirmeyi devre dışı bırak"
-polish = "Wyłącz automatyczne przełączanie Gores po zdobyciu dodatkowej broni"
-
-[[message]]
 key = "Discard cached server pings older than this many hours (0 = never expire)"
 [message.translations]
 simplified_chinese = "丢弃缓存中超过此小时数的服务器 ping（0 = 永不过期）"
@@ -10508,8 +10396,8 @@ polish = "Włącz rozszerzony widok tablicy wyników"
 [[message]]
 key = "Enable fast input for other players in Gores mode"
 [message.translations]
-simplified_chinese = "Gores 模式下对其他玩家也启用快速输入"
-traditional_chinese = "Gores 模式下對其他玩家也啟用快速輸入"
+simplified_chinese = "进入 Gores 模式时联动开启其他玩家的快速输入预测，需同时开启快速输入。"
+traditional_chinese = "進入 Gores 模式時聯動開啟其他玩家的快速輸入預測，需同時開啟快速輸入。"
 japanese = "Gores モードで他のプレイヤーにもクイック入力を有効にする"
 korean = "Gores 모드에서 다른 플레이어에게도 빠른 입력 활성화"
 russian = "Включить быстрый ввод для других игроков в режиме Gores"
@@ -10524,8 +10412,8 @@ polish = "Włącz szybkie wprowadzanie dla innych graczy w trybie Gores"
 [[message]]
 key = "Enable fast input in Gores mode"
 [message.translations]
-simplified_chinese = "Gores 模式下启用快速输入"
-traditional_chinese = "Gores 模式下啟用快速輸入"
+simplified_chinese = "进入 Gores 模式时联动开启快速输入，让自己的按键动作更早显示。"
+traditional_chinese = "進入 Gores 模式時聯動開啟快速輸入，讓自己的按鍵動作更早顯示。"
 japanese = "Gores モードでクイック入力を有効にする"
 korean = "Gores 모드에서 빠른 입력 활성화"
 russian = "Включить быстрый ввод в режиме Gores"
@@ -10600,22 +10488,6 @@ brazilian_portuguese = "Ativar modo Gores"
 portuguese = "Ativar modo Gores"
 turkish = "Gores modunu etkinleştir"
 polish = "Włącz tryb Gores"
-
-[[message]]
-key = "Enable Gores mode (King of Gores helper tools)"
-[message.translations]
-simplified_chinese = "启用 Gores 模式（King of Gores 辅助工具集合）"
-traditional_chinese = "啟用 Gores 模式（King of Gores 輔助工具集合）"
-japanese = "Gores モードを有効化（King of Gores 支援ツールセット）"
-korean = "Gores 모드 활성화 (King of Gores 도구 모음)"
-russian = "Включить режим Gores (набор инструментов King of Gores)"
-german = "Gores-Modus aktivieren (King of Gores Hilfswerkzeugsammlung)"
-spanish = "Activar modo Gores (conjunto de herramientas auxiliares de King of Gores)"
-french = "Activer le mode Gores (ensemble d'outils d'aide King of Gores)"
-brazilian_portuguese = "Ativar modo Gores (conjunto de ferramentas auxiliares King of Gores)"
-portuguese = "Ativar modo Gores (conjunto de ferramentas auxiliares King of Gores)"
-turkish = "Gores Modu’nu etkinleştir (King of Gores yardımcı araç seti)"
-polish = "Włącz tryb Gores (zestaw narzędzi King of Gores)"
 
 [[message]]
 key = "Enable Gores mode or join a Gores server."
@@ -10732,8 +10604,8 @@ polish = "Przesunięcie w lewo podczas zanikania wiadomości czatu"
 [[message]]
 key = "Enable LLM thinking mode (may increase response time)"
 [message.translations]
-simplified_chinese = "启用 LLM 思考模式（可能增加响应时间）"
-traditional_chinese = "啟用 LLM 思考模式（可能增加響應時間）"
+simplified_chinese = "请求支持推理的模型在翻译前进行思考，译文可能更晚返回。具体效果取决于所用模型和服务端。"
+traditional_chinese = "請求支援推理的模型在翻譯前進行思考，譯文可能更晚返回。具體效果取決於所用模型和伺服器端。"
 japanese = "LLM 思考モードを有効化（応答時間が増加する可能性あり）"
 korean = "LLM 사고 모드 활성화 (응답 시간이 늘어날 수 있음)"
 russian = "Включить режим размышлений LLM (может увеличить время отклика)"
@@ -11370,22 +11242,6 @@ turkish = "Sesi etkinleştir"
 polish = "Włącz głos"
 
 [[message]]
-key = "Enable voice activation (VAD)"
-[message.translations]
-simplified_chinese = "启用语音激活（VAD）"
-traditional_chinese = "啟用語音激活（VAD）"
-japanese = "音声アクティビティ検出（VAD）を有効化"
-korean = "음성 활성화 감지(VAD) 활성화"
-russian = "Включить голосовую активацию (VAD)"
-german = "Sprachaktivierung (VAD) aktivieren"
-spanish = "Activar activación por voz (VAD)"
-french = "Activer la détection d'activité vocale (VAD)"
-brazilian_portuguese = "Ativar detecção de atividade de voz (VAD)"
-portuguese = "Ativar ativação por voz (VAD)"
-turkish = "Ses Aktivasyonu’nu (VAD) etkinleştir"
-polish = "Włącz aktywację głosową (VAD)"
-
-[[message]]
 key = "Enable voice chat"
 [message.translations]
 simplified_chinese = "启用语音聊天"
@@ -11932,8 +11788,8 @@ polish = "Wyjdź z trybu solo"
 [[message]]
 key = "Exit spectating on both tees when either is hammered awake by another player"
 [message.translations]
-simplified_chinese = "任一方被其他玩家锤醒时，自动让两个 Tee 退出旁观"
-traditional_chinese = "任一方被其他玩家錘醒時，自動讓兩個 Tee 退出旁觀"
+simplified_chinese = "本体或分身被其他玩家锤醒时，让两个角色中正在旁观的都退出旁观。"
+traditional_chinese = "本體或分身被其他玩家錘醒時，讓兩個角色中正在旁觀的都退出旁觀。"
 japanese = "どちらかが他のプレイヤーのハンマーで解凍されたら両方の Tee の観戦を解除"
 korean = "어느 한 Tee가 다른 플레이어의 망치로 해동되면 두 Tee 모두 관전 해제"
 russian = "Выходить из наблюдения обоими Tee, когда другой игрок размораживает любого из них молотком"
@@ -12056,22 +11912,6 @@ brazilian_portuguese = "Predefinição de exportação: 0=personalizado, 1=diár
 portuguese = "Predefinição de exportação: 0=personalizado, 1=diário(libx264/mp4), 2=partilha eficiente(hevc/mp4), 3=edição(all-intra H.264/mp4), 4=intercâmbio(ProRes/mov), 5=melhor qualidade(all-intra H.264 4:4:4/mp4), 6=mais rápido(hardware h264/mp4)"
 turkish = "Dışa aktarma ön ayarı: 0=özel, 1=günlük(libx264/mp4), 2=verimli paylaşım(hevc/mp4), 3=kurgu(all-intra H.264/mp4), 4=takas(ProRes/mov), 5=en iyi kalite(all-intra H.264 4:4:4/mp4), 6=en hızlı(donanım h264/mp4)"
 polish = "Preset eksportu: 0=własny, 1=codzienny(libx264/mp4), 2=efektywne udostępnianie(hevc/mp4), 3=montaż(all-intra H.264/mp4), 4=wymiana(ProRes/mov), 5=najlepsza jakość(all-intra H.264 4:4:4/mp4), 6=najszybszy(sprzętowy h264/mp4)"
-
-[[message]]
-key = "Expose IP to servers by default when adding a favorite (last choice on the server info page)"
-[message.translations]
-simplified_chinese = "添加收藏时默认向该服务器暴露 IP（记住服务器信息页上的上次选择）"
-traditional_chinese = "加入收藏時預設向該伺服器顯示 IP（記住伺服器資訊頁上的上次選擇）"
-japanese = "お気に入り追加時に既定でサーバーへ IP を公開します（サーバー情報ページの前回の選択を記憶）"
-korean = "즐겨찾기 추가 시 기본으로 서버에 IP를 공개합니다 (서버 정보 페이지의 마지막 선택 기억)"
-russian = "По умолчанию открывать IP серверам при добавлении в избранное (запоминает последний выбор на странице сервера)"
-german = "IP beim Hinzufügen eines Favoriten standardmäßig an Server weitergeben (merkt sich die letzte Wahl auf der Serverinfoseite)"
-spanish = "Expone la IP a los servidores por defecto al añadir un favorito (recuerda la última elección de la página de información del servidor)"
-french = "Expose l'IP aux serveurs par défaut lors de l'ajout d'un favori (mémorise le dernier choix de la page d'infos du serveur)"
-brazilian_portuguese = "Expõe o IP aos servidores por padrão ao adicionar um favorito (lembra a última escolha da página de informações do servidor)"
-portuguese = "Expõe o IP aos servidores por predefinição ao adicionar um favorito (memoriza a última escolha da página de informações do servidor)"
-turkish = "Favori eklerken IP'yi varsayılan olarak sunuculara gösterir (sunucu bilgi sayfasındaki son seçimi hatırlar)"
-polish = "Domyślnie ujawniaj IP serwerom przy dodawaniu ulubionego (pamięta ostatni wybór na stronie informacji o serwerze)"
 
 [[message]]
 key = "Expose playback controls to the operating system"
@@ -14059,8 +13899,8 @@ polish = "Kolor linii prowadzącej"
 [[message]]
 key = "Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters"
 [message.translations]
-simplified_chinese = "引导补吃附近遗漏的传送检查点，接近检查点回传入口时提醒"
-traditional_chinese = "引導補吃附近遺漏的傳送檢查點，接近檢查點回傳入口時提醒"
+simplified_chinese = "提示附近还没踩过的传送检查点，并在接近会按检查点回传的入口时预警，方便先补踩再进传送。"
+traditional_chinese = "提示附近還沒踩過的傳送檢查點，並在接近會按檢查點回傳的入口時預警，方便先補踩再進傳送。"
 japanese = "近くの未取得のテレポートチェックポイントへ案内し、チェックポイントへの帰還入口付近で警告する"
 korean = "근처의 미활성 텔레포트 체크포인트로 안내하고 체크포인트 귀환 입구 근처에서 경고"
 russian = "Показывать путь к ближайшим неактивированным контрольным точкам телепортации и предупреждать у входов возврата"
@@ -14752,8 +14592,8 @@ polish = "Ukryj nazwy/klany nieznajomych i pokaż ID klienta"
 [[message]]
 key = "Hide own chat bubble (only when authenticated in remote console)"
 [message.translations]
-simplified_chinese = "隐藏自己的聊天气泡（仅在远程控制台已鉴权时生效）"
-traditional_chinese = "隱藏自己的聊天氣泡（僅在遠程控制台已鑑權時生效）"
+simplified_chinese = "登录远程控制台（rcon）后，本体和分身输入聊天时不向服务器报告打字状态，其他玩家看不到打字气泡。"
+traditional_chinese = "登入遠端主控台（rcon）後，本體和分身輸入聊天時不向伺服器報告打字狀態，其他玩家看不到打字氣泡。"
 japanese = "自分のチャットバブルを非表示（リモートコンソール認証時のみ有効）"
 korean = "자신의 채팅 풍선 숨기기 (원격 콘솔 인증 시에만 적용)"
 russian = "Скрыть свой пузырь чата (действует только при авторизации в удалённой консоли)"
@@ -14940,22 +14780,6 @@ brazilian_portuguese = "Ocultar QR code do patrocinador"
 portuguese = "Ocultar código QR do patrocinador"
 turkish = "Sponsor QR kodunu gizle"
 polish = "Ukryj kod QR sponsora"
-
-[[message]]
-key = "Hide typing emoji during input"
-[message.translations]
-simplified_chinese = "输入时不显示打字表情"
-traditional_chinese = "輸入時不顯示打字表情"
-japanese = "入力中はタイピング表情を表示しない"
-korean = "입력 중 타이핑 이모티콘 표시 안 함"
-russian = "Не показывать смайлики при вводе текста"
-german = "Tipp-Emoticons während der Eingabe nicht anzeigen"
-spanish = "No mostrar emoticonos de escritura al escribir"
-french = "Ne pas afficher les émoticônes de frappe pendant la saisie"
-brazilian_portuguese = "Não mostrar emoticon de digitação ao digitar"
-portuguese = "Não mostrar emotes de digitação durante a entrada"
-turkish = "Yazarken Yazma İfadesini Gösterme"
-polish = "Nie pokazuj emotek podczas pisania"
 
 [[message]]
 key = "Hide UI for focused gameplay"
@@ -15689,8 +15513,8 @@ polish = "Lyrics providers that ignore cache during search"
 [[message]]
 key = "Ignore voice distance attenuation"
 [message.translations]
-simplified_chinese = "忽略语音距离衰减"
-traditional_chinese = "忽略語音距離衰減"
+simplified_chinese = "收听语音时忽略距离，远处的玩家也能听清。静音名单等收听过滤仍然生效。"
+traditional_chinese = "收聽語音時忽略距離，遠處的玩家也能聽清。靜音名單等收聽篩選仍然有效。"
 japanese = "ボイス距離減衰を無視"
 korean = "음성 거리 감쇠 무시"
 russian = "Игнорировать затухание голоса по расстоянию"
@@ -18335,8 +18159,8 @@ polish = "Pokazuj znajomych jako pierwszych w menu widza"
 [[message]]
 key = "Listen from camera center when spectating"
 [message.translations]
-simplified_chinese = "旁观时按镜头中心收听"
-traditional_chinese = "旁觀時按鏡頭中心收聽"
+simplified_chinese = "旁观时以镜头位置计算语音距离，移动镜头就能听到该处附近的玩家。关闭后以自己角色的位置收听。"
+traditional_chinese = "旁觀時以鏡頭位置計算語音距離，移動鏡頭就能聽到該處附近的玩家。關閉後以自己角色的位置收聽。"
 japanese = "観戦時にカメラ中心で聴く"
 korean = "관전 시 카메라 중심 기준 청취"
 russian = "Слушать по центру камеры при наблюдении"
@@ -18671,8 +18495,8 @@ polish = "Lokalny plik TTML"
 [[message]]
 key = "Lock both teams immediately when entering solo split mode"
 [message.translations]
-simplified_chinese = "进入单刷模式时立即锁定双方队伍"
-traditional_chinese = "進入單刷模式時立即鎖定雙方隊伍"
+simplified_chinese = "进入单刷分队模式后，本体和分身各自加入队伍时自动锁队，避免其他玩家进入。"
+traditional_chinese = "進入單刷分隊模式後，本體和分身各自加入隊伍時自動鎖隊，避免其他玩家進入。"
 japanese = "ソロスプリット開始時に両チームをすぐにロック"
 korean = "솔로 스플릿 시작 시 두 팀을 즉시 잠금"
 russian = "Сразу блокировать обе команды при входе в режим соло-разделения"
@@ -20287,7 +20111,18 @@ polish = "Margines przy krawędzi ekranu dla panelu powiadomień"
 [[message]]
 key = "Mark the freeze check at the center and the four death checks around each Tee"
 [message.translations]
-simplified_chinese = "用十字标出角色中心的冻结判定点和四角的死亡判定点"
+simplified_chinese = "在角色中心标出冻结判定点，并在四周标出四个死亡判定点，方便对照地图边缘。"
+traditional_chinese = "在角色中心標出凍結判定點，並在四周標出四個死亡判定點，方便對照地圖邊緣。"
+japanese = "ティーの中心に凍結判定点、周囲に4つの死亡判定点を表示します。"
+korean = "티 중심의 동결 판정점과 주위 네 곳의 사망 판정점을 표시합니다."
+russian = "Отмечает точку проверки заморозки в центре tee и четыре точки проверки смерти вокруг него."
+german = "Markiert die Gefrierprüfung in der Mitte des Tees und die vier Prüfpunkte für Tod um ihn herum."
+spanish = "Marca el punto central que comprueba la congelación y los cuatro puntos de muerte alrededor del tee."
+french = "Marque le point de détection du gel au centre du tee et les quatre points de détection de la mort autour de lui."
+brazilian_portuguese = "Marca o ponto de detecção de congelamento no centro do tee e os quatro pontos de detecção de morte à sua volta."
+portuguese = "Marca o ponto de deteção de congelamento no centro do tee e os quatro pontos de deteção de morte à sua volta."
+turkish = "Tee'nin merkezindeki donma kontrol noktasını ve çevresindeki dört ölüm kontrol noktasını işaretler."
+polish = "Oznacza punkt wykrywania zamrożenia w środku tee i cztery punkty wykrywania śmierci wokół niego."
 
 [[message]]
 key = "Marquee for long lyrics"
@@ -20448,22 +20283,6 @@ brazilian_portuguese = "Número máximo de jogadores exibidos no quadro de afoga
 portuguese = "Número máximo de jogadores apresentados no quadro de afogamentos da equipa Gores"
 turkish = "Gores takım boğulma panosunda gösterilen maksimum oyuncu sayısı"
 polish = "Maksymalna liczba graczy wyświetlanych na tablicy utonięć drużyny Gores"
-
-[[message]]
-key = "May overload the service"
-[message.translations]
-simplified_chinese = "可能导致服务过载"
-traditional_chinese = "可能導致服務過載"
-japanese = "サービスに過負荷がかかる可能性あり"
-korean = "서비스에 과부하가 걸릴 수 있음"
-russian = "может перегрузить сервис"
-german = "kann den Dienst überlasten"
-spanish = "puede sobrecargar el servicio"
-french = "peut surcharger le service"
-brazilian_portuguese = "pode sobrecarregar o serviço"
-portuguese = "pode sobrecarregar o serviço"
-turkish = "hizmeti aşırı yükleyebilir"
-polish = "może przeciążyć usługę"
 
 [[message]]
 key = "Memory"
@@ -21220,8 +21039,8 @@ polish = "Element tabliczki z nazwą – zezwól na swobodny ruch w osi Y"
 [[message]]
 key = "Name plate elements freely movable within bounds"
 [message.translations]
-simplified_chinese = "铭牌元素可在边界内自由移动"
-traditional_chinese = "名字板元素允許在框內自由移動"
+simplified_chinese = "在名牌预览中拖动元素时，可以在允许的范围内自由摆放，分别调整水平和垂直位置。"
+traditional_chinese = "在名牌預覽中拖動元素時，可以在允許的範圍內自由擺放，分別調整水平和垂直位置。"
 japanese = "ネームプレート要素の枠内自由移動を許可"
 korean = "네임플레이트 요소 상자 내 자유 이동 허용"
 russian = "Элемент таблички с именем: разрешить свободное перемещение в рамке"
@@ -21556,8 +21375,8 @@ polish = "Zakres obramowania tekstu tabliczki"
 [[message]]
 key = "Nameplate text effect auto LOD (0=Off 1=On: trim outer effect layers when crowded)"
 [message.translations]
-simplified_chinese = "名牌文字特效自动降级（0=关，1=开：同屏拥挤时削减外层特效）"
-traditional_chinese = "名牌文字特效自動降級（0=關，1=開：同屏擁擠時削減外層特效）"
+simplified_chinese = "同屏名牌的文字特效太多时，自动减少外层特效的绘制，减轻渲染负担。"
+traditional_chinese = "同一畫面中名牌的文字特效太多時，自動減少外層特效的繪製，減輕渲染負擔。"
 japanese = "ネームプレート文字効果の自動LOD（0=無効、1=有効：密集時に外側の効果層を削減）"
 korean = "네임플레이트 텍스트 효과 자동 LOD(0=끔, 1=켬: 혼잡할 때 바깥 효과 레이어 축소)"
 russian = "Авто-LOD эффектов текста табличек (0=выкл, 1=вкл: урезать внешние слои при скоплении)"
@@ -21760,38 +21579,6 @@ brazilian_portuguese = "Cor de destaque da dica de alinhamento X da placa de nom
 portuguese = "Cor de destaque da dica de alinhamento X da placa de nome"
 turkish = "İsim Plakası X Hizalama İpucu Vurgu Rengi"
 polish = "Kolor podświetlenia podpowiedzi wyrównania X tabliczki z nazwą"
-
-[[message]]
-key = "Nameplate X alignment hint strict mode"
-[message.translations]
-simplified_chinese = "铭牌 X 坐标对齐提示严格模式"
-traditional_chinese = "名字牌 X 對齊提示嚴格模式"
-japanese = "ネームプレート X 揃えヒント厳格モード"
-korean = "네임플레이트 X 정렬 힌트 엄격 모드"
-russian = "Строгий режим подсказки выравнивания по оси X для таблички с именем"
-german = "Strenger Modus für X-Ausrichtungshinweis des Namensschilds"
-spanish = "Modo estricto de la sugerencia de alineación X de la placa de nombre"
-french = "Mode strict d'alignement X des panneaux de nom"
-brazilian_portuguese = "Modo estrito de dica de alinhamento X da placa de nome"
-portuguese = "Modo rigoroso de dica de alinhamento X da placa de nome"
-turkish = "İsim Plakası X Hizalama İpucu Katı Modu"
-polish = "Tryb ścisły podpowiedzi wyrównania X tabliczki z nazwą"
-
-[[message]]
-key = "Nameplate X alignment hint with local player"
-[message.translations]
-simplified_chinese = "铭牌与本地玩家 X 坐标对齐提示"
-traditional_chinese = "名字牌顯示與本地玩家 X 對齊的提示"
-japanese = "ネームプレートにローカルプレイヤーの X 座標との位置合わせヒントを表示"
-korean = "네임플레이트에 로컬 플레이어와 X 정렬 힌트 표시"
-russian = "Показывать подсказку выравнивания по оси X с локальным игроком на табличке с именем"
-german = "Namensschild zeigt Hinweis auf X-Ausrichtung mit lokalem Spieler an"
-spanish = "Mostrar sugerencia de alineación X con el jugador local en la placa de nombre"
-french = "Afficher l'indicateur d'alignement X avec le joueur local sur les panneaux de nom"
-brazilian_portuguese = "Placa de nome mostra dica de alinhamento X com o jogador local"
-portuguese = "Mostrar dica de alinhamento X com o jogador local na placa de nome"
-turkish = "İsim Plakasında Yerel Oyuncuyla X Hizalamasını Göster"
-polish = "Pokaż podpowiedź wyrównania X z lokalnym graczem na tabliczce z nazwą"
 
 [[message]]
 key = "Need to have started the map to swap with a player."
@@ -23012,8 +22799,8 @@ polish = "Tylko Apple może to zrobić"
 [[message]]
 key = "Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players"
 [message.translations]
-simplified_chinese = "仅显示提及自己、私聊和自己发送的聊天消息，不受好友与队伍过滤限制；系统消息和屏蔽设置保持生效"
-traditional_chinese = "僅顯示提及自己、私聊和自己傳送的聊天訊息，不受好友與隊伍篩選限制；系統訊息和封鎖設定保持生效"
+simplified_chinese = "只看提到自己、私聊和自己发出的聊天，忽略仅好友或仅队伍的筛选。系统消息照常显示，已静音的玩家仍然隐藏。"
+traditional_chinese = "只看提到自己、私聊和自己發出的聊天，忽略僅好友或僅隊伍的篩選。系統訊息照常顯示，已靜音的玩家仍然隱藏。"
 japanese = "フレンドやチームのフィルターに関係なく、自分への呼びかけ、ささやき、自分の発言のみ表示。システムメッセージとミュート設定は維持"
 korean = "친구 및 팀 필터와 관계없이 나를 언급한 메시지, 귓속말, 내가 보낸 메시지만 표시하며 시스템 메시지와 차단 설정은 유지"
 russian = "Показывать только упоминания, личные и собственные сообщения независимо от фильтров друзей и команды; сохранять системные сообщения и блокировку игроков"
@@ -25639,26 +25426,10 @@ turkish = "Antrenman modu devre dışı"
 polish = "Tryb treningowy jest wyłączony"
 
 [[message]]
-key = "Pre-warm settings page on startup and menu idle"
-[message.translations]
-simplified_chinese = "启动和菜单空闲时预热设置页"
-traditional_chinese = "啟動和菜單空閒時預熱設置頁"
-japanese = "起動時とメニューアイドル時に設定ページをプリロード"
-korean = "시작 및 메뉴 대기 시 설정 페이지 미리 로드"
-russian = "Прогревать страницу настроек при запуске и простое в меню"
-german = "Einstellungsseite beim Start und im Leerlauf des Menüs vorwärmen"
-spanish = "Precargar página de configuración al inicio y cuando el menú esté inactivo"
-french = "Activer le préchauffage des pages de paramètres au démarrage et lorsque le menu est inactif"
-brazilian_portuguese = "Pré-aquecer página de configurações ao iniciar e quando o menu estiver ocioso"
-portuguese = "Pré-aquecer página de definições ao iniciar e quando o menu está inativo"
-turkish = "Başlangıçta ve Menü Boştayken Ayarlar Sayfasını Önceden Yükle"
-polish = "Wstępne ładowanie stron ustawień przy uruchomieniu i bezczynności menu"
-
-[[message]]
 key = "Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)"
 [message.translations]
-simplified_chinese = "在使用 Axiom 四边形规则的服务器中预测移动方块和冻结区域（实验性）"
-traditional_chinese = "在使用 Axiom 四邊形規則的伺服器中預測移動方塊和凍結區域（實驗性）"
+simplified_chinese = "在使用 Axiom 四边形规则的服务器上，本地提前模拟移动方块和冻结区，减少等待服务器更新时的位置差异。这是实验功能。"
+traditional_chinese = "在使用 Axiom 四邊形規則的伺服器上，本機提前模擬移動方塊和凍結區，減少等待伺服器更新時的位置差異。這是實驗功能。"
 japanese = "Axiom の四角形ルールを使うサーバーで移動ブロックと凍結領域を予測（実験的）"
 korean = "Axiom 사각형 규칙을 사용하는 서버에서 이동 블록과 동결 영역 예측 (실험적)"
 russian = "Предсказывать движущиеся блоки и зоны заморозки на серверах с правилами четырёхугольников Axiom (экспериментально)"
@@ -26126,8 +25897,8 @@ polish = "Poprzedni utwór"
 [[message]]
 key = "Prioritize outgoing game traffic on Windows (best effort)"
 [message.translations]
-simplified_chinese = "在 Windows 上优先处理出站游戏流量（尽力而为）"
-traditional_chinese = "在 Windows 上優先處理傳出遊戲流量（盡力而為）"
+simplified_chinese = "在 Windows 上为本体和分身的出站游戏包标记优先级。路由器可以忽略标记，因此不保证降低延迟。"
+traditional_chinese = "在 Windows 上為本體和分身的出站遊戲包標記優先級。路由器可以忽略標記，因此不保證降低延遲。"
 japanese = "Windows で送信ゲーム通信を優先する（ベストエフォート）"
 korean = "Windows에서 송신 게임 트래픽 우선 처리(최선형)"
 russian = "Приоритизировать исходящий игровой трафик в Windows (по возможности)"
@@ -27777,22 +27548,6 @@ turkish = "Alınan mesajlar için çeviri yöntemi"
 polish = "Metoda tłumaczenia odebranych wiadomości"
 
 [[message]]
-key = "Receive VAD speakers"
-[message.translations]
-simplified_chinese = "接收 VAD 讲话者"
-traditional_chinese = "接收 VAD 講話者"
-japanese = "VAD 発話者を受信"
-korean = "VAD 화자 수신"
-russian = "Принимать говорящих VAD"
-german = "VAD-Sprecher empfangen"
-spanish = "Recibir hablantes VAD"
-french = "Réception des locuteurs VAD"
-brazilian_portuguese = "Receber falantes VAD"
-portuguese = "Receber oradores VAD"
-turkish = "VAD konuşmacılarını al"
-polish = "Odbieraj mówców VAD"
-
-[[message]]
 key = "Receive voice from spectators/inactive players"
 [message.translations]
 simplified_chinese = "接收旁观/非活跃玩家语音"
@@ -28095,22 +27850,6 @@ brazilian_portuguese = "Renderizar apenas a demo: ocultar HUD, chat e informaç�
 portuguese = "Renderizar apenas a demo: ocultar HUD, chat e informações de espetador ao exportar"
 turkish = "Yalnızca demoyu işle: dışa aktarırken HUD, sohbet ve izleyici bilgilerini gizle"
 polish = "Renderuj tylko demo: ukryj HUD, czat i informacje widza podczas eksportu"
-
-[[message]]
-key = "Replace censored words with length-based chars"
-[message.translations]
-simplified_chinese = "按屏蔽词长度多字符替换"
-traditional_chinese = "按屏蔽詞長度多字符替換"
-japanese = "ブロックワードの長さに応じて複数文字で置換"
-korean = "차단어 길이에 따른 다중 문자 대체"
-russian = "Замена нескольких символов по длине заблокированного слова"
-german = "Mehrfachzeichenersetzung nach Länge des blockierten Wortes"
-spanish = "Reemplazo multicharacter por longitud de palabra bloqueada"
-french = "Remplacer par plusieurs caractères selon la longueur du mot masqué"
-brazilian_portuguese = "Substituir por múltiplos caracteres conforme comprimento da palavra bloqueada"
-portuguese = "Substituição por múltiplos caracteres com base no comprimento da palavra bloqueada"
-turkish = "Engellenen kelime uzunluğuna göre çok karakterli değiştirme"
-polish = "Zastąp wiele znaków długością blokowanego słowa"
 
 [[message]]
 key = "Replace mode"
@@ -29076,22 +28815,6 @@ brazilian_portuguese = "Run selected commands after joining a server"
 portuguese = "Run selected commands after joining a server"
 turkish = "Run selected commands after joining a server"
 polish = "Run selected commands after joining a server"
-
-[[message]]
-key = "Same group full map listening"
-[message.translations]
-simplified_chinese = "同组全图收听"
-traditional_chinese = "同組全圖收聽"
-japanese = "同じグループ内でマップ全体の音声を聞く"
-korean = "같은 그룹 전체 맵 듣기"
-russian = "Прослушивание всей карты в одной группе"
-german = "Gleiche Gruppe auf ganzer Karte hören"
-spanish = "Escuchar todo el mapa en el mismo grupo"
-french = "Écouter tout le groupe sur toute la carte"
-brazilian_portuguese = "Ouvir todo o mapa no mesmo grupo"
-portuguese = "Ouvir todo o mapa no mesmo grupo"
-turkish = "Aynı Gruptaki Herkesi Haritada Duy"
-polish = "Słuchaj całej mapy w tej samej grupie"
 
 [[message]]
 key = "Save-function is disabled on this server"
@@ -31668,20 +31391,20 @@ key = "Show hazard borders, character check points and weapon ranges"
 simplified_chinese = "显示地形危险边界、角色判定点与武器范围"
 
 [[message]]
-key = "Show hint at random top-left/right of player when main or dummy is hammered awake"
+key = "When another player hammers your main tee or dummy awake, show a hint above the other local tee, randomly on the left or right, only if it is connected and alive."
 [message.translations]
-simplified_chinese = "本体或分身被锤醒时，在对应玩家随机的左上或右上角显示提示"
-traditional_chinese = "本體或分身被錘醒時，在對應玩家隨機的左上或右上角顯示提示"
-japanese = "本体またはダミーがハンマーで起こされたとき、該当プレイヤーのランダムな左上または右上にヒントを表示"
-korean = "본체 또는 더미가 망치에 깨어날 때, 해당 플레이어의 무작위 왼쪽 위 또는 오른쪽 위에 알림 표시"
-russian = "Показывать подсказку в случайном верхнем левом или правом углу соответствующего игрока, когда основное тело или дамми разбужены ударом молота"
-german = "Wenn der Hauptcharakter oder der Dummy aufgeweckt wird, eine zufällige Anzeige oben links oder oben rechts des entsprechenden Spielers einblenden"
-spanish = "Al despertar al cuerpo principal o al Dummy con un martillazo, mostrar un aviso en una esquina superior aleatoria (izquierda o derecha) del jugador correspondiente"
-french = "Lorsque le personnage principal ou le Dummy est réveillé par un coup de marteau, afficher une notification dans un coin supérieur aléatoire (gauche ou droit) du joueur correspondant"
-brazilian_portuguese = "Quando o corpo principal ou Dummy for acordado com martelo, mostrar um aviso no canto superior esquerdo ou direito aleatório do jogador correspondente"
-portuguese = "Quando o corpo principal ou o Dummy é acordado com martelo, mostrar um aviso num canto superior aleatório (esquerdo ou direito) do jogador correspondente"
-turkish = "Ana karakter veya Dummy çekiçle uyandırıldığında, ilgili oyuncunun rastgele sol üst veya sağ üst köşesinde ipucu göster"
-polish = "Gdy postać główna lub kukła zostanie obudzona młotkiem, pokaż losowo w lewym górnym lub prawym górnym rogu odpowiedniego gracza"
+simplified_chinese = "其他玩家锤醒本体或分身时，随机在另一只本地角色的左上方或右上方提示。另一只须已连接且存活。"
+traditional_chinese = "其他玩家用錘子敲醒本體或分身時，隨機在另一個本機角色的左上方或右上方提示。另一個角色須已連線且存活。"
+japanese = "他のプレイヤーが本体かダミーをハンマーで解凍すると、もう一方が接続中で生存している場合に限り、その左上か右上にランダムに通知を表示します。"
+korean = "다른 플레이어가 망치로 본체나 더미를 깨우면 반대쪽 로컬 캐릭터의 왼쪽 위나 오른쪽 위에 무작위로 알립니다. 해당 캐릭터가 접속해 있고 살아 있어야 합니다."
+russian = "Когда другой игрок размораживает молотком основного персонажа или дамми, подсказка появляется случайно слева или справа над вторым локальным персонажем, только если тот подключён и жив."
+german = "Taut ein anderer Spieler deinen Tee oder Dummy mit dem Hammer auf, erscheint zufällig links oder rechts über der jeweils anderen Figur ein Hinweis, sofern sie verbunden und am Leben ist."
+spanish = "Si otro jugador descongela con el martillo a tu tee principal o al dummy, aparece un aviso al azar arriba a la izquierda o a la derecha del otro personaje local, solo si está conectado y vivo."
+french = "Si un autre joueur dégèle ton tee principal ou ton dummy au marteau, un indice apparaît au hasard en haut à gauche ou à droite de ton autre personnage, seulement si celui-ci est connecté et vivant."
+brazilian_portuguese = "Quando outro jogador descongela seu tee principal ou dummy com o martelo, mostra um aviso acima do outro personagem local, à esquerda ou à direita por sorteio, apenas se ele estiver conectado e vivo."
+portuguese = "Quando outro jogador descongela o teu tee principal ou dummy com o martelo, mostra um aviso por cima da outra personagem local, aleatoriamente à esquerda ou à direita, apenas se estiver ligada e viva."
+turkish = "Başka bir oyuncu ana tee'yi veya kuklayı çekiçle çözdüğünde, diğer yerel karakter bağlı ve hayattaysa onun sol veya sağ üstünde rastgele bir ipucu gösterir."
+polish = "Gdy inny gracz odmrozi młotkiem twojego głównego tee lub dummy, wskazówka pojawi się losowo nad drugą lokalną postacią, po lewej lub prawej stronie, tylko jeśli ta postać jest połączona i żyje."
 
 [[message]]
 key = "Show hitbox mode"
@@ -31836,22 +31559,6 @@ brazilian_portuguese = "Mostrar entrar na equipe"
 portuguese = "Mostrar entrar na equipa"
 turkish = "Takıma katılmayı göster"
 polish = "Pokaż dołączanie do drużyny"
-
-[[message]]
-key = "Show jump hint based on fractional part of position"
-[message.translations]
-simplified_chinese = "根据位置小数部分显示跳跃提示"
-traditional_chinese = "根據位置小數部分顯示跳躍提示"
-japanese = "位置の小数部分に基づいてジャンプヒントを表示"
-korean = "위치 소수 부분에 따라 점프 알림 표시"
-russian = "Показывать подсказку прыжка в зависимости от дробной части позиции"
-german = "Sprungtipp basierend auf dem Dezimalteil der Position anzeigen"
-spanish = "Mostrar sugerencia de salto según la parte decimal de la posición"
-french = "Afficher l'indice de saut en fonction de la partie décimale de la position"
-brazilian_portuguese = "Mostrar dica de salto com base na parte decimal da posição"
-portuguese = "Mostrar dica de salto com base na parte decimal da posição"
-turkish = "Konumun ondalık kısmına göre zıplama ipucunu göster"
-polish = "Pokaż wskazówkę skoku na podstawie części ułamkowej pozycji"
 
 [[message]]
 key = "Show key press counts"
@@ -32464,8 +32171,8 @@ polish = "Show server prompts and Echo messages as popups"
 [[message]]
 key = "Show server-side tees as ghosts during fast practice"
 [message.translations]
-simplified_chinese = "快速练习中把服务器侧的 Tee 显示为影子"
-traditional_chinese = "快速練習中把伺服器側的 Tee 顯示為影子"
+simplified_chinese = "快速练习期间，把服务器上的角色画成影子，方便对照本地练习中的位置。"
+traditional_chinese = "快速練習期間，把伺服器上的角色畫成影子，方便對照本機練習中的位置。"
 japanese = "高速練習中にサーバー側の Tee をゴーストとして表示する"
 korean = "빠른 연습 중 서버 쪽 Tee를 고스트로 표시합니다"
 russian = "Показывать ти на стороне сервера как призраков во время быстрой практики"
@@ -32821,8 +32528,8 @@ polish = "Pokazuj czasem przypomnienie w menu głównym"
 [[message]]
 key = "Show the original text locally below translated outgoing messages"
 [message.translations]
-simplified_chinese = "只在本地发送译文下方显示原文，不向服务器发送原文"
-traditional_chinese = "僅在本機送出的譯文下方顯示原文，不向伺服器傳送原文"
+simplified_chinese = "发送译文后，在自己的聊天窗口里把原文显示在译文下方。服务器和其他玩家只收到译文。"
+traditional_chinese = "發送譯文後，在自己的聊天視窗中把原文顯示在譯文下方。伺服器和其他玩家只收到譯文。"
 japanese = "送信した翻訳メッセージの下に原文をローカルでのみ表示し、原文はサーバーに送信しません"
 korean = "전송한 번역 메시지 아래에 원문을 로컬에서만 표시하며, 원문은 서버로 전송하지 않습니다"
 russian = "Показывать оригинал под отправленными переведёнными сообщениями только локально, не отправляя оригинал на сервер"
@@ -33775,8 +33482,8 @@ polish = "Nie odtwarzaj animacji zmiany broni przy uderzeniu młotkiem"
 [[message]]
 key = "Skip the weapon switch animation for hammer switches in Gores mode"
 [message.translations]
-simplified_chinese = "在 Gores 模式中锤击切换武器时不播放切换动画"
-traditional_chinese = "在 Gores 模式中錘擊切換武器時不播放切換動畫"
+simplified_chinese = "在 Gores 模式中自动切换武器时，自己的角色切到锤或从锤切出会跳过切换动画。实际切换仍会发生。"
+traditional_chinese = "使用 Gores 自動切換武器時，自己的角色切到錘或從錘切出會跳過切換動畫。實際切換仍會發生。"
 japanese = "Goresモードでハンマーに切り替える際に武器切替アニメーションを再生しない"
 korean = "Gores 모드에서 해머로 전환할 때 무기 전환 애니메이션을 재생하지 않음"
 russian = "Не проигрывать анимацию смены оружия при переключении на молот в режиме Gores"
@@ -33803,22 +33510,6 @@ brazilian_portuguese = "Deslizar para a esquerda"
 portuguese = "Deslizar para a esquerda"
 turkish = "Sola kaydır"
 polish = "Przesuń w lewo"
-
-[[message]]
-key = "Slower"
-[message.translations]
-simplified_chinese = "较慢"
-traditional_chinese = "較慢"
-japanese = "低速"
-korean = "느림"
-russian = "медленнее"
-german = "langsamer"
-spanish = "más lento"
-french = "plus lent"
-brazilian_portuguese = "mais lento"
-portuguese = "mais lento"
-turkish = "daha yavaş"
-polish = "wolniejszy"
 
 [[message]]
 key = "Smart"
@@ -34379,22 +34070,6 @@ brazilian_portuguese = "Opacidade do espectador"
 portuguese = "Opacidade do espetador"
 turkish = "İzleyici opaklığı"
 polish = "Nieprzezroczystość widza"
-
-[[message]]
-key = "Spectator opacity (percent)"
-[message.translations]
-simplified_chinese = "旁观者透明度（百分比）"
-traditional_chinese = "旁觀者透明度（百分比）"
-japanese = "観戦者の不透明度（パーセント）"
-korean = "관전자 불투명도(퍼센트)"
-russian = "Непрозрачность зрителя (в процентах)"
-german = "Deckkraft der Zuschauer (Prozent)"
-spanish = "Opacidad del espectador (porcentaje)"
-french = "Opacité du spectateur (pourcentage)"
-brazilian_portuguese = "Opacidade do espectador (porcentagem)"
-portuguese = "Opacidade do espetador (percentagem)"
-turkish = "İzleyici opaklığı (yüzde)"
-polish = "Nieprzezroczystość widza (procent)"
 
 [[message]]
 key = "Speech trigger threshold"
@@ -36333,22 +36008,6 @@ turkish = "Tee hitbox rengi"
 polish = "Kolor hitboxu Tee"
 
 [[message]]
-key = "Tee to Freeze"
-[message.translations]
-simplified_chinese = "Tee 与 Freeze"
-traditional_chinese = "Tee 與 Freeze"
-japanese = "Tee 対 Freeze"
-korean = "Tee 대 Freeze"
-russian = "Tee с Freeze"
-german = "Tee gegen Freeze"
-spanish = "Tee contra Freeze"
-french = "Tee contre Freeze"
-brazilian_portuguese = "Tee contra Freeze"
-portuguese = "Tee contra Freeze"
-turkish = "Tee ile Freeze"
-polish = "Tee z Freeze"
-
-[[message]]
 key = "Tee to Tee"
 [message.translations]
 simplified_chinese = "Tee 与 Tee"
@@ -36591,8 +36250,8 @@ polish = "Tymczasowo wyłącz młotkowanie dummy"
 [[message]]
 key = "Temporarily disable dummy hammering in Gores mode"
 [message.translations]
-simplified_chinese = "在 Gores 模式中临时禁用分身锤"
-traditional_chinese = "在 Gores 模式中暫時停用分身錘"
+simplified_chinese = "进入 Gores 模式时暂时关闭分身自动锤。期间没有手动改过分身锤设置的话，退出模式时会恢复原值。"
+traditional_chinese = "進入 Gores 模式時暫時關閉分身自動錘。期間沒有手動改過分身錘設定的話，退出模式時會恢復原值。"
 japanese = "Goresモードでダミーハンマーを一時的に無効化"
 korean = "Gores 모드에서 더미 해머링을 일시적으로 비활성화"
 russian = "Временно отключать удары манекена в режиме Gores"
@@ -39351,22 +39010,6 @@ simplified_chinese = "使用自定义颜色"
 traditional_chinese = "使用自訂顏色"
 
 [[message]]
-key = "Use custom colors for the pressed hook collision line (0 = always invert)"
-[message.translations]
-simplified_chinese = "按下钩键时使用自定义钩子辅助线颜色（0 = 始终反色）"
-traditional_chinese = "按下鉤鍵時使用自訂鉤子輔助線顏色（0 = 始終反色）"
-japanese = "フックキー押下時にカスタムカラーを使用（0 = 常に反転）"
-korean = "훅 키를 누를 때 사용자 지정 색상 사용 (0 = 항상 반전)"
-russian = "Использовать свои цвета линии зацепа при нажатой клавише (0 = всегда инвертировать)"
-german = "Eigene Farben für die Haken-Hilfslinie bei gedrückter Taste verwenden (0 = immer invertieren)"
-spanish = "Usa colores personalizados para la línea de gancho al presionar (0 = invertir siempre)"
-french = "utilise des couleurs personnalisées pour la ligne de grappin maintenue (0 = toujours inverser)"
-brazilian_portuguese = "Usa cores personalizadas para a linha de gancho pressionada (0 = sempre inverter)"
-portuguese = "Usa cores personalizadas para a linha de gancho premida (0 = sempre inverter)"
-turkish = "Basılı kanca yardımcı çizgisi için özel renkler kullan (0 = her zaman ters çevir)"
-polish = "Użyj własnych kolorów linii haka przy wciśniętym klawiszu (0 = zawsze odwracaj)"
-
-[[message]]
 key = "Use default flags on scoreboard"
 [message.translations]
 simplified_chinese = "在计分板上使用默认旗帜"
@@ -39765,22 +39408,6 @@ brazilian_portuguese = "Atraso de liberação do VAD (ms)"
 portuguese = "Atraso de libertação VAD (ms)"
 turkish = "VAD serbest bırakma gecikmesi (ms)"
 polish = "Opóźnienie zwolnienia VAD (ms)"
-
-[[message]]
-key = "VAD threshold (percent)"
-[message.translations]
-simplified_chinese = "VAD 阈值（百分比）"
-traditional_chinese = "VAD 閾值（百分比）"
-japanese = "VAD しきい値（パーセント）"
-korean = "VAD 임계값 (%)"
-russian = "Порог VAD (в процентах)"
-german = "VAD-Schwellwert (Prozent)"
-spanish = "Umbral de VAD (porcentaje)"
-french = "Seuil VAD (pourcentage)"
-brazilian_portuguese = "Limiar do VAD (porcentagem)"
-portuguese = "Limiar VAD (percentagem)"
-turkish = "VAD eşiği (yüzde)"
-polish = "Próg VAD (procent)"
 
 [[message]]
 key = "Vertical movement of each character. Zero keeps the title still."
@@ -42679,22 +42306,6 @@ turkish = "ZIP yolu"
 polish = "Ścieżka ZIP"
 
 [[message]]
-key = "⚠️ FTAPI is a free service. Excessive use may cause service suspension."
-[message.translations]
-simplified_chinese = "⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停"
-traditional_chinese = "⚠️ FTAPI 是免費服務，過度使用可能導致服務暫停"
-japanese = "⚠️ FTAPI は無料サービスです。過度に使用するとサービスが停止される可能性があります。"
-korean = "⚠️ FTAPI 는 무료 서비스입니다. 과도한 사용은 서비스 중단을 초래할 수 있습니다"
-russian = "⚠️ FTAPI — это бесплатный сервис. Чрезмерное использование может привести к приостановке обслуживания."
-german = "⚠️ FTAPI ist ein kostenloser Dienst. Übermäßige Nutzung kann zur Aussetzung des Dienstes führen."
-spanish = "⚠️ FTAPI es un servicio gratuito. El uso excesivo puede causar la suspensión del servicio."
-french = "⚠️ FTAPI est un service gratuit. Une utilisation excessive peut entraîner la suspension du service."
-brazilian_portuguese = "⚠️ FTAPI é um serviço gratuito. O uso excessivo pode causar suspensão do serviço."
-portuguese = "⚠️ FTAPI é um serviço gratuito. O uso excessivo pode causar suspensão do serviço."
-turkish = "⚠️ FTAPI ücretsiz bir hizmettir. Aşırı kullanım hizmetin askıya alınmasına neden olabilir."
-polish = "⚠️ FTAPI to darmowa usługa. Nadmierne użytkowanie może spowodować zawieszenie usługi."
-
-[[message]]
 key = "Menu"
 context = "Bind keyboard key"
 [message.translations]
@@ -42749,6 +42360,22 @@ brazilian_portuguese = "Destacar martelo e gancho mantidos durante o congelament
 portuguese = "Realçar martelo e gancho mantidos durante o congelamento"
 turkish = "Donmuşken basılı tutulan çekiç ve kanca girişlerini vurgula"
 polish = "Podświetlaj przytrzymanie młotka i haka podczas zamrożenia"
+
+[[message]]
+key = "Highlight frozen tees holding hammer or hook. For other players, this requires a teammate whose pre-input has been received. Enable the matching icons to see which input is held."
+[message.translations]
+simplified_chinese = "高亮被冻住时按住锤子或钩索的角色。其他玩家仅对已收到预输入的同队角色生效。开启对应图标可区分卡锤和卡钩。"
+traditional_chinese = "醒目標示被凍住時按住錘子或鉤索的角色。其他玩家僅對已收到預輸入的同隊角色生效。開啟對應圖示可區分卡錘與卡鉤。"
+japanese = "凍結中にハンマーかフックを押し続けているティーを強調します。他のプレイヤーは先行入力を受信した味方だけが対象です。対応するアイコンで入力を見分けられます。"
+korean = "얼어 있는 동안 망치나 갈고리를 계속 누르는 티를 강조합니다. 다른 플레이어는 사전 입력을 받은 팀원만 표시합니다. 해당 아이콘을 켜면 어느 입력인지 알 수 있습니다."
+russian = "Выделяет замороженных tee, удерживающих молоток или крюк. Из других игроков выделяются только союзники, чьи предварительные команды ввода получены. Включите значки, чтобы отличить молоток от крюка."
+german = "Hebt eingefrorene Tees hervor, die Hammer oder Haken gedrückt halten. Bei anderen Spielern gilt das nur für Teammitglieder, deren Vorabeingabe empfangen wurde. Die zugehörigen Symbole zeigen die gehaltene Eingabe."
+spanish = "Resalta a los tees congelados que mantienen pulsado el martillo o el gancho. Para otros jugadores, solo funciona con compañeros cuya entrada anticipada se haya recibido. Activa los iconos para distinguir cada acción."
+french = "Met en évidence les tees gelés qui maintiennent le marteau ou le grappin. Pour les autres joueurs, seuls les coéquipiers dont la pré-entrée a été reçue sont concernés. Activez les icônes pour distinguer les deux actions."
+brazilian_portuguese = "Destaca tees congelados que mantêm o martelo ou o gancho pressionado. Para outros jogadores, só vale para colegas de equipe cuja entrada antecipada foi recebida. Ative os ícones para distinguir as ações."
+portuguese = "Realça os tees congelados que mantêm o martelo ou o gancho premido. Nos outros jogadores, só se aplica a colegas de equipa cuja entrada antecipada tenha sido recebida. Ative os ícones para distinguir as ações."
+turkish = "Donmuşken çekiç veya kanca tuşunu basılı tutan tee'leri vurgular. Diğer oyuncularda yalnızca ön girdisi alınan takım arkadaşları için geçerlidir. Hangi tuşun basılı olduğunu görmek için ilgili simgeleri açın."
+polish = "Wyróżnia zamrożone tee trzymające przycisk młotka lub haka. U innych graczy działa tylko dla członków drużyny, od których odebrano dane wejściowe z wyprzedzeniem. Włącz odpowiednie ikony, aby odróżnić te akcje."
 
 [[message]]
 key = "Own includes your main tee and dummy. Other players must be on your team and require server preinput support."
@@ -43033,3 +42660,307 @@ brazilian_portuguese = "Treino"
 portuguese = "Treino"
 turkish = "Antrenman"
 polish = "Trening"
+
+[[message]]
+key = "With SyncWeaponInput, adjust the prediction margin to network timing. When off, use the larger of the base margin and the enabled fast input lead. Without server support, always use 10 ms."
+[message.translations]
+simplified_chinese = "服务器支持输入同步（SyncWeaponInput）时，按网络状况调整预测边距。关闭后取基础边距和已启用的快速输入提前量中的较大值。不支持输入同步时固定为 10 ms。"
+traditional_chinese = "伺服器支援輸入同步（SyncWeaponInput）時，依網路狀況調整預測邊距。關閉後取基礎邊距與已啟用的快速輸入提前量中的較大值。不支援輸入同步時固定為 10 ms。"
+japanese = "サーバーが SyncWeaponInput に対応していれば、通信状況に応じて予測マージンを調整します。オフなら基準値と有効な高速入力の先行時間の大きい方を使います。非対応なら常に 10 ms です。"
+korean = "서버가 SyncWeaponInput을 지원하면 네트워크 상태에 따라 예측 여유 시간을 조정합니다. 끄면 기본 여유 시간과 활성화된 빠른 입력의 선행 시간 중 큰 값을 씁니다. 미지원 서버에서는 항상 10 ms입니다."
+russian = "С SyncWeaponInput запас предсказания подстраивается под сеть. При отключении берётся большее из базового запаса и опережения включённого быстрого ввода. Без поддержки сервера всегда используется 10 мс."
+german = "Mit SyncWeaponInput wird der Vorhersagepuffer ans Netz angepasst. Ausgeschaltet gilt der größere Wert aus Basispuffer und Vorlauf der aktivierten schnellen Eingabe. Ohne Serverunterstützung gelten immer 10 ms."
+spanish = "Con SyncWeaponInput, ajusta el margen de predicción según la red. Al desactivar, usa el mayor entre el margen base y el adelanto de la entrada rápida si está activa. Sin soporte del servidor, usa siempre 10 ms."
+french = "Avec SyncWeaponInput, adapte la marge de prédiction aux délais réseau. Si désactivé, retient la plus grande valeur entre la marge de base et l’avance de la saisie rapide si elle est active. Sans prise en charge du serveur, utilise toujours 10 ms."
+brazilian_portuguese = "Com SyncWeaponInput, ajusta a margem de previsão à rede. Se desativado, usa o maior valor entre a margem base e a antecipação da entrada rápida, se ela estiver ativa. Sem suporte do servidor, usa sempre 10 ms."
+portuguese = "Com SyncWeaponInput, ajusta a margem de previsão à rede. Com a opção desligada, usa o maior valor entre a margem de base e a antecipação da entrada rápida, se ativa. Sem suporte do servidor, usa sempre 10 ms."
+turkish = "Sunucu SyncWeaponInput destekliyorsa tahmin payını ağ zamanlamasına göre ayarlar. Kapalıyken taban pay ile etkin hızlı girişin öne alma süresinden büyük olanı kullanır. Sunucu desteklemiyorsa her zaman 10 ms kullanılır."
+polish = "Z SyncWeaponInput dostosowuje margines predykcji do opóźnień sieci. Po wyłączeniu wybiera większą z wartości: margines bazowy lub wyprzedzenie aktywnego szybkiego wejścia. Bez obsługi przez serwer zawsze używa 10 ms."
+
+[[message]]
+key = "Allow direct pings by default for new favorites in the server browser info panel. Pinging reveals your IP to the server. LAN favorites always allow pings; in-game favorites ignore this setting."
+[message.translations]
+simplified_chinese = "在服务器浏览器信息页新建收藏时，默认允许直接 ping。服务器收到 ping 时能看到你的 IP。局域网页新建的收藏始终允许直接 ping；游戏内直接收藏不使用此设置。"
+traditional_chinese = "在伺服器瀏覽器資訊頁新增收藏時，預設允許直接 ping。伺服器收到 ping 時能看到你的 IP。區域網路頁新增的收藏一律允許直接 ping；遊戲內直接收藏不套用此設定。"
+japanese = "サーバーブラウザーの情報欄で追加するお気に入りに直接 ping を許可します。ping するとサーバーに IP が伝わります。LAN からの登録は常に許可し、ゲーム内からの登録にはこの設定を使いません。"
+korean = "서버 브라우저 정보 창에서 새로 즐겨찾기에 추가할 때 직접 ping을 기본 허용합니다. 서버는 ping을 받으면 IP를 볼 수 있습니다. LAN 탭에서 추가하면 항상 허용되며 게임 안에서 추가하면 이 설정을 쓰지 않습니다."
+russian = "По умолчанию разрешает прямой ping для избранного, добавленного через панель сведений в браузере серверов. При ping сервер видит ваш IP. При добавлении из LAN ping разрешён всегда, а при добавлении из игры настройка не применяется."
+german = "Erlaubt direkte Pings standardmäßig für neue Favoriten im Infofeld des Serverbrowsers. Beim Ping sieht der Server deine IP. Im LAN-Tab hinzugefügte Favoriten erlauben Pings immer; beim Hinzufügen im Spiel gilt diese Einstellung nicht."
+spanish = "Permite por defecto el ping directo al añadir favoritos desde la información del navegador de servidores. El ping revela tu IP al servidor. Desde la pestaña LAN siempre se permite; al añadir desde la partida no se aplica este ajuste."
+french = "Autorise par défaut le ping direct pour les favoris ajoutés depuis le panneau d’infos du navigateur de serveurs. Le ping révèle votre IP au serveur. Les favoris ajoutés depuis l’onglet LAN l’autorisent toujours ; l’ajout en jeu ignore ce réglage."
+brazilian_portuguese = "Permite ping direto por padrão ao adicionar favoritos no painel de informações do navegador de servidores. O ping revela seu IP ao servidor. Favoritos adicionados na aba LAN sempre permitem ping; os adicionados dentro da partida ignoram esta opção."
+portuguese = "Permite ping direto por predefinição ao adicionar favoritos no painel de informações do navegador de servidores. O ping revela o teu IP ao servidor. Os favoritos adicionados no separador LAN permitem sempre ping; os adicionados durante o jogo ignoram esta opção."
+turkish = "Sunucu tarayıcısının bilgi panelinden eklenen favoriler için doğrudan pinge varsayılan olarak izin verir. Ping, IP adresinizi sunucuya gösterir. LAN sekmesinden eklenenlerde pinge daima izin verilir; oyun içinden eklerken bu ayar kullanılmaz."
+polish = "Domyślnie zezwala na bezpośredni ping przy dodawaniu ulubionych w panelu informacji przeglądarki serwerów. Ping ujawnia serwerowi twój adres IP. Dodanie z karty LAN zawsze zezwala na ping; dodanie w trakcie gry pomija to ustawienie."
+
+[[message]]
+key = "Enable the selected Gores helpers, such as hammer switching and fast input, while this mode is active."
+[message.translations]
+simplified_chinese = "进入 Gores 模式后，启用下方选中的辅助功能，例如锤枪切换和快速输入。"
+traditional_chinese = "進入 Gores 模式後，啟用下方選中的輔助功能，例如錘槍切換和快速輸入。"
+japanese = "Gores モード中、ハンマーの持ち替えや高速入力など、選択した補助機能を有効にします。"
+korean = "Gores 모드가 활성화된 동안 망치 전환이나 빠른 입력 등 선택한 보조 기능을 적용합니다."
+russian = "В режиме Gores включает выбранные помощники, например смену молотка и быстрый ввод."
+german = "Aktiviert im Gores-Modus die ausgewählten Hilfen, etwa den Hammerwechsel oder die schnelle Eingabe."
+spanish = "Activa las ayudas seleccionadas, como el cambio de martillo o la entrada rápida, mientras se usa el modo Gores."
+french = "Active les aides choisies pendant le mode Gores, par exemple le changement de marteau ou la saisie rapide."
+brazilian_portuguese = "Ativa as ajudas selecionadas, como a troca de martelo e a entrada rápida, enquanto o modo Gores estiver ativo."
+portuguese = "Ativa as ajudas selecionadas, como a troca de martelo e a entrada rápida, enquanto o modo Gores estiver ativo."
+turkish = "Gores modu açıkken çekiç değiştirme ve hızlı girdi gibi seçtiğiniz yardımcıları etkinleştirir."
+polish = "W trybie Gores włącza wybrane ułatwienia, takie jak zmiana młotka czy szybkie wprowadzanie poleceń."
+
+[[message]]
+key = "Hear members of your voice group at any distance on the map. Other players keep their usual distance limit."
+[message.translations]
+simplified_chinese = "同一语音组的成员在地图上相隔多远都能听见。此项只对同组成员放宽距离限制。"
+traditional_chinese = "同一語音組的成員在地圖上相隔多遠都能聽見。此項只對同組成員放寬距離限制。"
+japanese = "同じボイスグループの相手はマップ内の距離に関係なく聞こえます。他のプレイヤーには通常の距離制限が適用されます。"
+korean = "같은 음성 그룹의 플레이어는 맵 어디에 있어도 들립니다. 다른 플레이어에게는 평소 거리 제한이 적용됩니다."
+russian = "Позволяет слышать участников своей голосовой группы на любом расстоянии на карте. Для остальных действует обычное ограничение по расстоянию."
+german = "Mitglieder deiner Sprachgruppe sind auf der ganzen Karte hörbar. Für andere Spieler gilt weiterhin die normale Reichweite."
+spanish = "Oye a los miembros de tu grupo de voz en cualquier punto del mapa. Los demás mantienen su límite de distancia habitual."
+french = "Permet d’entendre les membres de votre groupe vocal partout sur la carte. Les autres joueurs conservent leur limite de distance habituelle."
+brazilian_portuguese = "Permite ouvir os membros do grupo de voz a qualquer distância no mapa. Os demais jogadores mantêm o limite de distância habitual."
+portuguese = "Permite ouvir os membros do grupo de voz a qualquer distância no mapa. Os restantes jogadores mantêm o limite de distância habitual."
+turkish = "Ses grubunuzdaki oyuncuları haritanın her yerinden duyarsınız. Diğer oyuncular için olağan mesafe sınırı geçerlidir."
+polish = "Pozwala słyszeć członków swojej grupy głosowej z dowolnej odległości na mapie. Dla pozostałych obowiązuje zwykły zasięg."
+
+[[message]]
+key = "Hear players who transmit by voice activation. With this off, only speakers on your VAD allowlist can use it to reach you."
+[message.translations]
+simplified_chinese = "接收通过声音自动激活的发言。关闭后，这类发言只接收白名单中的玩家，按键发言不受此项影响。"
+traditional_chinese = "接收透過聲音自動啟動的發言。關閉後，這類發言只接收白名單中的玩家，按鍵發言不受此項影響。"
+japanese = "音声検出で送信するプレイヤーの声を受信します。オフではこの方式の声は VAD 許可リストの相手だけ聞こえます。"
+korean = "음성 감지로 송신하는 플레이어의 소리를 듣습니다. 끄면 VAD 허용 목록에 있는 사람만 이 방식으로 들립니다."
+russian = "Разрешает слышать игроков с активацией по голосу. При отключении этим способом слышны только игроки из списка разрешений VAD."
+german = "Lässt Stimmen mit Sprachaktivierung durch. Ausgeschaltet hörst du so nur Spieler auf deiner VAD-Zulassungsliste."
+spanish = "Permite oír a quienes transmiten por activación de voz. Al desactivarlo, solo oirás por ese método a los jugadores de tu lista de permitidos de VAD."
+french = "Permet d’entendre les joueurs qui émettent par activation vocale. Sinon, seuls ceux de votre liste d’autorisation VAD restent audibles par ce moyen."
+brazilian_portuguese = "Permite ouvir quem transmite por ativação de voz. Com a opção desativada, só os jogadores da lista de permissões VAD são ouvidos por esse método."
+portuguese = "Permite ouvir quem transmite por ativação de voz. Com a opção desativada, só os jogadores da lista de permissões VAD são ouvidos por esse método."
+turkish = "Sesle etkinleştirme kullanan oyuncuları duymanızı sağlar. Kapalıyken bu yolla yalnızca VAD izin listenizdekileri duyarsınız."
+polish = "Pozwala słyszeć graczy nadających przez aktywację głosową. Po wyłączeniu słychać w tym trybie tylko osoby z listy dozwolonych VAD."
+
+[[message]]
+key = "Highlight the X coordinate when a teammate stays horizontally aligned with you or your dummy for the configured time."
+[message.translations]
+simplified_chinese = "队友与本体或分身持续横向对齐达到设定时长后，名牌上的 X 坐标会变色。"
+traditional_chinese = "隊友與本體或分身持續橫向對齊達到設定時間後，名牌上的 X 座標會變色。"
+japanese = "チームメイトと自分またはダミーの横位置が設定時間そろうと、ネームプレートの X 座標を強調します。"
+korean = "팀원의 가로 위치가 자신이나 더미와 설정 시간 동안 일치하면 이름표의 X 좌표를 강조합니다."
+russian = "Выделяет координату X, когда товарищ по команде держится на одной вертикали с вами или вашим дамми в течение заданного времени."
+german = "Hebt die X-Koordinate hervor, wenn ein Teammitglied für die eingestellte Dauer auf gleicher horizontaler Position wie du oder dein Dummy bleibt."
+spanish = "Resalta la coordenada X si un compañero mantiene la misma posición horizontal que tú o tu dummy durante el intervalo configurado."
+french = "Met en évidence la coordonnée X lorsqu’un coéquipier reste à la même abscisse que vous ou votre dummy pendant la durée choisie."
+brazilian_portuguese = "Destaca a coordenada X quando um colega mantém a mesma posição horizontal que o jogador ou o seu dummy durante o intervalo definido."
+portuguese = "Destaca a coordenada X quando um colega mantém a mesma posição horizontal que o jogador ou o seu dummy durante o intervalo definido."
+turkish = "Bir takım arkadaşınız ayarlanan süre boyunca sizinle veya kuklanızla aynı yatay konumda kalırsa X koordinatını vurgular."
+polish = "Wyróżnia współrzędną X, gdy członek drużyny przez ustawiony czas pozostaje na tej samej pozycji poziomej co ty lub twój dummy."
+
+[[message]]
+key = "If both tees are frozen and another player hammers the inactive tee awake first, switch control to it."
+[message.translations]
+simplified_chinese = "本体和分身都被冻结时，如果其他玩家先锤醒了当前未控制的角色，就切过去操作。"
+traditional_chinese = "本體和分身都被凍結時，如果其他玩家先錘醒了目前未控制的角色，就切過去操作。"
+japanese = "両方のティーが凍っているとき、操作していない方が先に他のプレイヤーのハンマーで解凍されたら、操作をそちらに切り替えます。"
+korean = "두 티가 모두 얼어 있을 때 다른 플레이어가 조작하지 않는 쪽을 먼저 망치로 풀어 주면 그 티로 조작을 전환합니다."
+russian = "Если оба tee заморожены и другой игрок первым освободит неактивного tee молотком, переключает управление на него."
+german = "Sind beide Tees eingefroren und befreit ein anderer Spieler zuerst den inaktiven Tee mit dem Hammer, wechselst du zu diesem Tee."
+spanish = "Si ambos tees están congelados y otro jugador libera primero al tee inactivo con el martillo, pasa a controlarlo."
+french = "Si les deux tees sont gelés et qu’un autre joueur libère d’abord le tee inactif au marteau, vous en prenez le contrôle."
+brazilian_portuguese = "Se ambos os tees estiverem congelados e outro jogador liberar primeiro o tee inativo com o martelo, o controle passa para esse tee."
+portuguese = "Se ambos os tees estiverem congelados e outro jogador libertar primeiro o tee inativo com o martelo, o controlo passa para esse tee."
+turkish = "İki tee de donmuşken başka bir oyuncu etkin olmayan tee'yi önce çekiçle çözerse kontrol ona geçer."
+polish = "Jeśli oba tee są zamrożone, a inny gracz najpierw odmrozi młotkiem nieaktywnego tee, przełącza na niego sterowanie."
+
+[[message]]
+key = "Leave spectating when another player hammers your active tee awake. A thawing timer alone does not trigger this."
+[message.translations]
+simplified_chinese = "正在控制的角色被其他玩家锤醒时自动退出旁观。自然解冻或自己的另一个角色锤醒都不会触发。"
+traditional_chinese = "正在控制的角色被其他玩家錘醒時自動退出旁觀。自然解凍或自己的另一個角色錘醒都不會觸發。"
+japanese = "操作中のティーが他のプレイヤーのハンマーで解凍されたときに観戦を終了します。自然解凍では発動しません。"
+korean = "조작 중인 티가 다른 플레이어의 망치로 풀리면 관전을 끝냅니다. 시간 경과로 풀릴 때는 작동하지 않습니다."
+russian = "Выходит из наблюдения, когда другой игрок размораживает активного tee молотком. Разморозка по таймеру не срабатывает."
+german = "Verlässt den Zuschauermodus, wenn ein anderer Spieler deinen aktiven Tee mit dem Hammer befreit. Bloßes Auftauen löst dies nicht aus."
+spanish = "Sale del modo espectador cuando otro jugador descongela con el martillo a tu tee activo. El deshielo por tiempo no lo activa."
+french = "Quitte le mode spectateur si un autre joueur dégèle votre tee actif au marteau. Le dégel par expiration du délai ne déclenche rien."
+brazilian_portuguese = "Sai do modo de espectador quando outro jogador descongela o tee ativo com o martelo. O fim do tempo de congelamento não ativa a opção."
+portuguese = "Sai do modo de espectador quando outro jogador descongela o tee ativo com o martelo. O fim do tempo de congelamento não ativa a opção."
+turkish = "Başka bir oyuncu etkin tee'nizi çekiçle çözdüğünde izleyici modundan çıkar. Donma süresinin dolması bunu tetiklemez."
+polish = "Wychodzi z obserwacji, gdy inny gracz odmrozi aktywnego tee młotkiem. Sam upływ czasu zamrożenia tego nie uruchamia."
+
+[[message]]
+key = "Omit the typing flag from both tees' outgoing input so other players do not see your typing bubble."
+[message.translations]
+simplified_chinese = "输入聊天时，本体和分身都不向服务器报告打字状态，其他玩家看不到打字气泡。"
+traditional_chinese = "輸入聊天時，本體和分身都不向伺服器報告打字狀態，其他玩家看不到打字氣泡。"
+japanese = "本体とダミーのどちらも入力中の状態をサーバーへ送らず、他のプレイヤーから入力中の吹き出しが見えなくなります。"
+korean = "본체와 더미 모두 입력 중 상태를 서버에 보내지 않아 다른 플레이어에게 말풍선이 보이지 않습니다."
+russian = "Оба tee перестают передавать серверу признак набора текста, поэтому другие игроки не видят ваш значок ввода."
+german = "Beide Tees senden beim Tippen keinen Schreibstatus an den Server. Andere Spieler sehen deine Tippblase dadurch nicht."
+spanish = "Ninguno de tus dos tees envía el estado de escritura al servidor, así que los demás no ven tu burbuja al escribir."
+french = "Aucun de vos deux tees ne signale la saisie au serveur. Les autres joueurs ne voient donc pas votre bulle de saisie."
+brazilian_portuguese = "Nenhum dos dois tees envia ao servidor o estado de escrita, por isso os outros jogadores não veem o balão durante a digitação."
+portuguese = "Nenhum dos dois tees envia ao servidor o estado de escrita, pelo que os outros jogadores não veem o balão enquanto escreve."
+turkish = "Her iki tee de sunucuya yazma durumunu göndermez, böylece diğer oyuncular yazma balonunuzu görmez."
+polish = "Oba tee pomijają w danych do serwera stan pisania, dzięki czemu inni gracze nie widzą dymku podczas wpisywania wiadomości."
+
+[[message]]
+key = "Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening."
+[message.translations]
+simplified_chinese = "在启动和菜单空闲时分帧准备设置页，减少首次打开时集中加载造成的卡顿。"
+traditional_chinese = "在啟動和選單閒置時分幀準備設定頁，減少首次打開時集中載入造成的卡頓。"
+japanese = "起動時やメニューの待機中に設定画面を数フレームに分けて準備し、初めて開くときの引っかかりを減らします。"
+korean = "시작할 때와 메뉴가 유휴 상태일 때 여러 프레임에 걸쳐 설정 페이지를 준비해 처음 열 때의 끊김을 줄입니다."
+russian = "Готовит страницы настроек за несколько кадров при запуске и простое меню, чтобы уменьшить задержку при первом открытии."
+german = "Bereitet Einstellungsseiten beim Start und während Leerlaufzeiten im Menü über mehrere Frames vor, damit sie beim ersten Öffnen weniger stocken."
+spanish = "Prepara los ajustes a lo largo de varios fotogramas al iniciar y mientras el menú está inactivo para reducir las pausas al abrirlos por primera vez."
+french = "Prépare les pages de réglages sur plusieurs images au démarrage et pendant les temps morts du menu pour limiter les pauses à la première ouverture."
+brazilian_portuguese = "Prepara as páginas de opções ao longo de vários quadros na inicialização e quando o menu está inativo, reduzindo as pausas na primeira abertura."
+portuguese = "Prepara as páginas de opções ao longo de vários quadros no arranque e quando o menu está inativo, reduzindo as pausas na primeira abertura."
+turkish = "Ayar sayfalarını başlangıçta ve menü boştayken birkaç kareye yayarak hazırlar, böylece ilk açılıştaki takılmalar azalır."
+polish = "Przygotowuje strony ustawień przez kilka klatek przy starcie i w bezczynnym menu, aby ograniczyć zacięcie przy pierwszym otwarciu."
+
+[[message]]
+key = "Repeat the replacement character per UTF-8 byte in custom word lists or per character in the public list. When off, use it once per match."
+[message.translations]
+simplified_chinese = "自定义词表每匹配一个 UTF-8 字节就显示一个替换字符，公共词表则按字符数替换。关闭后，每次匹配只显示一个替换字符。"
+traditional_chinese = "自訂詞表每符合一個 UTF-8 位元組就顯示一個替換字元，公共詞表則按字元數替換。關閉後，每次符合只顯示一個替換字元。"
+japanese = "置換文字を、自作リストでは一致部分の UTF-8 バイト数だけ、公開リストでは文字数だけ繰り返します。オフなら一致部分ごとに 1 個だけ表示します。"
+korean = "사용자 단어 목록에서는 일치한 UTF-8 바이트마다, 공용 목록에서는 글자마다 대체 문자를 표시합니다. 끄면 일치한 구간당 한 번만 표시합니다."
+russian = "В своём списке подставляет один символ замены на каждый байт UTF-8 совпадения, в общем списке — на каждый символ. Если отключить, подставляет один символ на всё совпадение."
+german = "In eigenen Wortlisten erscheint das Ersatzzeichen pro UTF-8-Byte des Treffers, in der öffentlichen Liste pro Zeichen. Ausgeschaltet erscheint es einmal pro Treffer."
+spanish = "En listas personalizadas se muestra un carácter de reemplazo por byte UTF-8 de la coincidencia; en la lista pública, uno por carácter. Al desactivar, solo se muestra uno por coincidencia."
+french = "Dans les listes personnelles, affiche un caractère de remplacement par octet UTF-8 du texte trouvé ; dans la liste publique, un par caractère. Si désactivé, un seul par correspondance."
+brazilian_portuguese = "Nas listas personalizadas, repete o caractere de substituição por byte UTF-8 do trecho encontrado; na lista pública, por caractere. Desativado, usa apenas um por ocorrência."
+portuguese = "Nas listas personalizadas, repete o caráter de substituição por byte UTF-8 do texto encontrado; na lista pública, por caráter. Com a opção desligada, usa apenas um por ocorrência."
+turkish = "Özel listelerde eşleşen her UTF-8 baytı, ortak listede ise her karakter için bir değiştirme karakteri gösterir. Kapalıyken eşleşmenin tamamı için tek karakter kullanır."
+polish = "Na własnej liście wstawia znak zastępczy za każdy bajt UTF-8 dopasowania, a na liście publicznej za każdy znak. Po wyłączeniu wstawia tylko jeden znak na dopasowanie."
+
+[[message]]
+key = "Require matching X coordinates rounded to hundredths of a tile for the whole interval. Normal mode allows a difference of 0.03 tiles."
+[message.translations]
+simplified_chinese = "在整个判定时段内，双方 X 坐标四舍五入到百分之一格后必须相同。普通模式允许相差 0.03 格。"
+traditional_chinese = "在整個判定時段內，雙方 X 座標四捨五入到百分之一格後必須相同。普通模式允許相差 0.03 格。"
+japanese = "判定時間中、タイル単位で小数第2位まで丸めた X 座標が一致すると強調します。通常は 0.03 タイルまでの差を許容します。"
+korean = "판정 시간 내내 칸 단위로 소수점 둘째 자리까지 반올림한 X 좌표가 같아야 합니다. 일반 모드는 0.03칸까지 차이를 허용합니다."
+russian = "Координаты X, округлённые до сотых долей тайла, должны совпадать весь интервал. Обычный режим допускает разницу в 0,03 тайла."
+german = "Die auf Hundertstel eines Tiles gerundeten X-Koordinaten müssen über das ganze Intervall gleich sein. Normal sind bis zu 0,03 Tiles Abstand erlaubt."
+spanish = "Las coordenadas X redondeadas a centésimas de casilla deben coincidir durante todo el intervalo. El modo normal admite una diferencia de 0,03 casillas."
+french = "Les abscisses arrondies au centième de case doivent rester identiques pendant tout l’intervalle. Le mode normal tolère un écart de 0,03 case."
+brazilian_portuguese = "As coordenadas X arredondadas a centésimos de bloco têm de coincidir durante todo o intervalo. O modo normal admite uma diferença de 0,03 bloco."
+portuguese = "As coordenadas X arredondadas a centésimos de bloco têm de coincidir durante todo o intervalo. O modo normal admite uma diferença de 0,03 bloco."
+turkish = "Karenin yüzde birine yuvarlanan X koordinatları süre boyunca eşleşmelidir. Normal modda 0,03 kareye kadar fark kabul edilir."
+polish = "Współrzędne X zaokrąglone do setnych części kafelka muszą się zgadzać przez cały przedział czasu. Zwykły tryb dopuszcza różnicę 0,03 kafelka."
+
+[[message]]
+key = "Show a fixed HUD reference with fractional coordinates for takeoff and double jumps near tile edges."
+[message.translations]
+simplified_chinese = "在 HUD 上显示边缘跳参考表，可用坐标的小数部分对照起跳和二段跳位置。参考表不会随角色移动而变化。"
+traditional_chinese = "在 HUD 上顯示邊緣跳參考表，可用座標的小數部分對照起跳和二段跳位置。參考表不會隨角色移動而變化。"
+japanese = "タイルの端での踏み切りと二段ジャンプの目安になる座標の小数部分を、固定の早見表として HUD に表示します。"
+korean = "칸 가장자리에서 도약하거나 이단 점프할 때 참고할 좌표 소수부를 HUD에 고정된 표로 표시합니다."
+russian = "Выводит на HUD постоянную памятку с дробными частями координат для отрыва от края тайла и двойного прыжка."
+german = "Zeigt im HUD eine feste Merkhilfe mit Koordinaten-Nachkommastellen für Absprung und Doppelsprung an Tilekanten."
+spanish = "Muestra en el HUD una referencia fija con los decimales de las coordenadas para saltar desde un borde y hacer el doble salto."
+french = "Affiche sur le HUD un aide-mémoire fixe des décimales de coordonnées pour le départ et le double saut au bord des cases."
+brazilian_portuguese = "Mostra no HUD uma referência fixa com as partes decimais das coordenadas para saltos e saltos duplos junto à borda dos blocos."
+portuguese = "Mostra no HUD uma referência fixa com as partes decimais das coordenadas para saltos e saltos duplos junto à borda dos blocos."
+turkish = "Karo kenarındaki ilk ve çift sıçrama için koordinatların kesirli kısımlarını HUD'da sabit bir başvuru tablosu olarak gösterir."
+polish = "Pokazuje na HUD stałą ściągę z częściami ułamkowymi współrzędnych do wybicia i podwójnego skoku przy krawędzi kafelka."
+
+[[message]]
+key = "This legacy switch is saved, but microphone capture currently uses only the manual mic volume."
+[message.translations]
+simplified_chinese = "此开关仅保留旧配置。当前录音只使用手动设置的麦克风音量，开启后也不会自动调节增益。"
+traditional_chinese = "此開關僅保留舊設定。目前錄音只使用手動設定的麥克風音量，開啟後也不會自動調節增益。"
+japanese = "旧設定として保存されます。現在の録音には手動で設定したマイク音量だけが適用されます。"
+korean = "기존 설정과의 호환을 위해 값을 저장합니다. 현재 녹음에는 수동 마이크 음량만 적용됩니다."
+russian = "Сохраняется для совместимости. При записи сейчас применяется только уровень микрофона, заданный вручную."
+german = "Der Schalter wird aus Kompatibilitätsgründen gespeichert. Bei der Aufnahme gilt derzeit nur die manuell eingestellte Mikrofonlautstärke."
+spanish = "Se guarda por compatibilidad. La captura de audio solo usa el volumen del micrófono ajustado manualmente."
+french = "Ce réglage est conservé pour compatibilité. À l’enregistrement, seul le volume du micro réglé manuellement est appliqué."
+brazilian_portuguese = "Esta opção antiga é salva por compatibilidade. A captura usa apenas o volume do microfone definido manualmente."
+portuguese = "Esta opção antiga é guardada por compatibilidade. A captura usa apenas o volume do microfone definido manualmente."
+turkish = "Bu eski ayar uyumluluk için kaydedilir. Mikrofon kaydında şu anda yalnızca elle ayarlanan ses düzeyi kullanılır."
+polish = "Ustawienie jest zapisywane dla zgodności. Podczas nagrywania stosowana jest obecnie tylko ręcznie ustawiona głośność mikrofonu."
+
+[[message]]
+key = "Transmit without holding the talk key when the microphone level reaches or exceeds the voice activation threshold."
+[message.translations]
+simplified_chinese = "麦克风音量达到或超过语音激活阈值时自动发言，无需按住说话键。"
+traditional_chinese = "麥克風音量達到或超過語音啟動門檻時自動發話，無須按住說話鍵。"
+japanese = "マイク音量が音声検出のしきい値以上になると、通話キーを押さなくても送信します。"
+korean = "마이크 음량이 음성 활성화 임계값 이상이면 말하기 키를 누르지 않아도 송신합니다."
+russian = "Передаёт голос без удержания клавиши разговора, когда уровень микрофона достигает порога голосовой активации или превышает его."
+german = "Sendet ohne gedrückte Sprechtaste, sobald der Mikrofonpegel die Aktivierungsschwelle erreicht oder überschreitet."
+spanish = "Transmite sin mantener pulsada la tecla de voz cuando el nivel del micrófono alcanza o supera el umbral de activación."
+french = "Transmet sans maintenir la touche de parole lorsque le niveau du micro atteint ou dépasse le seuil d’activation vocale."
+brazilian_portuguese = "Transmite sem segurar a tecla de voz quando o nível do microfone atinge ou supera o limite de ativação por voz."
+portuguese = "Transmite sem manter premida a tecla de voz quando o nível do microfone atinge ou ultrapassa o limiar de ativação por voz."
+turkish = "Mikrofon düzeyi sesle etkinleştirme eşiğine ulaştığında veya eşiği aştığında konuşma tuşunu basılı tutmadan ses gönderir."
+polish = "Nadaje bez przytrzymywania klawisza rozmowy, gdy poziom mikrofonu osiągnie lub przekroczy próg aktywacji głosowej."
+
+[[message]]
+key = "Scale the existing faded opacity of paused tees and their nameplates in water or freeze zones by this percentage. At 100% their usual fading is unchanged."
+[message.translations]
+simplified_chinese = "对水域或冻结区内已暂停的角色及其名牌，在原有旁观淡化透明度基础上再乘以此百分比。100% 保持原淡化程度。"
+traditional_chinese = "對水域或凍結區內已暫停的角色與名牌，在原有旁觀淡化透明度上再乘以此百分比。100% 保留原有的淡化程度。"
+japanese = "水中や凍結エリアで一時停止中のティーとネームプレートの、観戦用に薄くした不透明度にこの割合を掛けます。100% なら元の薄さを保ちます。"
+korean = "물이나 동결 구역에서 일시 정지한 티와 이름표에 적용된 관전 불투명도에 이 비율을 곱합니다. 100%면 기존 흐림 정도를 유지합니다."
+russian = "Для приостановленных tee и их имён в воде или зонах заморозки умножает уже уменьшенную непрозрачность наблюдателя на этот процент. При 100% исходное затухание сохраняется."
+german = "Multipliziert bei pausierten Tees und ihren Namensschildern in Wasser- oder Gefrierzonen die bereits reduzierte Deckkraft mit diesem Prozentsatz. 100% behält die übliche Abschwächung bei."
+spanish = "Para los tees en pausa y sus nombres en zonas de agua o congelación, multiplica la opacidad ya atenuada del espectador por este porcentaje. Al 100% se mantiene la atenuación habitual."
+french = "Pour les tees en pause et leurs plaques de nom dans l’eau ou les zones de gel, multiplie l’opacité déjà atténuée en spectateur par ce pourcentage. À 100%, l’atténuation habituelle est conservée."
+brazilian_portuguese = "Para tees pausados e suas placas de nome na água ou em áreas de congelamento, multiplica a opacidade já atenuada de espectador por esta porcentagem. Em 100%, mantém a atenuação original."
+portuguese = "Para tees em pausa e respetivas placas de nome na água ou em zonas de congelamento, multiplica a opacidade já atenuada de espetador por esta percentagem. A 100%, mantém a atenuação original."
+turkish = "Su veya donma alanında duraklatılmış tee'lerin ve isim etiketlerinin zaten azaltılmış izleyici opaklığını bu yüzdeyle çarpar. %100 normal solukluğu korur."
+polish = "Dla spauzowanych tee i ich tabliczek w wodzie lub strefach zamrożenia mnoży już obniżoną nieprzezroczystość obserwatora przez ten procent. Przy 100% zwykłe przygaszenie pozostaje bez zmian."
+
+[[message]]
+key = "In Always Show mode, holding the hook collision line key uses four custom colors when enabled. When disabled, only the main line is inverted; the end segment keeps its color."
+[message.translations]
+simplified_chinese = "钩索碰撞线设为“始终显示”并按住显示键时，开启此项会使用自定义的四种按下色。关闭时仅反转主线颜色，末段保留原色。"
+traditional_chinese = "鉤索碰撞線設為「一律顯示」並按住顯示鍵時，開啟此項會使用自訂的四種按下色。關閉時只反轉主線顏色，末段保留原色。"
+japanese = "フック衝突線を「常に表示」にして表示キーを押している間、オンなら設定した4色を使います。オフなら主線の色だけを反転し、先端部分の色は変えません。"
+korean = "갈고리 충돌선을 ‘항상 표시’로 설정하고 표시 키를 누르고 있을 때, 켜면 사용자 지정 색상 네 가지를 사용합니다. 끄면 본선 색만 반전되고 끝부분 색은 유지됩니다."
+russian = "В режиме постоянного показа линии крюка при удержании клавиши используются четыре заданных цвета. Если отключено, инвертируется только основная линия, цвет конечного отрезка сохраняется."
+german = "Wird die Haken-Kollisionslinie immer angezeigt und die Anzeigetaste gehalten, gelten bei aktivierter Option die vier eigenen Farben. Sonst wird nur die Hauptlinie invertiert; das Endstück behält seine Farbe."
+spanish = "Con la línea de colisión del gancho en «Mostrar siempre» y la tecla pulsada, usa los cuatro colores personalizados si se activa. Si se desactiva, solo invierte la línea principal; el tramo final conserva su color."
+french = "Si la ligne de collision du grappin est toujours affichée et sa touche maintenue, activez cette option pour utiliser les quatre couleurs personnalisées. Sinon, seule la ligne principale est inversée ; le segment final garde sa couleur."
+brazilian_portuguese = "Com a linha de colisão do gancho em «Sempre mostrar» e a tecla pressionada, usa as quatro cores personalizadas se ativado. Desativado, inverte apenas a linha principal; o trecho final mantém a cor."
+portuguese = "Com a linha de colisão do gancho em «Mostrar sempre» e a tecla premida, usa as quatro cores personalizadas se a opção estiver ligada. Desligada, inverte apenas a linha principal; o segmento final mantém a cor."
+turkish = "Kanca çarpışma çizgisi «Her zaman göster» modundayken gösterme tuşunu basılı tutarsanız, seçenek açıksa dört özel renk kullanılır. Kapalıysa yalnızca ana çizginin rengi tersine çevrilir; uç kısmın rengi değişmez."
+polish = "W trybie stałego wyświetlania linii kolizji haka przytrzymanie jej klawisza włącza cztery własne kolory, jeśli ta opcja jest aktywna. Po wyłączeniu odwraca się tylko kolor głównej linii; końcowy odcinek zachowuje kolor."
+
+[[message]]
+key = "With Gores auto-switch on and extra weapons equipped, pressing fire briefly selects the hammer, then restores your weapon."
+[message.translations]
+simplified_chinese = "开启 Gores 自动切换且持有额外武器时，按下开火会临时切锤，随后切回原武器。"
+traditional_chinese = "開啟 Gores 自動切換且持有額外武器時，按下開火會臨時切錘，隨後切回原武器。"
+japanese = "Gores の武器自動切替中に追加武器を持っている場合、発射を押すと一時的にハンマーに切り替わり、元の武器に戻ります。"
+korean = "Gores 무기 자동 전환을 켜고 추가 무기를 보유한 상태에서 발사를 누르면 잠시 망치로 바꿨다가 원래 무기로 돌아갑니다."
+russian = "Если включена автосмена оружия Gores и есть дополнительное оружие, нажатие огня ненадолго выбирает молоток, затем возвращает прежнее оружие."
+german = "Sind der Gores-Waffenwechsel aktiv und weitere Waffen vorhanden, schaltet ein Druck auf Feuer kurz zum Hammer und dann zur vorherigen Waffe zurück."
+spanish = "Con el cambio automático de Gores y armas adicionales, pulsar disparo selecciona un momento el martillo y luego recupera el arma anterior."
+french = "Avec le changement automatique de Gores et des armes supplémentaires, appuyer sur tir sélectionne brièvement le marteau puis reprend l’arme précédente."
+brazilian_portuguese = "Com a troca automática de Gores ativa e armas adicionais, o comando de disparo seleciona brevemente o martelo e volta à arma anterior."
+portuguese = "Com a troca automática de Gores ativa e armas adicionais, o comando de disparo seleciona brevemente o martelo e volta à arma anterior."
+turkish = "Gores otomatik silah değişimi açıkken ek silahınız varsa ateşe basınca kısa süreliğine çekice geçilir ve önceki silaha dönülür."
+polish = "Przy automatycznej zmianie broni w Gores i dodatkowym uzbrojeniu naciśnięcie strzału na chwilę wybiera młotek, po czym przywraca poprzednią broń."
+
+[[message]]
+key = "With only hammer and pistol in Gores mode, return to the pistol after switching to the hammer."
+[message.translations]
+simplified_chinese = "Gores 模式下只有锤和手枪时，切锤后会自动切回手枪。"
+traditional_chinese = "Gores 模式下只有錘和手槍時，切錘後會自動切回手槍。"
+japanese = "Gores モードでハンマーとピストルだけを持っているとき、ハンマーに持ち替えた後にピストルへ自動で戻します。"
+korean = "Gores 모드에서 망치와 권총만 가지고 있으면 망치로 전환한 뒤 자동으로 권총으로 돌아갑니다."
+russian = "В режиме Gores, если есть только молоток и пистолет, после выбора молотка автоматически возвращает пистолет."
+german = "Hast du im Gores-Modus nur Hammer und Pistole, wechselst du nach dem Griff zum Hammer automatisch zurück zur Pistole."
+spanish = "En modo Gores, si solo tienes el martillo y la pistola, vuelve a la pistola después de seleccionar el martillo."
+french = "En mode Gores, si vous n’avez que le marteau et le pistolet, reprend le pistolet après avoir sélectionné le marteau."
+brazilian_portuguese = "No modo Gores, se só houver martelo e pistola, volta à pistola depois de selecionar o martelo."
+portuguese = "No modo Gores, se só houver martelo e pistola, volta à pistola depois de selecionar o martelo."
+turkish = "Gores modunda yalnızca çekiç ve tabancanız varsa çekici seçtikten sonra tabancaya geri döner."
+polish = "W trybie Gores, gdy masz tylko młotek i pistolet, po wybraniu młotka przełącza z powrotem na pistolet."

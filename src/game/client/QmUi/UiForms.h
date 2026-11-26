@@ -264,7 +264,7 @@ namespace ui_widget
 	// 输入框的内边距只有两个来源：外壳左右内退 control::PadX，图标（前导图标、
 	// 清除叉、尾部动作）与文字之间留 control::IconTextGap，都按该输入框实际使用的
 	// 正文字号计算；调用方没给字号时按 UiScale 走与其他控件同一条夹取。
-	inline SInputFieldLayout ResolveInputFieldLayout(const CUIRect &Rect, bool HasIcon, bool Clearable, float UiScale = 1.0f, float TrailingWidth = 0.0f, float BodySize = 0.0f)
+	inline SInputFieldLayout ResolveInputFieldLayout(const CUIRect &Rect, bool HasIcon, bool Clearable, float UiScale = 1.0f, float TrailingWidth = 0.0f, float BodySize = 0.0f, float MinTextWidth = 0.0f)
 	{
 		SInputFieldLayout Layout{};
 		Layout.m_ShellRect = Rect;
@@ -276,6 +276,17 @@ namespace ui_widget
 		const float SlotWidth = std::max(Rect.h, 18.0f * Scale);
 		Layout.m_ContentRect.x += InsetX;
 		Layout.m_ContentRect.w = std::max(0.0f, Layout.m_ContentRect.w - InsetX * 2.0f);
+		if(MinTextWidth > 0.0f)
+		{
+			// 先给正文和尾部动作留位，剩余宽度优先放清空叉，最后放前导图标。
+			float Available = Layout.m_ContentRect.w - MinTextWidth;
+			if(TrailingWidth > 0.0f)
+				Available -= TrailingWidth + IconGapX;
+			Clearable = Clearable && Available >= SlotWidth + IconGapX;
+			if(Clearable)
+				Available -= SlotWidth + IconGapX;
+			HasIcon = HasIcon && Available >= SlotWidth + IconGapX;
+		}
 		if(HasIcon)
 		{
 			Layout.m_IconRect = Layout.m_ContentRect;
@@ -398,6 +409,7 @@ namespace ui_widget
 		int m_TextAlign = -1;
 		float m_FontSize = ui_token::font::BODY;
 		float m_LineSpacing = 1.0f;
+		float m_MinTextWidth = 0.0f;
 	};
 
 	inline int ResolveInputFieldTextAlign(const SInputFieldOptions &Options)

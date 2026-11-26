@@ -1881,17 +1881,7 @@ bool CUi::DoDoubleClickLogic(const void *pId)
 	if(RenderOnly())
 		return false;
 
-	if(m_DoubleClickState.m_pLastClickedId == pId &&
-		Client()->GlobalTime() - m_DoubleClickState.m_LastClickTime < 0.5f &&
-		distance(m_DoubleClickState.m_LastClickPos, MousePos()) <= 32.0f * Screen()->h / Graphics()->ScreenHeight())
-	{
-		m_DoubleClickState.m_pLastClickedId = nullptr;
-		return true;
-	}
-	m_DoubleClickState.m_pLastClickedId = pId;
-	m_DoubleClickState.m_LastClickTime = Client()->GlobalTime();
-	m_DoubleClickState.m_LastClickPos = MousePos();
-	return false;
+	return m_DoubleClickState.Click(pId, Client()->GlobalTime(), MousePos(), 32.0f * Screen()->h / Graphics()->ScreenHeight());
 }
 
 EEditState CUi::DoPickerLogic(const void *pId, const CUIRect *pRect, float *pX, float *pY)

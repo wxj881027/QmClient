@@ -6,6 +6,7 @@
 #include <engine/shared/localization.h>
 
 #include <algorithm>
+#include <array>
 #include <vector>
 
 namespace qm_audio_pack
@@ -22,8 +23,27 @@ namespace qm_audio_pack
 		FLAGS,
 		MUSIC,
 		OTHER,
+		INTERFACE,
+		MAP_ENVIRONMENT,
 		COUNT,
 	};
+
+	inline constexpr std::array EDITOR_CATEGORIES = {
+		ECategory::ALL, ECategory::MOVEMENT, ECategory::WEAPONS, ECategory::HOOK,
+		ECategory::INTERFACE, ECategory::MAP_ENVIRONMENT, ECategory::OTHER};
+
+	inline ECategory EditorCategory(ECategory Category)
+	{
+		switch(Category)
+		{
+		case ECategory::CHAT:
+		case ECategory::MUSIC: return ECategory::INTERFACE;
+		case ECategory::PICKUPS:
+		case ECategory::FLAGS: return ECategory::MAP_ENVIRONMENT;
+		case ECategory::PLAYER_STATE: return ECategory::OTHER;
+		default: return Category;
+		}
+	}
 
 	enum class EContext
 	{
@@ -64,6 +84,8 @@ namespace qm_audio_pack
 		case ECategory::CHAT: return Localizable("Chat");
 		case ECategory::FLAGS: return Localizable("Capture the flag");
 		case ECategory::MUSIC: return Localizable("Music");
+		case ECategory::INTERFACE: return Localizable("Interface");
+		case ECategory::MAP_ENVIRONMENT: return Localizable("Map and environment");
 		default: return Localizable("Other sounds");
 		}
 	}
@@ -163,10 +185,10 @@ namespace qm_audio_pack
 		for(int Index = 0; Index < (int)vGroups.size(); ++Index)
 		{
 			const auto &Group = vGroups[Index];
-			if(Category != ECategory::ALL && Category != Group.m_pInfo->m_Category)
+			if(Category != ECategory::ALL && Category != Group.m_pInfo->m_Category && Category != EditorCategory(Group.m_pInfo->m_Category))
 				continue;
 			bool Matches = pQuery == nullptr || pQuery[0] == '\0';
-			const char *apTexts[] = {Group.m_pSetName, Group.m_pInfo->m_pName, Group.m_pInfo->m_pUsage, CategoryName(Group.m_pInfo->m_Category)};
+			const char *apTexts[] = {Group.m_pSetName, Group.m_pInfo->m_pName, Group.m_pInfo->m_pUsage, CategoryName(Group.m_pInfo->m_Category), CategoryName(EditorCategory(Group.m_pInfo->m_Category))};
 			for(const char *pText : apTexts)
 			{
 				Matches |= str_utf8_find_nocase(pText, pQuery != nullptr ? pQuery : "") != nullptr;

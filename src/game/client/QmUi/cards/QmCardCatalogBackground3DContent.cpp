@@ -56,8 +56,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 	const int ColorModeForLayout = g_Config.m_Qm3DParticlesColorMode;
 	CUIRect Row, LabelCol, ControlCol;
 	auto DoQmSettingsCheckboxAuto = [this](const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float) {
-		Ui()->DoConfigTooltip(pId, pRect, pValue);
-		const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, pId, pTextId, pText, *pValue, pRect) != 0;
+		const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, pId, pTextId, pText, *pValue, pRect, {}, true, -1.0f, true, pValue) != 0;
 		if(Changed)
 			*pValue ^= 1;
 		return Changed;

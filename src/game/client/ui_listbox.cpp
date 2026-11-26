@@ -499,7 +499,7 @@ void CListBox::QmRestoreEntryScope()
 	m_EntryAlphaScope.reset();
 }
 
-CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRadius, vec2 Offset)
+CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRadius, vec2 Offset, float TrailingActionSize)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	// 行距不在这里推进：DoNextRow 在行首统一给（多列网格只有第一格开启新行）。
@@ -517,7 +517,8 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 	CListboxItem Item = DoNextRow(Offset);
 	Item.m_pUi = Ui();
 	Item.m_GaussianBlurSuppressed = true;
-	const int ItemClicked = Item.m_Visible ? Ui()->DoButtonLogic(pId, 0, &Item.m_Rect, BUTTONFLAG_LEFT) : 0;
+	const CUIRect Hit = Item.SelectionHitRect(TrailingActionSize);
+	const int ItemClicked = Item.m_Visible ? Ui()->DoButtonLogic(pId, 0, &Hit, BUTTONFLAG_LEFT) : 0;
 	if(ItemClicked)
 	{
 		m_ListBoxNewSelected = ThisItemIndex;

@@ -5,7 +5,7 @@ namespace
 		{Localizable("Better scoreboard"), nullptr, "更好的计分板"},
 		{Localizable("Scroll mode"), nullptr, "滚动模式 满人服务器改用固定行高计分板，滚轮翻看其余玩家"},
 		{Localizable("Scoreboard point check"), nullptr, "计分板积分检查"},
-		{Localizable("Scoreboard playtime"), nullptr, "计分板游玩时间 累计小时 DDStats"},
+		{Localizable("Scoreboard playtime"), nullptr, "计分板游玩时间 累计小时 DDStats 计分板游玩时长 计分板累计小时"},
 		{Localizable("Show scoreboard after death"), nullptr, "死亡后显示计分板"},
 		{Localizable("Use the scoreboard cursor mode to scroll the list"), nullptr, "使用计分板光标模式滚动查看列表"},
 		{Localizable("Show total playtime from DDStats instead of points in scoreboard"), nullptr, "计分板用总游戏时长替代分数"},
@@ -25,7 +25,7 @@ namespace
 		{Localizable("Behavior"), nullptr, "行为"},
 		{Localizable("Both"), nullptr, "两者"},
 		{Localizable("Console color"), nullptr, "控制台颜色"},
-		{Localizable("Enable word filter list"), nullptr, "启用屏蔽词列表"},
+		{Localizable("Enable word filter list"), nullptr, "启用屏蔽词列表 过滤聊天敏感词 聊天屏蔽词"},
 		{Localizable("Hide player messages"), nullptr, "隐藏玩家消息"},
 		{Localizable("Literal"), nullptr, "字面"},
 		{Localizable("Mode"), nullptr, "模式"},
@@ -76,7 +76,7 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_friend_notify[] = {
 		{Localizable("Auto greet friends entering map"), nullptr, "自动问候进图的好友"},
 		{Localizable("Auto refresh server list"), nullptr, "自动刷新服务器列表"},
-		{Localizable("Auto-follow delay"), nullptr, "自动跟随延迟"},
+		{Localizable("Auto-follow delay"), nullptr, "自动跟随延迟 跨服跟随好友 自动跟好友换服"},
 		{Localizable("Greeting text"), nullptr, "打招呼文本"},
 		{Localizable("Large text announcement for friend joining"), nullptr, "大字播报进服好友"},
 		{Localizable("Large text content"), nullptr, "大字文案"},
@@ -107,8 +107,8 @@ namespace
 		{nullptr, "qm_axiom_quad_prediction", nullptr},
 		{nullptr, "qm_moving_tiles_entities", nullptr},
 		{Localizable("Auto enable in Gores mode"), nullptr, "Gores 模式自动启用"},
-		{Localizable("Auto login Axiom server"), nullptr, "自动登录 Axiom 服务器账号"},
-		{Localizable("Auto weapon switch"), nullptr, "自动切锤"},
+		{Localizable("Auto login Axiom server"), nullptr, "自动登录 Axiom 服务器账号 Axiom自动登录"},
+		{Localizable("Auto weapon switch"), nullptr, "自动切锤 Gores自动切锤 自动切锤切枪"},
 		{Localizable("Auto-toggle fast input"), nullptr, "自动开关快速输入"},
 		{Localizable("Auto-toggle fast input others"), nullptr, "自动开关快速输入其他玩家"},
 		{Localizable("Axiom dummy password"), nullptr, "Axiom 分身密码"},
@@ -160,10 +160,10 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_hj_assist[] = {
-		{Localizable("Show dummy distance link"), "qm_dummy_distance_link", "本体 分身连线 fenshen lianxian 距离 钩索"},
+		{Localizable("Show dummy distance link"), "qm_dummy_distance_link", "本体 分身连线 fenshen lianxian 距离 钩索 分身距离连线 分身钩索距离"},
 		{Localizable("Link style"), "qm_dummy_distance_link_style", "直线 水滴 shuidi droplet"},
 		{Localizable("Auto switch to the tee that got unfrozen"), nullptr, "自动切换到解冻的 Tee"},
-		{Localizable("Auto-lock after joining lockable team"), nullptr, "加入可锁定队伍后自动锁定"},
+		{Localizable("Auto-lock after joining lockable team"), nullptr, "加入可锁定队伍后自动锁定 进队怎么自动锁队 进队自动锁队"},
 		{Localizable("Auto unspec on unfreeze"), nullptr, "解冻自动取消旁观"},
 		{Localizable("Auto unspec both tees when either is hammered awake"), nullptr, "任一方被锤醒时两个 Tee 都取消旁观"},
 		{Localizable("Automatically close the current chat after waking from freeze"), nullptr, "从冻结状态中醒来自动关闭聊天框"},
@@ -195,7 +195,7 @@ namespace
 		{Localizable("IME selection background color"), nullptr, "输入法选中背景颜色"},
 		{Localizable("IME text color"), nullptr, "输入法文字颜色"},
 		{Localizable("New IME"), nullptr, "新版 IME"},
-		{Localizable("IME appearance"), nullptr, "输入法外观"},
+		{Localizable("IME appearance"), nullptr, "输入法外观 全屏打字看不到输入法 全屏输入法候选栏"},
 		{nullptr, "qm_ime_auto_manage", nullptr},
 		{nullptr, "qm_ime_bg_color", nullptr},
 		{nullptr, "qm_ime_font_size", nullptr},
@@ -281,7 +281,7 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_mini_features[] = {
 		{Localizable("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"), nullptr, "自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）"},
-		{Localizable("Blank asset auto fallback"), nullptr, "空白资源自动回退"},
+		{Localizable("Blank asset auto fallback"), nullptr, "空白资源自动回退 怎么隐藏雪花特效 空白材质 屏蔽雪花"},
 		{Localizable("Color map tune zones by their tune zone number"), nullptr, "按 Tune Zone 编号给地图上的对应区块着色"},
 		{Localizable("Enable repeat"), nullptr, "启用复读"},
 		{Localizable("Hide input emoticon"), nullptr, "隐藏输入表情"},
@@ -292,7 +292,7 @@ namespace
 		{Localizable("Show Qm badge"), nullptr, "显示 Qm 标识"},
 		{Localizable("Show tune zone colors"), nullptr, "显示 Tune Zone 颜色"},
 		{Localizable("CP guide"), "qm_checkpoint_guide", "CP 引导 吃CP 检查点 传送 寻路 checkpoint guide"},
-		{Localizable("Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters"), nullptr, "引导补吃附近遗漏的传送检查点，接近检查点回传入口时提醒"},
+		{Localizable("Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters"), nullptr, "引导补吃附近遗漏的传送检查点，接近检查点回传入口时提醒 漏踩CP怎么提示 漏踩检查点"},
 		{Localizable("Sponsor reminder"), nullptr, "赞助提醒"},
 		{Localizable("Show command completion in chat"), nullptr, "聊天中显示命令补全"},
 		{Localizable("Chat emoji completion"), nullptr, "聊天表情补全"},
@@ -378,7 +378,7 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_qiafen[] = {
 		{Localizable("Auto reply cooldown"), nullptr, "自动回复冷却"},
 		{Localizable("Both sides of keyword rules must be filled"), nullptr, "关键词规则的两侧都必须填写"},
-		{Localizable("Enable keyword reply"), nullptr, "启用关键词回复"},
+		{Localizable("Enable keyword reply"), nullptr, "启用关键词回复 关键词自动回复 触发词回复"},
 		{Localizable("Keyword rules"), nullptr, "关键词规则"},
 		{Localizable("Regex"), nullptr, "正则"},
 		{Localizable("Rename"), nullptr, "重命名"},
@@ -398,10 +398,10 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_solo_split[] = {
-		{Localizable("Lock both teams immediately when entering solo split mode"), nullptr, "进入单刷模式时立即锁定双方队伍"},
+		{Localizable("Lock team"), nullptr, "进入单刷模式时立即锁定双方队伍"},
 		{Localizable("Auto-connect dummy"), nullptr, "自动连接分身"},
 		{Localizable("Solo split enter key"), nullptr, "单刷模式进队按键"},
-		{Localizable("Solo split key"), nullptr, "单刷模式按键"},
+		{Localizable("Solo split key"), nullptr, "单刷模式按键 单人分身 一键分队"},
 		{Localizable("Solo split leave key"), nullptr, "单刷模式出队按键"},
 		{Localizable("Team when leaving solo split"), nullptr, "退出单刷时的队伍"},
 		{nullptr, "qm_solo_split", nullptr},
@@ -463,7 +463,7 @@ namespace
 		{Localizable("Zhipu AI"), nullptr, "智谱清言"},
 		{Localizable("Zhipu API key"), nullptr, "智谱 API 密钥"},
 		{Localizable("Zhipu free models allow only 1 concurrent request"), nullptr, "智谱免费模型只允许 1 个并发请求"},
-		{Localizable("⚠️ FTAPI is a free service. Excessive use may cause service suspension."), nullptr, "⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停"},
+		{Localizable("Allow FTAPI to auto-translate received chat messages. Busy chats can overload the free service. Outgoing auto-translation is controlled separately."), nullptr, "接收消息 FTAPI 自动翻译，发送自动翻译单独设置"},
 		{Localizable("Show original text below outgoing translation"), nullptr, "发送翻译下方显示原文"},
 		{nullptr, "qm_translate_auto", nullptr},
 		{nullptr, "qm_translate_auto_mode", nullptr},
