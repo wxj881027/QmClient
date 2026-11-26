@@ -3,13 +3,13 @@
 
 #include <functional>
 #include <memory>
-#include <vector>
 
 class CUi;
 class ITextRender;
 class IInput;
 class IStorage;
 class IClient;
+class CTooltips;
 struct SSettingsCardDefinition;
 struct SSettingsContentMetrics;
 struct IUiContext;
@@ -34,11 +34,12 @@ namespace qm_card_catalog
 		IInput *m_pInput;
 		IStorage *m_pStorage;
 		IClient *m_pClient;
+		CTooltips *m_pTooltips = nullptr;
 	};
 
 	inline constexpr const char *SEARCH_ANSWER_CARD_ID = "deck:global-search-answers";
 	void BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, const qm_search_answers::SResult &Result, bool ReadOnly, const SSettingsContentMetrics &Metrics, const std::function<void(const char *)> &SelectQuestion, SSettingsCardDefinition &Out, const std::shared_ptr<SSearchAnswerCardState> &State = {});
-	void BuildDdnetWikiSearchCard(const IUiContext &Ctx, const std::vector<qm_wiki_docs::SDdnetWikiMatch> &vMatches, bool PreferChinese, bool ReadOnly, const SSettingsContentMetrics &Metrics, SSettingsCardDefinition &Out);
+	void BuildDdnetWikiSearchCard(const IUiContext &Ctx, const qm_wiki_docs::SDdnetWikiMatch &Match, bool PreferChinese, bool ReadOnly, const SSettingsContentMetrics &Metrics, SSettingsCardDefinition &Out);
 }
 
 #endif

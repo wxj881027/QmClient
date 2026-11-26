@@ -391,25 +391,12 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_visual_nameplates[] = {
-		{Localizable("Freeze stars"), nullptr, "显示冻结效果的星星动画"},
-		{Localizable("Frozen color darkening"), nullptr, "冻结时颜色变暗强度"},
-		{Localizable("Use skin color for frozen feet"), nullptr, "冻结脚部使用皮肤色"},
-		{Localizable("Render all custom colored feet as white feet skin"), nullptr, "将所有自定义脚部颜色渲染为白色"},
 		{Localizable("Show country flags in nameplates"), nullptr, "在玩家昵称旁显示国旗"},
-		{Localizable("Show katana on frozen players"), nullptr, "在被冻结的玩家身上显示武士刀"},
 		{Localizable("Show ping colored circle in nameplates"), nullptr, "在玩家昵称旁显示延迟颜色圆圈"},
 		{Localizable("Show skin names in nameplate"), nullptr, "在玩家昵称旁显示皮肤名"},
-		{Localizable("Use colored skins for frozen tees"), nullptr, "冻结 Tee 使用彩色皮肤"},
-		{nullptr, "cl_freeze_stars", nullptr},
-		{nullptr, "qm_color_freeze", nullptr},
-		{nullptr, "qm_color_freeze_darken", nullptr},
-		{nullptr, "qm_color_freeze_feet", nullptr},
-		{nullptr, "qm_frozen_katana", nullptr},
 		{nullptr, "qm_nameplate_country", nullptr},
 		{nullptr, "qm_nameplate_ping_circle", nullptr},
 		{nullptr, "qm_nameplate_skins", nullptr},
-		{nullptr, "qm_white_feet", nullptr},
-		{nullptr, "qm_white_feet_skin", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("tclient:visual-nameplates", tclient_visual_nameplates);
 }

@@ -1578,7 +1578,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			if(DDTeam != TEAM_FLOCK && (LastRow || NextTeam != DDTeam))
 			{
 				const int PreviousTeam = BandStart == FirstRow ? TEAM_FLOCK : Plan.m_aRows[BandStart - 1].m_DDTeam;
-				const auto Surface = QmScoreboardTeamBandSurface(PreviousTeam, NextTeam, RoundRadius);
+				const auto Surface = QmScoreboardTeamBandSurface(PreviousTeam, NextTeam, LineHeight);
 				const ColorRGBA Color = ScoreboardDecorationColor(GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ContentAlpha));
 				DrawRoundedSurface(Ui(), CUIRect{Scoreboard.x, BandTop, Scoreboard.w, Bottom - BandTop}, Color, ColorRGBA(), Surface);
 			}
@@ -1667,7 +1667,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			(GameClient()->m_Snap.m_SpecInfo.m_Active && pInfo->m_ClientId == GameClient()->m_Snap.m_SpecInfo.m_SpectatorId))
 		{
 			CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-			Row.Draw(ScoreboardDecorationColor(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(ItemAlpha * 1.45f)), IGraphics::CORNER_ALL, RoundRadius);
+			Row.Draw(ScoreboardDecorationColor(Ui()->QmControlTheme().m_Selected.WithMultipliedAlpha(ItemAlpha)), IGraphics::CORNER_ALL, RoundRadius);
 		}
 
 		const int ClientId = pInfo->m_ClientId;

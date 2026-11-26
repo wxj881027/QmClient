@@ -66,6 +66,9 @@ namespace ui_widget
 		const void *m_pUser = nullptr;
 	};
 
+	// 卡头已在预布局处理点击，绘制时只复用图标按钮外观。
+	void DrawIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, const CUIRect &Rect, SButtonSurfaceOptions Options, const SIconButtonIconDraw *pIconDraw = nullptr, float IconSize = 0.0f, bool ShowSlash = false);
+
 	// Radius < 0 使用默认控件圆角；传入短边一半得到圆形按钮。
 	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> Color = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const CUIRect *pHitRect = nullptr, const SIconButtonIconDraw *pIconDraw = nullptr, float Radius = -1.0f, std::optional<bool> HoveredOverride = std::nullopt);
 

@@ -305,8 +305,8 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.18 图标按钮（icon button）
 
 - 定义：只表达一个动作、不带文字的方形/圆形按钮。刷新、重载、重试、复制这类「动词即全部语义」的动作一律用它；文字按钮只留给需要完整句子才能说清的动作（如「导入并重启」）。
-- 唯一实现：`ui_widget::DoIconButton`（`src/game/client/QmUi/UiButtons.cpp`），调用点走 `CUi::DoButton_QmIcon` / `DoButton_Menu_QmIcon`；图标语义固定：刷新与重试 `EQmIcon::ARROW_ROTATE_RIGHT` + `FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT`，复制 `EQmIcon::COPY`，好友与收藏 `EQmIcon::HEART`，静音 `EQmIcon::BAN`，观战与跟随 `EQmIcon::EYE`，屏蔽表情 `EQmIcon::HEART_CRACK`。禁用走 `Enabled` 形参（外观与命中一起关闭），不要用 `Flags = 0` 绕过。
-- 禁止的反面写法：用文字按钮承担刷新/复制/重试；同一语义换用别的字形（`ARROWS_ROTATE` 与 `ARROW_ROTATE_RIGHT` 混用、直接写 `"\\xEE\\x80\\xB6"` 转义）；图标按钮不给悬停气泡；禁用态直接跳过绘制（按钮数量随状态横跳，玩家看不到「为什么没有这个动作」）；边长各写一个魔数而不是随行高派生。
+- 唯一实现：`ui_widget::DoIconButton`（`src/game/client/QmUi/UiButtons.cpp`），卡头在预布局处理输入，绘制走同组件的 `ui_widget::DrawIconButton`，以 `m_TransparentInactive` 指定常态透明。悬浮时显示圆形底和描边，折叠箭头通过图标回调绘制。普通调用点走 `CUi::DoButton_QmIcon` / `DoButton_Menu_QmIcon`；图标语义固定：刷新与重试 `EQmIcon::ARROW_ROTATE_RIGHT` + `FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT`，复制 `EQmIcon::COPY`，好友与收藏 `EQmIcon::HEART`，静音 `EQmIcon::BAN`，观战与跟随 `EQmIcon::EYE`，屏蔽表情 `EQmIcon::HEART_CRACK`。禁用走 `Enabled` 形参（外观与命中一起关闭），不要用 `Flags = 0` 绕过。
+- 禁止的反面写法：在卡头另画圆角矩形底，或在绘制回调里重复处理点击。用文字按钮承担刷新/复制/重试；同一语义换用别的字形（`ARROWS_ROTATE` 与 `ARROW_ROTATE_RIGHT` 混用、直接写 `"\\xEE\\x80\\xB6"` 转义）；图标按钮不给悬停气泡；禁用态直接跳过绘制（按钮数量随状态横跳，玩家看不到「为什么没有这个动作」）；边长各写一个魔数而不是随行高派生。
 
 ### 2.17 输入光标（text caret）
 
@@ -507,7 +507,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 - 定义：悬停后的补充说明，默认不常显、不占布局；配置项默认使用配置描述。带文字的布尔开关由 `ui_switch_tip::Fallback`（`src/game/client/QmUi/UiSwitchTipPolicy.h`）过滤只复述标签或卡片标题的兜底说明；普通页不弹空提示，功能搜索仍显示命令名。机制说明仅在当前译文与标签逐字相同时省略。逐行开关优先显示临时接管原因，其次是提供额外信息的条目说明，最后取配置说明。筛选胶囊在输入趟绑定命令与标签。图标按钮保留动作提示。
 - 唯一实现：`ui_widget::Tooltip`（`src/game/client/QmUi/UiOverlays.h`）、`GameClient()->m_Tooltips.DoToolTip(...)` / `DoToolTipForRect(...)` / `DoToolTipForRectForced(...)` / `DoSmallToolTip(...)` / `DoSettingsToolTipForConfig(...)`（`CTooltips`，`src/game/client/ui.h`）；设置页按系统鼠标命中，游戏内虚拟光标由调用方完成命中后用 `DoToolTipForRectForced`。尺寸与颜色 `ui_token::tooltip::*`、`ui_token::motion::TOOLTIP_FADE`。
-- 禁止的反面写法：用 tooltip 承载必须常显的信息（应当用行尾说明）；自己画矩形加文字；把长句塞进 tooltip 而不给 `m_MaxWidth`。
+- 禁止的反面写法：用 tooltip 承载必须常显的信息（应当用行尾说明）；给悬浮提示单设背景色（背景复用 `ResolveConfiguredSecondaryPanelTheme().m_Surface`）；自己画矩形加文字；把长句塞进 tooltip 而不给 `m_MaxWidth`。
 
 ### 3.15 浮层骨架（Secondary panel）
 

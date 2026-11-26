@@ -39,12 +39,12 @@ TEST(QmScoreboardPresentation, HeaderButtonsKeepEqualHeightsAndUnshrunkLabelSpac
 TEST(QmScoreboardPresentation, AdjacentTeamsOnlyRoundOuterEnds)
 {
 	const CUIRect Band{0.0f, 0.0f, 200.0f, 60.0f};
-	const auto First = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(TEAM_FLOCK, 50, 5.0f), true);
-	const auto Middle = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(1, 100, 5.0f), true);
-	const auto Last = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(50, TEAM_FLOCK, 5.0f), true);
-	EXPECT_EQ(First.m_CornerRadii, vec4(5.0f, 5.0f, 0.0f, 0.0f));
+	const auto First = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(TEAM_FLOCK, 50, 16.0f), true);
+	const auto Middle = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(1, 100, 16.0f), true);
+	const auto Last = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(50, TEAM_FLOCK, 16.0f), true);
+	EXPECT_EQ(First.m_CornerRadii, vec4(8.0f, 8.0f, 0.0f, 0.0f));
 	EXPECT_EQ(Middle.m_CornerRadii, vec4(0.0f, 0.0f, 0.0f, 0.0f));
-	EXPECT_EQ(Last.m_CornerRadii, vec4(0.0f, 0.0f, 5.0f, 5.0f));
+	EXPECT_EQ(Last.m_CornerRadii, vec4(0.0f, 0.0f, 8.0f, 8.0f));
 }
 
 TEST(QmScoreboardPresentation, BottomPaddingIsReservedOnlyWhenColumnEndsWithATeam)

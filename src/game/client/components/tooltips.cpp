@@ -2,6 +2,7 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiConfigHint.h>
 #include <game/client/QmUi/UiSwitchTipPolicy.h>
@@ -377,7 +378,8 @@ void CTooltips::OnRender()
 	if(BodyGlyphCount <= 0)
 		return;
 
-	ColorRGBA Background = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true));
+	const SUiTheme Theme = ResolveConfiguredSecondaryPanelTheme();
+	ColorRGBA Background = Theme.m_Surface;
 	Background.a *= AlphaFactor;
 	Rect.Draw(Background, IGraphics::CORNER_ALL, ui_token::tooltip::RADIUS * UiScale * Scale);
 
@@ -385,7 +387,7 @@ void CTooltips::OnRender()
 	if(QmTooltipDrawEllipsis(Facts, BodyGlyphCount))
 		QmTooltipCreateText(*TextRender(), Layout, "…", TextPosition + vec2(0.0f, (Layout.m_VisibleLines - 1) * Layout.m_LineHeight), EllipsisIndex, true);
 
-	ColorRGBA TextColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipTextColor, true));
+	ColorRGBA TextColor = Theme.m_TextBody;
 	TextColor.a *= AlphaFactor;
 	ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
 	OutlineColor.a *= AlphaFactor;

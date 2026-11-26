@@ -369,8 +369,6 @@ namespace qm_tclient_cards
 		}
 		if(str_comp(pStableCardId, "tclient:cursor") == 0)
 			return Hash;
-		if(str_comp(pStableCardId, "tclient:visual-nameplates") == 0)
-			return HashValueFnv1a64(Hash, g_Config.m_QmWhiteFeet);
 		if(str_comp(pStableCardId, "tclient:visual-effects") == 0)
 		{
 			Hash = HashValueFnv1a64(Hash, g_Config.m_QmTinyTees > 0);

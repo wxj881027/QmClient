@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <set>
 #include <string>
 
 namespace
@@ -287,4 +288,19 @@ TEST_F(CQmWikiEditorTest, ChineseHeadingQueryShowsTheExplanationFromTheArticle)
 	EXPECT_STREQ(DdnetWikiArticle(Match.m_Article).m_pSlug, "binds");
 	EXPECT_GE(Match.m_aBlocks[SIMPLIFIED_CHINESE], 0);
 	EXPECT_NE(Match.m_aExcerpts[SIMPLIFIED_CHINESE].find("反斜杠"), std::string::npos);
+}
+
+TEST_F(CQmWikiEditorTest, SearchingWikiListsEachShippedArticleWithADistinctCardId)
+{
+	const std::string ExecutablePath = TestSourcePath("qmclient.exe");
+	const char *apArgs[] = {ExecutablePath.c_str()};
+	auto pStorage = CreateTempStorage(m_Info.StoragePath(), 1, apArgs);
+	ASSERT_NE(pStorage, nullptr);
+
+	qm_wiki_docs::CDdnetWikiIndex Index;
+	const auto vMatches = Index.Search("Wiki", pStorage.get());
+	ASSERT_EQ(vMatches.size(), qm_wiki_docs::NUM_DDNET_WIKI_ARTICLES);
+	std::set<std::string> CardIds;
+	for(const auto &Match : vMatches)
+		EXPECT_TRUE(CardIds.insert(qm_wiki_docs::DdnetWikiArticle(Match.m_Article).m_pCardId).second);
 }

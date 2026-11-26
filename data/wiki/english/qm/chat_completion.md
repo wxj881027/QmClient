@@ -8,7 +8,7 @@ When `/` pops up command candidates or `:` pops up emoji candidates, the rounded
 
 ## How to tune it
 
-1. Set "Background color" first, then use "Background opacity" (0–100, default 96) to dial the panel down until the map behind stays readable.
+1. Set "Background color" first, then use "Background opacity" (0–100, default 80) to dial the panel down until the map behind stays readable.
 2. Keep the body text color clearly apart from the background; make "Selected text color" one step brighter still.
 3. Do not pick a "Selection background color" from the same family as the body text, or the highlighted row smears together.
 4. Check the live preview below the card, then type something in game to confirm; "Reset chat completion appearance" reverts everything.

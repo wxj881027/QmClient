@@ -82,10 +82,10 @@ namespace
 	};
 
 	constexpr qm_wiki_docs::SDdnetWikiArticle s_aDdnetArticles[] = {
-		{"settings-and-commands", {"Settings and Commands", "设置与命令"},
+		{"settings-and-commands", "deck:ddnet-wiki-settings-and-commands", {"Settings and Commands", "设置与命令"},
 			{"Look up DDNet map settings, client and server commands, their arguments, defaults and allowed values.",
 				"查找 DDNet 地图设置、客户端和服务器命令，以及参数、默认值和取值范围。"}},
-		{"binds", {"Binds", "按键绑定"},
+		{"binds", "deck:ddnet-wiki-binds", {"Binds", "按键绑定"},
 			{"Use the F1 console to bind DDNet commands to a keyboard or mouse button. Enter bind followed by a key and the command to run.",
 				"在 F1 控制台输入 bind、按键和要执行的命令，就能把 DDNet 操作绑定到键盘或鼠标按键上。"}},
 	};
@@ -168,7 +168,7 @@ std::vector<qm_wiki_docs::SDdnetWikiMatch> qm_wiki_docs::CDdnetWikiIndex::Search
 	for(int Article = 0; Article < NUM_DDNET_WIKI_ARTICLES; ++Article)
 	{
 		SDdnetWikiMatch Match{Article, {}, {-1, -1}, {}};
-		int TitleScore = 0;
+		int TitleScore = Query == "wiki" || Query == "ddnet wiki" ? 1 : 0;
 		for(const char *pAlias : s_apDdnetWikiAliases[Article])
 			TitleScore = std::max(TitleScore, PhraseScore(pAlias));
 		for(const char *pTitle : DdnetWikiArticle(Article).m_apTitles)

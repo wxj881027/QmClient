@@ -8,6 +8,7 @@
 #include "UiSurfaceText.h"
 
 #include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
 
@@ -140,35 +141,21 @@ namespace ui_widget
 		return Fill;
 	}
 
-	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners, bool Enabled, std::optional<ColorRGBA> Color, bool ShowSlash, bool TransparentInactive, const CUIRect *pHitRect, const SIconButtonIconDraw *pIconDraw, float Radius, std::optional<bool> HoveredOverride)
+	void DrawIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, const CUIRect &Rect, SButtonSurfaceOptions Options, const SIconButtonIconDraw *pIconDraw, float IconSize, bool ShowSlash)
 	{
-		if(Ctx.m_pUi == nullptr || pId == nullptr || (Ctx.m_pUi->DrawingSuppressed() && !Ctx.m_pUi->PreLayoutInput()))
-			return 0;
 		CUi *pUi = Ctx.m_pUi;
+		if(pUi == nullptr || pUi->DrawingSuppressed() || Rect.w <= 0.0f || Rect.h <= 0.0f)
+			return;
 		const CUIRect ButtonRect = QmUiSquareIconButtonRect(Rect);
-		const CUIRect &HitRect = pHitRect != nullptr ? *pHitRect : ButtonRect;
-		if(pUi->PreLayoutInput())
-			return Enabled && Checked >= 0 ? pUi->DoButtonLogic(pId, Checked, &HitRect, Flags) : 0;
-		SButtonSurfaceOptions Options;
 		Options.m_Role = EUiButtonRole::ICON;
-		// 图标按钮一律正圆：方块按钮按半高取半径，和「圆形图标按钮」的既有约定一致。
-		Options.m_Radius = ButtonRect.h * 0.5f;
-		Options.m_Enabled = Enabled && Checked >= 0;
-		Options.m_Selected = Checked > 0;
-		// 图标按钮恒为正圆：半径取半高；Corners 必须保留调用点的值——
-		// 引擎的四角路径里 Corners 才是形状开关，清成 NONE 会直接画成方块。
-		Options.m_Corners = Corners;
-		Options.m_Color = Color;
-		Options.m_TransparentInactive = TransparentInactive;
-		Options.m_pHitRect = &HitRect;
-		if(Radius >= 0.0f)
-			Options.m_Radius = Radius;
-		Options.m_HoveredOverride = HoveredOverride;
 		const ColorRGBA SemanticColor = pUi->TextRender()->GetTextColor();
 		const ColorRGBA Fill = DrawButtonSurface(Ctx, pId, ButtonRect, Options);
 		CUiScopedSurfaceText SurfaceText(pUi->TextRender(), Fill);
 		CUIRect Label;
-		ButtonRect.Margin(std::min(2.0f, ButtonRect.h * 0.1f), &Label);
+		if(IconSize > 0.0f)
+			Label = QmIconLabelRect(ButtonRect, IconSize, TEXTALIGN_MC);
+		else
+			ButtonRect.Margin(std::min(2.0f, ButtonRect.h * 0.1f), &Label);
 		ColorRGBA Foreground = ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(pUi->TextRender()->GetTextColor().a);
 		if(CQmIconSemanticColorScope::Active())
 			Foreground = ResolveUiSurfaceIconColor(SurfaceText.Surface(), SemanticColor);
@@ -200,6 +187,33 @@ namespace ui_widget
 			DrawSlash(Label.w * 0.10f, pUi->ScaleControlAlpha(SlashWarnColor));
 			pGraphics->QuadsEnd();
 		}
+	}
+
+	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners, bool Enabled, std::optional<ColorRGBA> Color, bool ShowSlash, bool TransparentInactive, const CUIRect *pHitRect, const SIconButtonIconDraw *pIconDraw, float Radius, std::optional<bool> HoveredOverride)
+	{
+		if(Ctx.m_pUi == nullptr || pId == nullptr || (Ctx.m_pUi->DrawingSuppressed() && !Ctx.m_pUi->PreLayoutInput()))
+			return 0;
+		CUi *pUi = Ctx.m_pUi;
+		const CUIRect ButtonRect = QmUiSquareIconButtonRect(Rect);
+		const CUIRect &HitRect = pHitRect != nullptr ? *pHitRect : ButtonRect;
+		if(pUi->PreLayoutInput())
+			return Enabled && Checked >= 0 ? pUi->DoButtonLogic(pId, Checked, &HitRect, Flags) : 0;
+		SButtonSurfaceOptions Options;
+		Options.m_Role = EUiButtonRole::ICON;
+		// 图标按钮一律正圆：方块按钮按半高取半径，和「圆形图标按钮」的既有约定一致。
+		Options.m_Radius = ButtonRect.h * 0.5f;
+		Options.m_Enabled = Enabled && Checked >= 0;
+		Options.m_Selected = Checked > 0;
+		// 图标按钮恒为正圆：半径取半高；Corners 必须保留调用点的值——
+		// 引擎的四角路径里 Corners 才是形状开关，清成 NONE 会直接画成方块。
+		Options.m_Corners = Corners;
+		Options.m_Color = Color;
+		Options.m_TransparentInactive = TransparentInactive;
+		Options.m_pHitRect = &HitRect;
+		if(Radius >= 0.0f)
+			Options.m_Radius = Radius;
+		Options.m_HoveredOverride = HoveredOverride;
+		DrawIconButton(Ctx, pId, Icon, pFallbackIcon, ButtonRect, Options, pIconDraw, 0.0f, ShowSlash);
 		return Options.m_Enabled && !pUi->RenderOnly() ? pUi->DoButtonLogic(pId, Checked, &HitRect, Flags) : 0;
 	}
 

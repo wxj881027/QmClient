@@ -1,7 +1,10 @@
 // 执行真实答案卡片、声明布局和 CUi；仅替换输入设备、目录与系统打开边界。
 #include <engine/keys.h>
 
+#include <game/client/QmUi/QmWikiDocs.h>
 #include <game/client/QmUi/SettingsCardContentBridge.h>
+#include <game/client/QmUi/SettingsCardInfo.h>
+#include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/cards/QmSearchAnswerCard.h>
 #include <game/client/components/qmclient/search_answers.h>
 
@@ -124,7 +127,7 @@ namespace
 		CAnswerStorage m_Storage;
 		CAnswerInput m_Input;
 		CAnswerClient m_Client;
-		CUIRect m_Content{20, 20, 640, 560};
+		CUIRect m_Content{20, 60, 640, 520};
 		SSettingsContentMetrics m_Metrics;
 		std::shared_ptr<qm_card_catalog::SSearchAnswerCardState> m_pState;
 		SSettingsCardDefinition m_Definition;
@@ -180,6 +183,16 @@ namespace
 			m_Client.AdvanceFrame();
 			m_Ui.Update();
 		}
+		SSettingsCardFrame HeaderFrame() const
+		{
+			const CUIRect Slot{m_Content.x, 0, m_Content.w, 0};
+			return ResolveSettingsCardHeaderActions(BuildSettingsCardFrame(Slot, m_Definition.m_Spec, 0, m_Metrics.m_UiScale), m_Definition.m_LeadingHeaderActionWidth, HasSettingsCardInfo(m_Definition.m_Spec));
+		}
+		vec2 CopyCenter() const
+		{
+			const CUIRect Button = HeaderFrame().m_LeadingHeaderActionRect;
+			return Button.Center();
+		}
 		vec2 Center(const char *pId)
 		{
 			const auto *pRow = m_pLayout->Find(pId);
@@ -192,6 +205,8 @@ namespace
 			m_Ui.BeginPreLayoutInput();
 			try
 			{
+				if(m_Definition.m_LeadingHeaderInput)
+					m_Definition.m_LeadingHeaderInput(HeaderFrame(), false);
 				m_Definition.m_ContentLayoutInput(*m_pLayout, m_Content);
 			}
 			catch(...)
@@ -201,10 +216,15 @@ namespace
 			}
 			m_Ui.EndPreLayoutInput();
 		}
-		void Draw() { m_Definition.m_ContentLayoutDraw(*m_pLayout, m_Content); }
-		void Click(const char *pId)
+		void Draw()
 		{
-			const vec2 Position = Center(pId);
+			if(m_Definition.m_LeadingHeaderAction)
+				m_Definition.m_LeadingHeaderAction(HeaderFrame(), false);
+			m_Definition.m_ContentLayoutDraw(*m_pLayout, m_Content);
+		}
+		void Click(const char *pId) { Click(Center(pId)); }
+		void Click(vec2 Position)
+		{
 			Frame(Position);
 			Input();
 			Frame(Position, true);
@@ -267,13 +287,12 @@ TEST_F(QmSearchAnswerCard, DeclarationAndDrawingCannotSubmitAnswerActions)
 {
 	Build("截图");
 	ASSERT_TRUE(m_pActionStorage->CreateFolder("screenshots", IStorage::TYPE_SAVE));
-	for(const char *pId : {"answer-copy", "answer-open-directory"})
+	for(const vec2 Position : {CopyCenter(), Center("answer-open-directory")})
 	{
-		SCOPED_TRACE(pId);
-		Frame(Center(pId), true);
+		Frame(Position, true);
 		Resolve();
 		Draw();
-		Frame(Center(pId));
+		Frame(Position);
 		Resolve();
 		Draw();
 	}
@@ -289,7 +308,7 @@ TEST_F(QmSearchAnswerCard, DeclarationAndDrawingCannotSubmitAnswerActions)
 TEST_F(QmSearchAnswerCard, ReadOnlyAnswerAndCandidateControlsCannotSubmit)
 {
 	Build("截图", true);
-	Click("answer-copy");
+	Click(CopyCenter());
 	Click("answer-open-directory");
 	Build("toggle_scoreboard_cursor", true);
 	Click("answer-copy-command");
@@ -309,7 +328,7 @@ TEST_F(QmSearchAnswerCard, CopyAnswerPersistsItsStatusAcrossRebuildsWithTheSameS
 	const auto Result = qm_search_answers::Search("截图");
 	ASSERT_NE(Result.m_pAnswer, nullptr);
 	Build("截图");
-	Click("answer-copy");
+	Click(CopyCenter());
 	EXPECT_EQ(m_Input.m_ClipboardWrites, 1);
 	EXPECT_EQ(m_Input.m_Clipboard, Result.m_pAnswer->m_pAnswer);
 	Build("截图");
@@ -317,6 +336,23 @@ TEST_F(QmSearchAnswerCard, CopyAnswerPersistsItsStatusAcrossRebuildsWithTheSameS
 	Draw();
 	Draw();
 	EXPECT_EQ(m_Input.m_ClipboardWrites, 1);
+}
+
+TEST_F(QmSearchAnswerCard, WikiHeaderCopiesTheDisplayedTranslation)
+{
+	using namespace qm_wiki_docs;
+	const SDdnetWikiMatch Match{0, {true, true}, {1, 2}, {"English excerpt", "中文摘录"}};
+	auto Ctx = ui_widget::ControlContext(&m_Ui);
+	Ctx.m_pTextRender = m_Ui.TextRender();
+	for(const bool PreferChinese : {true, false})
+	{
+		qm_card_catalog::BuildDdnetWikiSearchCard(Ctx, Match, PreferChinese, false, m_Metrics, m_Definition);
+		Resolve();
+		const int Language = PreferChinese ? SIMPLIFIED_CHINESE : ENGLISH;
+		EXPECT_STREQ(m_Definition.m_Spec.m_pTitle, DdnetWikiArticle(0).m_apTitles[Language]);
+		Click(CopyCenter());
+		EXPECT_EQ(m_Input.m_Clipboard, Match.m_aExcerpts[Language]);
+	}
 }
 
 TEST_F(QmSearchAnswerCard, CopyCommandRunsOncePerExplicitClick)
@@ -347,7 +383,7 @@ TEST_F(QmSearchAnswerCard, CallbacksKeepTheStateAliveAfterTheBuilderOwnerAndResu
 	m_pState.reset();
 	EXPECT_FALSE(Weak.expired());
 	Resolve();
-	Click("answer-copy");
+	Click(CopyCenter());
 	ExpectText("answer-status", "已复制答案");
 	EXPECT_EQ(m_Input.m_ClipboardWrites, 1);
 	m_Ui.SetActiveItem(nullptr);
@@ -529,7 +565,7 @@ TEST_F(QmSearchAnswerCard, EveryBuildAllocationFailurePreservesTheOldInteractive
 		ExpectText("answer-question", OldResult.m_pAnswer->m_pQuestion);
 		ExpectText("answer-body", OldResult.m_pAnswer->m_pAnswer);
 		const int Copies = m_Input.m_ClipboardWrites;
-		Click("answer-copy");
+		Click(CopyCenter());
 		EXPECT_EQ(m_Input.m_ClipboardWrites, Copies + 1);
 		EXPECT_EQ(m_Input.m_Clipboard, OldResult.m_pAnswer->m_pAnswer);
 		ExpectText("answer-status", "已复制答案");
@@ -565,7 +601,7 @@ TEST_F(QmSearchAnswerCard, FactoryAllocationFailureCanBeRetriedBeforeBuildingThe
 	EXPECT_EQ(m_pState, nullptr);
 	m_pState = qm_card_catalog::CreateSearchAnswerCardState();
 	Build("截图");
-	Click("answer-copy");
+	Click(CopyCenter());
 	EXPECT_EQ(m_Input.m_ClipboardWrites, 1);
 }
 
@@ -574,7 +610,7 @@ TEST_F(QmSearchAnswerCard, ExistingBuildSignatureRetainsItsSharedActionState)
 	const auto Result = qm_search_answers::Search("截图");
 	qm_card_catalog::BuildSearchAnswerCard(Context(), Result, false, m_Metrics, m_SelectQuestion, m_Definition);
 	Resolve();
-	Click("answer-copy");
+	Click(CopyCenter());
 	qm_card_catalog::BuildSearchAnswerCard(Context(), Result, false, m_Metrics, m_SelectQuestion, m_Definition);
 	Resolve();
 	ExpectText("answer-status", "已复制答案");
