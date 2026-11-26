@@ -3671,7 +3671,9 @@ void CChat::OnRender()
 		y -= PreviewBoundingBox.m_H + 4.0f;
 	}
 
-	if(InputActive)
+	// HUD 编辑器里也画输入行外壳（翻译按钮 + 「全体:」前缀），
+	// 这样预览的底边和真正打开聊天框时的最低一行一致；但不激活输入框。
+	if(InputActive || HudEditorPreview)
 	{
 		const SQmChatInputLayout InputLayout = QmChatResolveInputLayout(x, y, InputLineWidth, ScaledFontSize, InputPrefixWidth);
 
@@ -3802,30 +3804,37 @@ void CChat::OnRender()
 		float ScrollOffset = m_Input.GetScrollOffset();
 		float ScrollOffsetChange = m_Input.GetScrollOffsetChange();
 
-		m_Input.Activate(EInputPriority::CHAT); // Ensure that the input is active
 		// 输入内容与前缀标签（「全体」/「队伍」/「聊天」，见上方 pInputModeLabel 的 TextEx）
 		// 共用 InputContentRect.y 作为首行起点。防裁切只需把 InputClippingRect 向上扩
 		// InputClipPaddingTop，不能在文本这里再加一次，否则输入内容会比前缀低一个 padding。
 		const CUIRect InputCursorRect = {InputContentRect.x, InputContentRect.y - ScrollOffset, 0.0f, 0.0f};
-		const bool WasChanged = m_Input.WasChanged();
-		const bool WasCursorChanged = m_Input.WasCursorChanged();
-		const bool Changed = WasChanged || WasCursorChanged;
-		const STextBoundingBox BoundingBox = m_Input.Render(&InputCursorRect, InputCursor.m_FontSize, TEXTALIGN_TL, Changed, MessageMaxWidth, 0.0f);
+		STextBoundingBox BoundingBox{};
+		if(InputActive)
+		{
+			m_Input.Activate(EInputPriority::CHAT); // Ensure that the input is active
+			const bool WasChanged = m_Input.WasChanged();
+			const bool WasCursorChanged = m_Input.WasCursorChanged();
+			const bool Changed = WasChanged || WasCursorChanged;
+			BoundingBox = m_Input.Render(&InputCursorRect, InputCursor.m_FontSize, TEXTALIGN_TL, Changed, MessageMaxWidth, 0.0f);
+		}
 
 		Graphics()->ClipDisable();
 
-		// Scroll up or down to keep the caret inside the content rect.
-		// 光标与文本同基准（首行起点即 InputContentRect.y），无需再扣除顶部 padding。
-		const float CaretPositionY = m_Input.GetCaretPosition().y - ScrollOffsetChange;
-		if(CaretPositionY < InputContentRect.y)
-			ScrollOffsetChange -= InputContentRect.y - CaretPositionY;
-		else if(CaretPositionY + InputCursor.m_FontSize > InputContentRect.y + InputContentRect.h)
-			ScrollOffsetChange += CaretPositionY + InputCursor.m_FontSize - (InputContentRect.y + InputContentRect.h);
+		if(InputActive)
+		{
+			// Scroll up or down to keep the caret inside the content rect.
+			// 光标与文本同基准（首行起点即 InputContentRect.y），无需再扣除顶部 padding。
+			const float CaretPositionY = m_Input.GetCaretPosition().y - ScrollOffsetChange;
+			if(CaretPositionY < InputContentRect.y)
+				ScrollOffsetChange -= InputContentRect.y - CaretPositionY;
+			else if(CaretPositionY + InputCursor.m_FontSize > InputContentRect.y + InputContentRect.h)
+				ScrollOffsetChange += CaretPositionY + InputCursor.m_FontSize - (InputContentRect.y + InputContentRect.h);
 
-		Ui()->DoSmoothScrollLogic(&ScrollOffset, &ScrollOffsetChange, InputContentRect.h, BoundingBox.m_H);
+			Ui()->DoSmoothScrollLogic(&ScrollOffset, &ScrollOffsetChange, InputContentRect.h, BoundingBox.m_H);
 
-		m_Input.SetScrollOffset(ScrollOffset);
-		m_Input.SetScrollOffsetChange(ScrollOffsetChange);
+			m_Input.SetScrollOffset(ScrollOffset);
+			m_Input.SetScrollOffsetChange(ScrollOffsetChange);
+		}
 
 		// 补全提示也属于正文区域，不能跨过独立的翻译按钮操作区。
 		Graphics()->ClipEnable(InputPixelClip.m_X, InputPixelClip.m_Y, InputPixelClip.m_W, InputPixelClip.m_H);
@@ -4403,13 +4412,20 @@ void CChat::OnRender()
 			{"Server", "Welcome to QmClient", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
 			{"Teammate", "Ready?", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
 			{"Friend", "Let's go!", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "Map changed to QmClient", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "Nice one!", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "See you!", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Spammer", "Hey, I'm spamming here!", ColorRGBA(1.0f, 0.72f, 0.72f, 0.92f)},
+			{"Server", "Vote passed", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
 		};
 
-		float PreviewY = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f)) - ScaledFontSize;
-		PreviewY -= RowHeight * (float)std::size(s_aPreviewLines);
-
-		for(const SPreviewLine &Line : s_aPreviewLines)
+		// 从历史和输入行的交界处往上铺，填满展开后的聊天区，
+		// 底边位置与真正聊天时最后一条消息一致；内容仍是固定样例，不取实时快照。
+		const float PreviewBottom = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f)) - ScaledFontSize;
+		int PreviewIndex = 0;
+		for(float PreviewY = PreviewBottom - RowHeight; PreviewY >= CHAT_HEIGHT_MIN; PreviewY -= RowHeight, ++PreviewIndex)
 		{
+			const SPreviewLine &Line = s_aPreviewLines[PreviewIndex % (int)std::size(s_aPreviewLines)];
 			char aPreviewText[256];
 			str_format(aPreviewText, sizeof(aPreviewText), "%s: %s", Line.m_pPrefix, Line.m_pMessage);
 			const float TextWidth = TextRender()->TextWidth(FontSize(), aPreviewText, -1, -1.0f);
@@ -4432,7 +4448,6 @@ void CChat::OnRender()
 			TextRender()->Text(x + (g_Config.m_ClChatOld ? 0.0f : RealMsgPaddingX), PreviewY + RealMsgPaddingY * 0.5f, FontSize(), aPreviewText, -1.0f);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			ExtendBounds(x, PreviewY, PreviewWidth, RowHeight);
-			PreviewY += RowHeight;
 		}
 	}
 	Graphics()->ClipDisable();
