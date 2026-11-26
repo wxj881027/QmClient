@@ -11008,7 +11008,7 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 == 皮膚變化時播放動畫，包括錘子偷來的皮膚。
 
 Playtime (h)
-== 遊玩（小時）
+== 遊玩小時
 
 Playtime query failed. Retrying shortly.
 == 遊玩時長查詢失敗，稍後重試。

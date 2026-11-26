@@ -11,12 +11,20 @@ namespace
 	std::string FindRuntimeTranslation(const std::string &LanguageData, const char *pKey)
 	{
 		const std::string Prefix = std::string(pKey) + "\n== ";
-		const size_t TranslationStart = LanguageData.find(Prefix);
-		if(TranslationStart == std::string::npos)
-			return {};
-		const size_t ValueStart = TranslationStart + Prefix.size();
-		const size_t ValueEnd = LanguageData.find('\n', ValueStart);
-		return LanguageData.substr(ValueStart, ValueEnd - ValueStart);
+		size_t SearchPos = 0;
+		while(true)
+		{
+			const size_t TranslationStart = LanguageData.find(Prefix, SearchPos);
+			if(TranslationStart == std::string::npos)
+				return {};
+			if(TranslationStart == 0 || LanguageData[TranslationStart - 1] == '\n')
+			{
+				const size_t ValueStart = TranslationStart + Prefix.size();
+				const size_t ValueEnd = LanguageData.find('\n', ValueStart);
+				return LanguageData.substr(ValueStart, ValueEnd - ValueStart);
+			}
+			SearchPos = TranslationStart + 1;
+		}
 	}
 }
 
@@ -31,6 +39,13 @@ TEST(SettingsCardTranslationContract, EveryCardDescriptionHasSimplifiedChineseRu
 		ASSERT_FALSE(Translation.empty()) << pDescription;
 		EXPECT_NE(Translation, pDescription);
 	}
+}
+
+TEST(SettingsCardTranslationContract, ChineseScoreboardPlaytimeHeadersUseHoursWithoutParentheses)
+{
+	const char *pKey = "Playtime (h)";
+	EXPECT_EQ(FindRuntimeTranslation(ReadTestSourceFile("data/languages/simplified_chinese.txt"), pKey), "游玩小时");
+	EXPECT_EQ(FindRuntimeTranslation(ReadTestSourceFile("data/languages/traditional_chinese.txt"), pKey), "遊玩小時");
 }
 
 TEST(SettingsCardTranslationContract, AuditedUiLabelsHaveSimplifiedChineseRuntimeTranslations)
