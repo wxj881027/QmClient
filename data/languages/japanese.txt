@@ -1542,6 +1542,9 @@ Available rescue modes: auto, manual
 Available resolutions
 == 利用可能な解像度
 
+Average payload
+== 平均ペイロード
+
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 平均 %.*f   ↓ %.*f   ↑ %.*f
 
@@ -1968,6 +1971,9 @@ Brutal
 Bubble opacity
 == バブルの不透明度
 
+Buffer memory
+== バッファメモリ
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
@@ -2012,6 +2018,9 @@ By player name
 
 By row
 == 行ごと
+
+Bytes per update
+== 更新あたりのバイト数
 
 c = Player position
 == c = プレイヤー座標
@@ -6198,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == フラグ数
 
+Frame rate
+== フレームレート
+
 Frame time
 == フレーム時間
 
@@ -6383,6 +6395,9 @@ Functions
 
 Game
 == ゲーム
+
+Game / predicted tick
+== ゲームティック / 予測ティック
 
 Game assets
 == ゲームアセット
@@ -7128,6 +7143,9 @@ Horizontal position
 Horizontal speed × ramp
 == 水平速度 × 補正倍率
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== 水平速度 × 速度倍率（%d～%d ブロック/秒）
+
 Hostname of DNSBL provider for IP verification
 == IP 検証用 DNSBL プロバイダーのホスト名
 
@@ -7136,6 +7154,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == ホバーでツールチップ
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== ホバー中: %p   次のホバー先: %p   アクティブ: %p   前回: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == ホイールやドラッグで端を越えて押し込める距離（UI ピクセル）。0 で無効
@@ -10419,6 +10440,9 @@ p = Ping latency
 Pack name
 == パック名
 
+packets
+== パケット
+
 Panel
 == パネル
 
@@ -10550,6 +10574,9 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == ゲームを一時停止/再開
+
+Peak speed: %.2f blocks/s
+== ピーク速度: %.2f ブロック/秒
 
 Penalty in seconds for saving or swapping positions
 == 位置の保存または交換に対するペナルティ（秒単位）
@@ -11208,6 +11235,9 @@ Prediction margin
 Prediction margin when frozen
 == フリーズ時の予測マージン
 
+Prediction time
+== 予測時間
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == 予測は正確さと応答性のトレードオフです。上り冗長化は送信量を 3 倍にします。「ゲームトラフィックを優先」は Windows でパケットに印を付けるだけで、QoS 対応ルーターがなければ効果ありません。
 
@@ -11412,8 +11442,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == フリーズチャットメッセージを送信する確率 (0-100%)
 
+Process UDP receive (estimated)
+== プロセスの UDP 受信（推定）
+
 Process UDP RX (est.)
 == プロセス UDP 受信（推定）
+
+Process UDP send (estimated)
+== プロセスの UDP 送信（推定）
 
 Process UDP TX (est.)
 == プロセス UDP 送信（推定）
@@ -13878,9 +13914,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == ネームプレートに国旗を表示
 
-Show FPS, prediction time, and performance graphs
-== FPS、予測時間、パフォーマンスグラフを表示
-
 Show freeze bar under frozen players indicating thaw time
 == 凍結プレイヤーの下に解凍時間を示すフリーズバーを表示
 
@@ -14285,6 +14318,9 @@ Show pending crash reports on startup
 
 Show per-character title waves locally
 == 称号の文字を自分の画面で波打たせる
+
+Show performance graphs.
+== パフォーマンスグラフを表示
 
 Show pet
 == ペットを表示
@@ -15246,6 +15282,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 弾 Tee 変形強度
 
+Staging memory
+== ステージングメモリ
+
 Standalone
 == 単独表示
 
@@ -15443,6 +15482,9 @@ Store the current practice tee state as the respawn point
 
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == 現在の Tee の状態（位置、武器、ジャンプ、移動状態）を練習用リスポーン地点として保存します。
+
+Streamed memory
+== ストリームメモリ
 
 Streamer mode
 == ストリーマーモード
@@ -16049,6 +16091,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 
 Text is too long for the selected translation service.
 == テキストが選択した翻訳サービスの長さ制限を超えています。
+
+Texture memory
+== テクスチャメモリ
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == ご支援と信頼に感謝します。それが私に前進し続ける勇気を与えてくれます。
@@ -16695,6 +16740,9 @@ Top right
 Total
 == 合計
 
+Total bytes
+== 合計バイト数
+
 Total fonts:
 == フォント総数：
 
@@ -16896,6 +16944,9 @@ Tune variable to value or show current value
 Tune zone (map / override)
 == 調整ゾーン（マップ / 上書き）
 
+Tuning parameter
+== 調整パラメーター
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 非力な環境ではオフにしてください。カードは即座に開き、スクロールも即時になります。カーソル形状は見た目だけで、3 種とも同じ文字枠に収まります。
 
@@ -16986,6 +17037,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == サウンドをオンにしてからデバイスを選びます。一覧は起動時にオーディオバックエンドから取得されます。
 
+Turning point (%d to %d blocks/s)
+== 転換点（%d～%d ブロック/秒）
+
 Turning this off only changes your display.
 == オフにしても自分の画面の表示だけが変わります。
 
@@ -17024,6 +17078,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == 単語を入力すると、カードと設定名を対象に入力に合わせて結果が絞り込まれます。
+
+Type ID
+== 種類 ID
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == 検索欄に入力するか、すべて、お気に入り、最近を切り替え、スキンをクリックすると適用され、プラスアイコンでキューに追加します。
@@ -17265,6 +17322,9 @@ Unknown status
 Unknown title style
 == 不明なタイトルスタイル
 
+Unknown UUID
+== 不明な UUID
+
 Unlimited
 == 無制限
 
@@ -17363,6 +17423,9 @@ Updated this configuration.
 
 Updated this phrase.
 == フレーズを更新しました。
+
+Updates
+== 更新回数
 
 Updating preview…
 == プレビュー更新中…

@@ -65,7 +65,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 #### 调试 HUD 字体（debug HUD font）
 
 - 定义：调试 HUD 的文字使用 HUD 小字档，字号随视口宽度和单行文字的可用宽度调整。
-- 唯一实现：`ui_token::hud::font::{DEBUG_PRESET, DEBUG_TEXT_REFERENCE_WIDTH, CAPTION}`（`src/game/client/QmUi/UiTokens.h`），由相关绘制入口计算可用宽度。
+- 唯一实现：`ui_token::hud::font::DEBUG_PRESET` 选字体，`ui_token::hud::font::DebugSize` 按 HUD、菜单或像素视口换算小字档（`src/game/client/QmUi/UiTokens.h`）。引擎统计、游戏诊断和菜单控件信息都按可用行宽绘制。
 - 禁止的反面写法：诊断字段各自写固定字号，或让图标字体状态泄漏到诊断字段。
 
 ### 2.1a 组件角色色（component role colors）

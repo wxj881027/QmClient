@@ -51,7 +51,7 @@ public:
 	void Scale(int64_t WantedTotalTime);
 	bool Add(float Value, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f));
 	bool InsertAt(int64_t Time, float Value, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f));
-	void Render(IGraphics *pGraphics, ITextRender *pTextRender, float x, float y, float w, float h, const char *pDescription);
+	void Render(IGraphics *pGraphics, ITextRender *pTextRender, float x, float y, float w, float h, float FontSize, const char *pDescription, const char *pFooter = nullptr);
 };
 
 #endif

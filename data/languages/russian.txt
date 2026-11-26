@@ -1542,6 +1542,9 @@ Available rescue modes: auto, manual
 Available resolutions
 == Доступные разрешения
 
+Average payload
+== Средняя полезная нагрузка
+
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Средн. %.*f   ↓ %.*f   ↑ %.*f
 
@@ -1968,6 +1971,9 @@ Brutal
 Bubble opacity
 == Непрозрачность пузырька
 
+Buffer memory
+== Память буферов
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
@@ -2012,6 +2018,9 @@ By player name
 
 By row
 == По строкам
+
+Bytes per update
+== Байт на обновление
 
 c = Player position
 == c = Позиция игрока
@@ -6198,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == Фраги
 
+Frame rate
+== Частота кадров
+
 Frame time
 == Время кадра
 
@@ -6383,6 +6395,9 @@ Functions
 
 Game
 == Игра
+
+Game / predicted tick
+== Игровой / прогнозируемый тик
 
 Game assets
 == Игровые ресурсы
@@ -7128,6 +7143,9 @@ Horizontal position
 Horizontal speed × ramp
 == Горизонтальная скорость × множитель
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== Горизонтальная скорость × множитель (от %d до %d блоков/с)
+
 Hostname of DNSBL provider for IP verification
 == Имя хоста провайдера DNSBL для проверки IP
 
@@ -7136,6 +7154,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == Наведите для подсказки
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== Под курсором: %p   Далее: %p   Активный: %p   Предыдущий активный: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == Насколько колесо или перетаскивание может выйти за край, в пикселях UI; 0 отключает
@@ -10419,6 +10440,9 @@ p = Ping latency
 Pack name
 == Имя пакета
 
+packets
+== пак.
+
 Panel
 == Панель
 
@@ -10550,6 +10574,9 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == Поставить/снять игру на паузу
+
+Peak speed: %.2f blocks/s
+== Пиковая скорость: %.2f блоков/с
 
 Penalty in seconds for saving or swapping positions
 == Штраф в секундах за сохранение или обмен позициями
@@ -11208,6 +11235,9 @@ Prediction margin
 Prediction margin when frozen
 == Отступ предсказания при заморозке
 
+Prediction time
+== Время предсказания
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == Предсказание обменивает точность на отзывчивость; избыточность может утроить исходящий трафик. «Приоритет игрового трафика» лишь помечает пакеты в Windows и требует QoS-совместимый маршрутизатор.
 
@@ -11412,8 +11442,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == Вероятность отправки сообщения о заморозке в чат (0-100%)
 
+Process UDP receive (estimated)
+== Приём UDP процессом (оценка)
+
 Process UDP RX (est.)
 == Приём UDP процессом (оценка)
+
+Process UDP send (estimated)
+== Отправка UDP процессом (оценка)
 
 Process UDP TX (est.)
 == Отправка UDP процессом (оценка)
@@ -13878,9 +13914,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == Показывать флаг на табличке с именем
 
-Show FPS, prediction time, and performance graphs
-== Показывать FPS, время предсказания и графики производительности
-
 Show freeze bar under frozen players indicating thaw time
 == Показывать полосу заморозки под замороженными игроками, указывающую время разморозки
 
@@ -14285,6 +14318,9 @@ Show pending crash reports on startup
 
 Show per-character title waves locally
 == Показывать волнообразное движение букв титула у себя
+
+Show performance graphs.
+== Показывать графики производительности.
 
 Show pet
 == Показывать питомца
@@ -15246,6 +15282,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Интенсивность деформации упругого Tee
 
+Staging memory
+== Промежуточная память
+
 Standalone
 == Отдельно
 
@@ -15443,6 +15482,9 @@ Store the current practice tee state as the respawn point
 
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == Сохраняет текущее состояние Tee (позицию, оружие, прыжки и состояние движения) как точку возрождения практики.
+
+Streamed memory
+== Потоковая память
 
 Streamer mode
 == Режим стримера
@@ -16049,6 +16091,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 
 Text is too long for the selected translation service.
 == Текст превышает ограничение длины выбранного сервиса перевода.
+
+Texture memory
+== Память текстур
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Спасибо за вашу компанию и доверие. Именно это даёт мне смелость продолжать.
@@ -16695,6 +16740,9 @@ Top right
 Total
 == Всего
 
+Total bytes
+== Всего байт
+
 Total fonts:
 == Всего шрифтов:
 
@@ -16896,6 +16944,9 @@ Tune variable to value or show current value
 Tune zone (map / override)
 == Зона настроек (карта / переопределение)
 
+Tuning parameter
+== Параметр настройки
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == На слабых машинах выключите: карточки открываются и прокручиваются сразу. Форма курсора только внешняя: все три стиля занимают одно знакоместо.
 
@@ -16986,6 +17037,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == Включите звук, затем выберите устройство; список берётся из аудиобэкенда при запуске.
 
+Turning point (%d to %d blocks/s)
+== Точка перегиба (от %d до %d блоков/с)
+
 Turning this off only changes your display.
 == Отключение влияет только на отображение у вас.
 
@@ -17024,6 +17078,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == Введите слово — результаты фильтруются по мере ввода, охватывая карточки и названия конфигов.
+
+Type ID
+== Код типа
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == Введите текст в поиске или переключитесь на Все, Избранное и Недавние, клик по скину применяет его, а значок плюса ставит в очередь.
@@ -17265,6 +17322,9 @@ Unknown status
 Unknown title style
 == Неизвестный стиль титула
 
+Unknown UUID
+== Неизвестный UUID
+
 Unlimited
 == Без ограничения
 
@@ -17363,6 +17423,9 @@ Updated this configuration.
 
 Updated this phrase.
 == Фраза обновлена.
+
+Updates
+== Обновления
 
 Updating preview…
 == Обновление предпросмотра…

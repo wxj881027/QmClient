@@ -8,6 +8,7 @@
 
 #include <game/localization.h>
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -262,9 +263,8 @@ void CGraph::RenderDataLines(IGraphics *pGraphics, float x, float y, float w, fl
 	pGraphics->LinesBatchEnd(&LineItemBatch);
 }
 
-void CGraph::Render(IGraphics *pGraphics, ITextRender *pTextRender, float x, float y, float w, float h, const char *pDescription)
+void CGraph::Render(IGraphics *pGraphics, ITextRender *pTextRender, float x, float y, float w, float h, float FontSize, const char *pDescription, const char *pFooter)
 {
-	const float FontSize = 12.0f;
 	const float Spacing = 2.0f;
 	const float HeaderHeight = FontSize + 2.0f * Spacing;
 
@@ -292,19 +292,24 @@ void CGraph::Render(IGraphics *pGraphics, ITextRender *pTextRender, float x, flo
 
 	RenderDataLines(pGraphics, ItemGraph.m_X, ItemGraph.m_Y + 1.0f, ItemGraph.m_Width, ItemGraph.m_Height + 2.0f);
 
-	char aBuf[128];
-
-	pTextRender->Text(ItemHeader.m_X + Spacing, ItemHeader.m_Y + Spacing, FontSize, pDescription);
-
+	auto DrawCaption = [&](const IGraphics::CQuadItem &Band, const char *pLabel, float AxisValue) {
+		char aAxis[64];
+		str_format(aAxis, sizeof(aAxis), "%.*f", m_Precision, AxisValue);
+		const float AxisWidth = pTextRender->TextWidth(FontSize, aAxis);
+		const float Available = Band.m_Width - AxisWidth - 3.0f * Spacing;
+		if(pLabel && Available > 0.0f)
+		{
+			const float Size = FontSize * std::min(1.0f, Available / std::max(1.0f, pTextRender->TextWidth(FontSize, pLabel)));
+			pTextRender->Text(Band.m_X + Spacing, Band.m_Y + Spacing, Size, pLabel);
+		}
+		pTextRender->Text(Band.m_X + Band.m_Width - AxisWidth - Spacing, Band.m_Y + Spacing, FontSize, aAxis);
+	};
+	DrawCaption(ItemHeader, pDescription, m_MaxAxis);
+	char aSummary[128];
 	if(m_SummaryStats)
 	{
-		str_format(aBuf, sizeof(aBuf), Localize("Avg %.*f   ↓ %.*f   ↑ %.*f"), m_Precision, m_Average, m_Precision, m_MinValue, m_Precision, m_MaxValue);
-		pTextRender->Text(ItemFooter.m_X + Spacing, ItemFooter.m_Y + ItemFooter.m_Height - FontSize - Spacing, FontSize, aBuf);
+		str_format(aSummary, sizeof(aSummary), Localize("Avg %.*f   ↓ %.*f   ↑ %.*f"), m_Precision, m_Average, m_Precision, m_MinValue, m_Precision, m_MaxValue);
+		pFooter = aSummary;
 	}
-
-	str_format(aBuf, sizeof(aBuf), "%.*f", m_Precision, m_MaxAxis);
-	pTextRender->Text(ItemHeader.m_X + ItemHeader.m_Width - pTextRender->TextWidth(FontSize, aBuf) - Spacing, ItemHeader.m_Y + Spacing, FontSize, aBuf);
-
-	str_format(aBuf, sizeof(aBuf), "%.*f", m_Precision, m_MinAxis);
-	pTextRender->Text(ItemFooter.m_X + ItemFooter.m_Width - pTextRender->TextWidth(FontSize, aBuf) - Spacing, ItemFooter.m_Y + ItemFooter.m_Height - FontSize - Spacing, FontSize, aBuf);
+	DrawCaption(ItemFooter, pFooter, m_MinAxis);
 }

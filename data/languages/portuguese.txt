@@ -1542,6 +1542,9 @@ Available rescue modes: auto, manual
 Available resolutions
 == Resoluções disponíveis
 
+Average payload
+== Carga útil média
+
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Média %.*f   ↓ %.*f   ↑ %.*f
 
@@ -1968,6 +1971,9 @@ Brutal
 Bubble opacity
 == Opacidade da bolha
 
+Buffer memory
+== Memória de buffer
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
@@ -2012,6 +2018,9 @@ By player name
 
 By row
 == Por linha
+
+Bytes per update
+== Bytes por atualização
 
 c = Player position
 == c = Posição do jogador
@@ -6198,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == Eliminações
 
+Frame rate
+== Taxa de frames
+
 Frame time
 == Tempo de fotograma
 
@@ -6383,6 +6395,9 @@ Functions
 
 Game
 == Jogo
+
+Game / predicted tick
+== Tick do jogo / previsto
 
 Game assets
 == Recursos do jogo
@@ -7128,6 +7143,9 @@ Horizontal position
 Horizontal speed × ramp
 == Velocidade horizontal × fator
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== Velocidade horizontal × fator (%d a %d blocos/s)
+
 Hostname of DNSBL provider for IP verification
 == Nome do host do provedor DNSBL para verificação de IP
 
@@ -7136,6 +7154,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == Passe o rato para ver a dica
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== Sob o cursor: %p   Seguinte: %p   Ativo: %p   Último ativo: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == Quanto a roda ou o arrasto pode ultrapassar o fim, em píxeis de UI; 0 desativa
@@ -10419,6 +10440,9 @@ p = Ping latency
 Pack name
 == Nome do pacote
 
+packets
+== pacotes
+
 Panel
 == Painel
 
@@ -10550,6 +10574,9 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == Pausar/despausar jogo
+
+Peak speed: %.2f blocks/s
+== Velocidade máxima: %.2f blocos/s
 
 Penalty in seconds for saving or swapping positions
 == Penalidade em segundos por guardar ou trocar posições
@@ -11208,6 +11235,9 @@ Prediction margin
 Prediction margin when frozen
 == Margem de previsão quando congelado
 
+Prediction time
+== Tempo de previsão
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == A predição troca precisão por resposta; a redundância pode triplicar o tráfego de envio. "Priorizar tráfego de jogo" apenas marca pacotes no Windows e exige um router com QoS.
 
@@ -11412,8 +11442,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == Probabilidade de enviar mensagem de chat de congelamento (0-100%)
 
+Process UDP receive (estimated)
+== Receção UDP do processo (estimativa)
+
 Process UDP RX (est.)
 == Receção UDP do processo (estimada)
+
+Process UDP send (estimated)
+== Envio UDP do processo (estimativa)
 
 Process UDP TX (est.)
 == Envio UDP do processo (estimado)
@@ -13878,9 +13914,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == Mostrar bandeira na placa de nome
 
-Show FPS, prediction time, and performance graphs
-== Mostrar FPS, tempo de previsão e gráficos de desempenho
-
 Show freeze bar under frozen players indicating thaw time
 == Mostrar barra de congelamento sob jogadores congelados indicando tempo de descongelamento
 
@@ -14285,6 +14318,9 @@ Show pending crash reports on startup
 
 Show per-character title waves locally
 == Mostrar a ondulação das letras dos títulos no meu ecrã
+
+Show performance graphs.
+== Mostrar gráficos de desempenho.
 
 Show pet
 == Mostrar mascote
@@ -15246,6 +15282,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Intensidade da deformação do Tee elástico
 
+Staging memory
+== Memória de staging
+
 Standalone
 == Separada
 
@@ -15443,6 +15482,9 @@ Store the current practice tee state as the respawn point
 
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == Guarda o estado atual do tee (posição, armas, saltos e estado de movimento) como ponto de renascimento da prática.
+
+Streamed memory
+== Memória de streaming
 
 Streamer mode
 == Modo streamer
@@ -16049,6 +16091,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 
 Text is too long for the selected translation service.
 == O texto excede o limite de tamanho do serviço de tradução selecionado.
+
+Texture memory
+== Memória de texturas
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Obrigado pela sua companhia e confiança. É isto que me dá coragem para continuar.
@@ -16695,6 +16740,9 @@ Top right
 Total
 == Total
 
+Total bytes
+== Total de bytes
+
 Total fonts:
 == Total de tipos de letra:
 
@@ -16896,6 +16944,9 @@ Tune variable to value or show current value
 Tune zone (map / override)
 == Zona de ajuste (mapa / substituição)
 
+Tuning parameter
+== Parâmetro de afinação
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == Em máquinas modestas, desligue: os cartões abrem e deslocam-se imediatamente. A forma do cursor é apenas estética: os três estilos ocupam a mesma célula.
 
@@ -16986,6 +17037,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == Liga o som e escolhe um dispositivo; a lista vem do backend de áudio no arranque.
 
+Turning point (%d to %d blocks/s)
+== Ponto de inflexão (%d a %d blocos/s)
+
 Turning this off only changes your display.
 == Desativar altera apenas a apresentação no teu ecrã.
 
@@ -17024,6 +17078,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == Escreve uma palavra; os resultados filtram-se à medida que escreves, nos cartões e nos nomes de configuração.
+
+Type ID
+== ID do tipo
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == Escreve na pesquisa ou alterna entre Todas, Favoritas e Recentes, clica numa skin para a aplicar e usa o ícone de mais para a pôr em fila.
@@ -17265,6 +17322,9 @@ Unknown status
 Unknown title style
 == Estilo de título desconhecido
 
+Unknown UUID
+== UUID desconhecido
+
 Unlimited
 == Sem limite
 
@@ -17363,6 +17423,9 @@ Updated this configuration.
 
 Updated this phrase.
 == Frase atualizada.
+
+Updates
+== Atualizações
 
 Updating preview…
 == A atualizar a pré-visualização…

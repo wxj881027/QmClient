@@ -1542,6 +1542,9 @@ Available rescue modes: auto, manual
 Available resolutions
 == 사용 가능한 해상도
 
+Average payload
+== 평균 페이로드
+
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 평균 %.*f   ↓ %.*f   ↑ %.*f
 
@@ -1968,6 +1971,9 @@ Brutal
 Bubble opacity
 == 말풍선 불투명도
 
+Buffer memory
+== 버퍼 메모리
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
@@ -2012,6 +2018,9 @@ By player name
 
 By row
 == 줄마다
+
+Bytes per update
+== 갱신당 바이트
 
 c = Player position
 == c = 플레이어 위치
@@ -6198,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == 킬 수
 
+Frame rate
+== 프레임 속도
+
 Frame time
 == 프레임 시간
 
@@ -6383,6 +6395,9 @@ Functions
 
 Game
 == 게임
+
+Game / predicted tick
+== 게임 틱 / 예측 틱
 
 Game assets
 == 게임 에셋
@@ -7128,6 +7143,9 @@ Horizontal position
 Horizontal speed × ramp
 == 가로 속도 × 보정 배율
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== 수평 속도 × 속도 배율 (%d~%d 블록/초)
+
 Hostname of DNSBL provider for IP verification
 == IP 확인용 DNSBL 제공자 호스트명
 
@@ -7136,6 +7154,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == 툴팁을 보려면 마우스를 올리세요
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== 가리킨 항목: %p   다음 항목: %p   활성 항목: %p   이전 활성 항목: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == 휠이나 드래그로 끝을 넘어 밀 수 있는 거리(UI 픽셀)입니다. 0이면 끕니다
@@ -10419,6 +10440,9 @@ p = Ping latency
 Pack name
 == 팩 이름
 
+packets
+== 패킷
+
 Panel
 == 패널
 
@@ -10550,6 +10574,9 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == 게임 일시정지/재개
+
+Peak speed: %.2f blocks/s
+== 최고 속도: %.2f 블록/초
 
 Penalty in seconds for saving or swapping positions
 == 위치 저장 또는 교체에 대한 초 단위 패널티
@@ -11208,6 +11235,9 @@ Prediction margin
 Prediction margin when frozen
 == 얼었을 때 예측 여백
 
+Prediction time
+== 예측 시간
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == 예측은 정확도를 반응성과 맞바꿉니다. 상향 중복 전송은 업로드 트래픽을 3배로 늘립니다. "게임 트래픽 우선"은 Windows에서 패킷에 표시만 하며 QoS를 인식하는 공유기가 있어야 효과가 있습니다.
 
@@ -11412,8 +11442,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == 얼음 채팅 메시지 전송 확률 (0-100%)
 
+Process UDP receive (estimated)
+== 프로세스 UDP 수신 (추정)
+
 Process UDP RX (est.)
 == 프로세스 UDP 수신(추정)
+
+Process UDP send (estimated)
+== 프로세스 UDP 송신 (추정)
 
 Process UDP TX (est.)
 == 프로세스 UDP 전송(추정)
@@ -13878,9 +13914,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == 이름표에 국기 표시
 
-Show FPS, prediction time, and performance graphs
-== FPS, 예측 시간 및 성능 그래프 표시
-
 Show freeze bar under frozen players indicating thaw time
 == 얼어붙은 플레이어 아래에 해동 시간을 나타내는 프리즈 바 표시
 
@@ -14285,6 +14318,9 @@ Show pending crash reports on startup
 
 Show per-character title waves locally
 == 내 화면에서 칭호 글자 물결 효과 표시
+
+Show performance graphs.
+== 성능 그래프 표시
 
 Show pet
 == 펫 표시
@@ -15246,6 +15282,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 탄 Tee 변형 강도
 
+Staging memory
+== 스테이징 메모리
+
 Standalone
 == 별도 표시
 
@@ -15443,6 +15482,9 @@ Store the current practice tee state as the respawn point
 
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == 현재 Tee 상태(위치, 무기, 점프, 이동 상태)를 연습 리스폰 지점으로 저장합니다.
+
+Streamed memory
+== 스트리밍 메모리
 
 Streamer mode
 == 스트리머 모드
@@ -16049,6 +16091,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 
 Text is too long for the selected translation service.
 == 텍스트가 선택한 번역 서비스의 길이 제한을 초과합니다.
+
+Texture memory
+== 텍스처 메모리
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == 당신의 동행과 신뢰에 감사드립니다. 그것이 제가 계속 나아갈 용기를 주는 것입니다.
@@ -16695,6 +16740,9 @@ Top right
 Total
 == 합계
 
+Total bytes
+== 총 바이트
+
 Total fonts:
 == 전체 글꼴:
 
@@ -16896,6 +16944,9 @@ Tune variable to value or show current value
 Tune zone (map / override)
 == 튜닝 구역 (맵 / 덮어쓰기)
 
+Tuning parameter
+== 튜닝 매개변수
+
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 성능이 낮은 기기에서는 끄세요. 카드가 즉시 열리고 스크롤도 즉시 반응합니다. 커서 모양은 겉모양일 뿐이며 세 가지 모두 같은 문자 셀에 들어갑니다.
 
@@ -16986,6 +17037,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == 소리를 켠 다음 장치를 선택하세요. 목록은 시작할 때 오디오 백엔드에서 가져옵니다.
 
+Turning point (%d to %d blocks/s)
+== 속도 전환점 (%d~%d 블록/초)
+
 Turning this off only changes your display.
 == 끄면 내 화면의 표시만 변경됩니다.
 
@@ -17024,6 +17078,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == 단어를 입력하면 카드와 설정 이름을 대상으로 입력하는 대로 결과가 걸러집니다.
+
+Type ID
+== 유형 ID
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == 검색란에 입력하거나 모두, 즐겨찾기, 최근을 전환하고, 스킨을 클릭하면 바로 적용되며 더하기 아이콘으로 대기열에 넣습니다.
@@ -17265,6 +17322,9 @@ Unknown status
 Unknown title style
 == 알 수 없는 칭호 스타일
 
+Unknown UUID
+== 알 수 없는 UUID
+
 Unlimited
 == 무제한
 
@@ -17363,6 +17423,9 @@ Updated this configuration.
 
 Updated this phrase.
 == 문구를 업데이트했습니다.
+
+Updates
+== 갱신 횟수
 
 Updating preview…
 == 미리보기 업데이트 중…

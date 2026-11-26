@@ -1315,6 +1315,13 @@ namespace ui_token::hud::font
 	inline constexpr float CAPTION = 6.0f;
 	inline constexpr EFontPreset DEBUG_PRESET = EFontPreset::DEFAULT_FONT;
 	inline constexpr float DEBUG_TEXT_REFERENCE_WIDTH = 400.0f;
+
+	// 以 HUD 的 300 单位高度为基准，像素图表和菜单也使用同一档实际字号。
+	inline float DebugSize(float Width, float Height)
+	{
+		const float Scale = Height / 300.0f;
+		return CAPTION * std::clamp(Width / DEBUG_TEXT_REFERENCE_WIDTH, 0.65f * Scale, Scale);
+	}
 	// 正文：HUD 面板里成行的说明与数值标签。
 	inline constexpr float BODY = 8.0f;
 	// 标题：HUD 面板标题、区域名。

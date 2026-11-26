@@ -526,6 +526,7 @@ Automatically take statboard screenshot
 Available practice commands: 
 Available rescue modes: auto, manual
 Available resolutions
+Average payload
 Avg %.*f   ↓ %.*f   ↑ %.*f
 Axiom API returned an error
 Axiom auto login failed
@@ -676,6 +677,7 @@ Browse font store…
 Browser
 Brutal
 Bubble opacity
+Buffer memory
 Build the status text shown above Tees
 Built-in
 Built-in cfg is empty - nothing was installed
@@ -693,6 +695,7 @@ By player
 By player name
 By row
 Bytes in the generated bind line; over the limit the server rejects it.
+Bytes per update
 c = Player position
 Calculate unfinished maps for player in certain mode
 Call vote
@@ -2139,6 +2142,7 @@ FPM
 FPS
 Fraction of players needed to pass a vote
 Frags
+Frame rate
 Frame time
 Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
 Frames drawn per second when V-Sync is off; 0 = unlimited
@@ -2202,6 +2206,7 @@ Fully block enemy players
 Fun
 Functions
 Game
+Game / predicted tick
 Game assets
 Game graphics assets not from Teeworlds
 Game info
@@ -2458,9 +2463,11 @@ Hookable tiles
 Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 Horizontal speed × ramp
+Horizontal speed × ramp (%d to %d blocks/s)
 Hostname of DNSBL provider for IP verification
 Hover feedback style: 0 = scale, 1 = border highlight
 Hover for tooltip
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 How far the plasma gun tracks a tee
 How far the tractor tracks a tee
@@ -3617,6 +3624,7 @@ Own hook line width
 Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
 p = Ping latency
 Pack name
+packets
 Panel
 Panel opacity
 Parent Folder
@@ -3662,6 +3670,7 @@ Pause the current demo
 Pause video rendering when demo playback is paused
 Pause voice when window unfocused
 Pause/unpause game
+Peak speed: %.2f blocks/s
 Penalty in seconds for saving or swapping positions
 Per-name volume (name=percent)
 Performance mode
@@ -3885,6 +3894,7 @@ Prediction lead
 Prediction lead is high, check prediction settings and server timing
 Prediction margin
 Prediction margin when frozen
+Prediction time
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 Preparing chat export: %d%%
@@ -3956,7 +3966,9 @@ Prioritize outgoing game traffic on Windows (best effort)
 Privately messages someone's current time in this current running race (your time by default)
 Privately shows you your current time in this current running race in the broadcast message
 Probability of sending freeze chat message (0-100%)
+Process UDP receive (estimated)
 Process UDP RX (est.)
+Process UDP send (estimated)
 Process UDP TX (est.)
 Profiles
 Profiles file
@@ -4796,7 +4808,6 @@ Show finish messages
 Show finish summary
 Show finish summary in Dynamic Island
 Show flag on name plate
-Show FPS, prediction time, and performance graphs
 Show freeze bar under frozen players indicating thaw time
 Show freeze bars
 Show freeze tile outlines
@@ -4933,6 +4944,7 @@ Show pause/play indicator when changing
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 Show pending crash reports on startup
 Show per-character title waves locally
+Show performance graphs.
 Show pet
 Show ping colored circle in nameplates
 Show ping ring on name plate
@@ -5255,6 +5267,7 @@ Spring settle time; lower is snappier, higher feels heavier
 SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
+Staging memory
 Standalone
 Standard
 Star
@@ -5326,6 +5339,7 @@ Stop server
 Stop the current demo
 Store the current practice tee state as the respawn point
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+Streamed memory
 Streamer mode
 Streamer word list file
 Strength icons assets
@@ -5538,6 +5552,7 @@ Text color mode
 Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
 Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
 Text is too long for the selected translation service.
+Texture memory
 Thank you for your company and trust. This is what gives me the courage to keep going.
 Thanks for supporting QmClient
 That link would close a loop
@@ -5763,6 +5778,7 @@ Tooltips
 Top left
 Top right
 Total
+Total bytes
 Total fonts:
 Total friends
 Total hours
@@ -5830,6 +5846,7 @@ Tune in zone a variable to value
 Tune variable to value
 Tune variable to value or show current value
 Tune zone (map / override)
+Tuning parameter
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
@@ -5860,6 +5877,7 @@ Turn on "Weapon switch animation" or "Play a flip animation while reloading weap
 Turn on LX Music open API
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
+Turning point (%d to %d blocks/s)
 Turning this off only changes your display.
 Turns controller input on and maps stick axes to aiming, with speed settings for play and for menus.
 Turns important server prompts and Echo messages into short popups instead of plain lines in the chat box.
@@ -5873,6 +5891,7 @@ Type
 Type a map name or choose one from the list.
 Type a map name or pick one below
 Type a word; results filter as you type across cards and config names.
+Type ID
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 Type in the search field to filter, switch between "Sort by key" and "Sort by command", and press "Copy all" to copy the rows.
 Type something...
@@ -5955,6 +5974,7 @@ Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 Unknown sponsor chat style
 Unknown status
 Unknown title style
+Unknown UUID
 Unlimited
 Unload the rank ghost
 Unlock a team
@@ -5991,6 +6011,7 @@ Update ready to install
 Update sources are temporarily unavailable
 Updated this configuration.
 Updated this phrase.
+Updates
 Updating preview…
 Updating public word list...
 Upload .map files. Server and admin passwords: s.
