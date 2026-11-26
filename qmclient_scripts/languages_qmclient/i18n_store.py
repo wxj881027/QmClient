@@ -315,16 +315,6 @@ def translation_quality_warnings(
                     if limit is not None and len(warnings) >= limit:
                         return warnings
                     continue
-                # 中文 source 与拉丁文字译文的字符密度不同，不能用同一长度比率判定 UI 风险。
-                if (
-                    not source_keys.has_cjk(key)
-                    and len(key) > 10
-                    and len(translation) > len(key) * 2.5
-                ):
-                    warnings.append(
-                        f"{module_name}: [{context}] {key}: {language} length risk: "
-                        f"source {len(key)} translation {len(translation)}"
-                    )
                 if limit is not None and len(warnings) >= limit:
                     return warnings
     return warnings

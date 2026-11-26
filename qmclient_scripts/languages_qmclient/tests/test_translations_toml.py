@@ -819,36 +819,24 @@ spanish = "Aplicar"
             report.warnings,
         )
 
-    def test_translation_quality_report_warns_for_long_translation(self):
+    def test_translation_quality_does_not_limit_translation_length(self):
         store = {
             "menus": {
                 ("Short label", ""): {
                     "spanish": "Esta traducción es deliberadamente demasiado larga para una etiqueta corta",
                 }
-            }
-        }
-
-        report = i18n_store.translation_quality_report(store)
-
-        self.assertEqual(report.errors, [])
-        self.assertTrue(
-            any("length risk" in item for item in report.warnings),
-            report.warnings,
-        )
-
-    def test_translation_quality_ignores_cross_script_length_ratio(self):
-        store = {
+            },
             "qmclient": {
                 ("中文设置项", ""): {
                     "german": "Eine deutlich längere deutsche Übersetzung für die Einstellung",
                 }
-            }
+            },
         }
 
         report = i18n_store.translation_quality_report(store)
 
         self.assertEqual(report.errors, [])
-        self.assertFalse(any("length risk" in item for item in report.warnings))
+        self.assertEqual(report.warnings, [])
 
     def test_pending_translation_is_one_explicit_warning(self):
         store = {
@@ -865,7 +853,6 @@ spanish = "Aplicar"
         self.assertEqual(len(report.warnings), 1)
         self.assertIn("pending translation placeholder", report.warnings[0])
         self.assertNotIn("placeholder mismatch", report.warnings[0])
-        self.assertNotIn("length risk", report.warnings[0])
 
     def test_validate_module_calls_store_integrity_errors(self):
         validate_path = (
