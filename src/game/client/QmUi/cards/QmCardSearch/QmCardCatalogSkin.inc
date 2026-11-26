@@ -10,7 +10,7 @@ namespace
 		{Localizable("Only affects custom Tee colors."), nullptr, "仅对自定义 Tee 颜色生效。"},
 		{Localizable("Skin outline color"), nullptr, "皮肤描边颜色"},
 		{Localizable("Skin outline for other players"), nullptr, "其他玩家的皮肤描边"},
-		{Localizable("Skin outline for self and dummy"), nullptr, "自己和分身的皮肤描边"},
+		{Localizable("Skin outline for self and dummy"), nullptr, "自己和分身的皮肤描边 皮肤轮廓"},
 		{Localizable("Skin outline opacity"), nullptr, "皮肤描边不透明度"},
 		{Localizable("Skin outline width"), nullptr, "皮肤描边宽度"},
 		{Localizable("When TClient rainbow Tee is enabled, this feature has no effect."), nullptr, "已启用 TClient 彩虹 Tee 时，本功能不会生效。"},

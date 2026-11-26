@@ -6040,6 +6040,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_catalog_search_test.cpp
     src/test/integration/qmclient/settings/qm_search_answer_cards_test.cpp
+    src/test/integration/qmclient/settings/qm_search_placeholder_results_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_spectator_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
@@ -6383,6 +6384,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/qmclient/friend_code.cpp
     src/game/client/components/qmclient/search_answers.cpp
+    src/game/client/components/qmclient/settings_global_search_cache.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/game/client/render_tee_geometry.cpp
     src/game/client/components/section_loader.cpp

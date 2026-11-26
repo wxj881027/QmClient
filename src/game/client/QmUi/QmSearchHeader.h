@@ -69,6 +69,34 @@ namespace qm_search_header
 		"聊天气泡",
 		"语音没有声音怎么办",
 		"客户端ID",
+		"跨服跟随好友",
+		"音频包编辑器",
+		"材质编辑器",
+		"怎么隐藏雪花特效",
+		"单人分身",
+		"禅模式",
+		"Gores自动切锤",
+		"Gores落水榜",
+		"Axiom自动登录",
+		"计分板游玩时长",
+		"分身小窗",
+		"分身距离连线",
+		"按键显示",
+		"角色拖尾",
+		"果冻变形",
+		"皮肤描边",
+		"队伍光晕",
+		"皮肤轮换",
+		"地图预览",
+		"地图标签",
+		"怎么把回放导出成视频",
+		"高清合影截图",
+		"进队怎么自动锁队",
+		"关键词自动回复",
+		"机关门倒计时",
+		"漏踩CP怎么提示",
+		"全屏打字看不到输入法",
+		"F1怎么搜日志",
 	};
 	inline constexpr int NUM_SEARCH_PLACEHOLDERS = sizeof(SEARCH_PLACEHOLDERS) / sizeof(SEARCH_PLACEHOLDERS[0]);
 
@@ -122,6 +150,10 @@ namespace qm_search_header
 		const char *Text() const { return SPLASHES[std::max(0, m_Index)]; }
 		int LogoIndex() const { return m_LogoIndex; }
 		const char *Placeholder() const { return SEARCH_PLACEHOLDERS[std::max(0, m_PlaceholderIndex)]; }
+		const char *PlaceholderForSubmit(const char *pQuery, bool EnterSubmitted, bool SearchClicked) const
+		{
+			return (EnterSubmitted || SearchClicked) && (pQuery == nullptr || pQuery[0] == '\0') ? Placeholder() : nullptr;
+		}
 	};
 
 	struct SLayout

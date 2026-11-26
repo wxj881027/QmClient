@@ -51,6 +51,38 @@ TEST(QmSearchHeader, EveryPlaceholderCanBeSelectedOnFirstEntry)
 	}
 }
 
+TEST(QmSearchHeader, EnterAndSearchButtonSubmitOnlyTheVisiblePlaceholder)
+{
+	qm_search_header::CSession Session;
+	Session.Enter(1, 0, 0, 3);
+	const char *apEmpty[] = {nullptr, ""};
+	for(const char *pBlank : apEmpty)
+	{
+		EXPECT_EQ(Session.PlaceholderForSubmit(pBlank, false, false), nullptr);
+		EXPECT_STREQ(Session.PlaceholderForSubmit(pBlank, true, false), Session.Placeholder());
+		EXPECT_STREQ(Session.PlaceholderForSubmit(pBlank, false, true), Session.Placeholder());
+	}
+	for(const char *pQuery : {" ", "　", " \t　", "地图", "　我的搜索  ", Session.Placeholder()})
+	{
+		SCOPED_TRACE(pQuery);
+		EXPECT_EQ(Session.PlaceholderForSubmit(pQuery, true, false), nullptr);
+		EXPECT_EQ(Session.PlaceholderForSubmit(pQuery, false, true), nullptr);
+	}
+}
+
+TEST(QmSearchHeader, ClearingAndResubmittingUsesTheCurrentlyDisplayedPlaceholder)
+{
+	qm_search_header::CSession Session;
+	Session.Enter(1, 0, 0, 5);
+	const char *pFirstQuery = Session.PlaceholderForSubmit("", false, true);
+	ASSERT_STREQ(pFirstQuery, Session.Placeholder());
+	Session.Enter(2, 0, 0, 5);
+	EXPECT_EQ(Session.PlaceholderForSubmit(pFirstQuery, true, false), nullptr);
+	const char *pNextQuery = Session.PlaceholderForSubmit("", true, false);
+	EXPECT_STREQ(pNextQuery, Session.Placeholder());
+	EXPECT_STRNE(pNextQuery, pFirstQuery);
+}
+
 TEST(QmSearchHeader, RepeatedFramesKeepTheSamePlaceholder)
 {
 	qm_search_header::CSession Session;

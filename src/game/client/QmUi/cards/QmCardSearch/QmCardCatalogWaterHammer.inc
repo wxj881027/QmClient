@@ -2,7 +2,7 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_water_hammer[] = {
-		{Localizable("Highlight held hammer and hook inputs while frozen"), "qm_water_hammer_highlight", "水域卡锤卡钩高亮 冻结 卡锤 卡钩 按键显示"},
+		{Localizable("Highlight held hammer and hook inputs while frozen"), "qm_water_hammer_highlight", "水域卡锤卡钩高亮 冻结 卡锤 卡钩 按键显示 冻结卡锤高亮 冻结卡钩高亮"},
 		{Localizable("Stuck input display scope"), "qm_water_input_scope", "卡锤 卡钩 显示范围"},
 		{Localizable("Own", "Stuck input display scope"), nullptr, "自己的 本体 分身"},
 		{Localizable("Others", "Stuck input display scope"), nullptr, "别人的 其他玩家"},

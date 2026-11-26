@@ -365,7 +365,7 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_visual_effects[] = {
 		{Localizable("All"), nullptr, "全体"},
 		{Localizable("Blue"), nullptr, "蓝色"},
-		{Localizable("Enable Jelly Tee"), nullptr, "启用 Q 弹 Tee"},
+		{Localizable("Enable Jelly Tee"), nullptr, "启用 Q 弹 Tee 果冻变形 果冻弹跳"},
 		{Localizable("Fake CTF flags"), nullptr, "伪 CTF 旗帜"},
 		{Localizable("Jelly duration"), nullptr, "回弹时长"},
 		{Localizable("Jelly others"), nullptr, "其他玩家也使用 Q 弹 Tee"},

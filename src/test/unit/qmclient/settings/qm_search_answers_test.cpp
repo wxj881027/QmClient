@@ -4,15 +4,31 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 TEST(QmSearchAnswers, EverySearchPlaceholderResolvesToAnAnswer)
 {
+	std::set<std::string_view> Unique;
 	for(const char *pPlaceholder : qm_search_header::SEARCH_PLACEHOLDERS)
 	{
 		SCOPED_TRACE(pPlaceholder);
+		EXPECT_STRNE(pPlaceholder, "");
+		EXPECT_TRUE(Unique.insert(pPlaceholder).second);
 		EXPECT_NE(qm_search_answers::Search(pPlaceholder).m_pAnswer, nullptr);
+	}
+}
+
+TEST(QmSearchAnswers, AnswerIdsAreNonemptyAndUnique)
+{
+	std::set<std::string_view> Ids;
+	for(const auto &Answer : qm_search_answers::Answers())
+	{
+		SCOPED_TRACE(Answer.m_pId);
+		EXPECT_STRNE(Answer.m_pId, "");
+		EXPECT_TRUE(Ids.insert(Answer.m_pId).second);
 	}
 }
 
@@ -36,7 +52,21 @@ TEST(QmSearchAnswers, CommonPhrasingsResolveToTheirAnswer)
 		    SCase{"游戏没有声音怎么办", "game-sound"},
 		    SCase{"语音没声音", "voice-sound"},
 		    SCase{"音乐没有声音", "music-sound"},
-		    SCase{"翻译如何用？", "translation"}})
+		    SCase{"翻译如何用？", "translation"},
+		    SCase{"请问怎么自动跟好友换服？", "follow-friend"},
+		    SCase{"怎么单独换钩子声音？", "edit-audio"},
+		    SCase{"怎么给贴图改色？", "edit-assets"},
+		    SCase{"怎么屏蔽雪花？", "blank-assets"},
+		    SCase{"请问计分板累计小时在哪里？", "scoreboard-stats"},
+		    SCase{"请问小窗口看分身怎么开？", "dummy-window"},
+		    SCase{"分身钩得到吗？", "dummy-link"},
+		    SCase{"进队怎么自动锁队？", "team-lock"},
+		    SCase{"怎么自动接受组队邀请？", "team-invite"},
+		    SCase{"怎么定时换皮肤？", "skin-queue"},
+		    SCase{"怎么把回放导出成视频？", "demo-video"},
+		    SCase{"冻结卡锤高亮怎么开？", "frozen-input"},
+		    SCase{"全屏打字看不到输入法怎么办？", "ime"},
+		    SCase{"怎么调整控制台字号？", "console-search"}})
 	{
 		SCOPED_TRACE(Case.m_pQuery);
 		const auto Result = qm_search_answers::Search(Case.m_pQuery);
