@@ -15682,7 +15682,7 @@ polish = "Dostrój zmienną do wartości lub pokaż bieżącą wartość"
 [[message]]
 key = "Tune zone (map / override)"
 [message.translations]
-simplified_chinese = "调参区（地图 / 覆盖）"
+simplified_chinese = "调参区（地图/覆盖）"
 traditional_chinese = "調參區（地圖 / 覆寫）"
 japanese = "調整ゾーン（マップ / 上書き）"
 korean = "튜닝 구역 (맵 / 덮어쓰기)"
