@@ -4196,6 +4196,9 @@ void CChat::OnRender()
 		CLine &Line = m_aLines[LineIndex];
 		if(!Line.m_Initialized)
 			break;
+		// HUD 编辑器只画固定预览内容，不把这一局的实时聊天快照搬进来。
+		if(HudEditorPreview)
+			continue;
 		if(SkipChatHistoryLine(Focus, Line.m_ClientId, Line.m_ForceVisible, Line.m_ServerMessageClass, LinesToSkip))
 			continue;
 		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
@@ -4302,10 +4305,7 @@ void CChat::OnRender()
 		}
 		if(Line.m_TextContainerIndex.Valid() || RenderChatEmoji)
 		{
-			// 完全透明的行（聊天淡出后进入 HUD 编辑器时状态会被冻结）不算“已经画了内容”，
-			// 否则占位预览会被这些看不见的行压掉，选框里一片空白。
-			if(AnimAlpha > 0.001f)
-				RenderedAnyLines = true;
+			RenderedAnyLines = true;
 			// 横向入场动画不改变 HUD 锚点，避免贴边时边界反馈推动整个聊天区域。
 			ExtendBounds(x, RenderY, ChatRect.w - x, LineHeight);
 			if(Line.m_vMergedAuthors.size() <= 1 && !g_Config.m_ClChatOld && Line.m_pManagedTeeRenderInfo != nullptr)
@@ -4437,7 +4437,13 @@ void CChat::OnRender()
 	}
 	Graphics()->ClipDisable();
 
-	if(VisibleBounds.Valid())
+	if(HudEditorPreview)
+	{
+		// 编辑器选框取聊天元素的完整占位（宽度 × 固定高度），
+		// 不跟着当前画了几行内容自适应。
+		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, ChatRect);
+	}
+	else if(VisibleBounds.Valid())
 		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, VisibleBounds.Rect());
 
 	// 与输入法候选栏相同，浮层覆盖聊天记录，不参与记录布局。
