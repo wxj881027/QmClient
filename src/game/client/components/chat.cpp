@@ -4439,9 +4439,12 @@ void CChat::OnRender()
 
 	if(HudEditorPreview)
 	{
-		// 编辑器选框取聊天元素的完整占位（宽度 × 固定高度），
-		// 不跟着当前画了几行内容自适应。
-		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, ChatRect);
+		// 编辑器选框取聊天元素的真实占位：上沿是展开时的裁剪线
+		// （CHAT_HEIGHT_MIN 在这里是屏幕坐标，不是高度），下沿停在状态栏上边，
+		// 和打开聊天框时历史 + 输入行占据的区域一致，不再垂到屏幕最底部。
+		const float ChatBottom = 300.0f - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
+		const CUIRect ChatElementRect{ChatRect.x, CHAT_HEIGHT_MIN, ChatRect.w, maximum(0.0f, ChatBottom - CHAT_HEIGHT_MIN)};
+		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, ChatElementRect);
 	}
 	else if(VisibleBounds.Valid())
 		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, VisibleBounds.Rect());
