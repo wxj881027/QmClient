@@ -978,9 +978,6 @@ Angle:
 Angular gradient
 == Угловой градиент
 
-Animate country flags
-== Анимация флагов стран
-
 Animated title style id
 == Идентификатор анимированного стиля титула
 
@@ -4973,9 +4970,6 @@ Enable background 3D particle pulse scaling
 
 Enable background 3D particle trail
 == Включить шлейф фоновых 3D-частиц
-
-Enable bounce-in entrance animation when country flags finish loading
-== Анимация упругого появления флагов стран при завершении загрузки
 
 Enable camera drift
 == Включить дрейф камеры

@@ -978,9 +978,6 @@ Angle:
 Angular gradient
 == 각도 그라데이션
 
-Animate country flags
-== 국기 애니메이션
-
 Animated title style id
 == 칭호 애니메이션 스타일 ID
 
@@ -4973,9 +4970,6 @@ Enable background 3D particle pulse scaling
 
 Enable background 3D particle trail
 == 배경 3D 파티클 트레일 활성화
-
-Enable bounce-in entrance animation when country flags finish loading
-== 국기 아이콘 로딩 완료 시 바운스 등장 애니메이션 재생
 
 Enable camera drift
 == 카메라 드리프트 활성화

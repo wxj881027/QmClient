@@ -332,7 +332,6 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					CheckboxRow(&g_Config.m_QmShowhudDummyAngle, "appearance-show-dummy-target-angle", Localize("Show dummy angle in movement info HUD"), &g_Config.m_QmShowhudDummyAngle);
 				}
 				CheckboxRow(&g_Config.m_QmShowLocalTimeSeconds, "appearance-show-local-time-seconds", Localize("Show seconds in local time"), &g_Config.m_QmShowLocalTimeSeconds);
-				CheckboxRow(&g_Config.m_QmCountryFlagAnim, "appearance-animate-country-flags", Localize("Animate country flags"), &g_Config.m_QmCountryFlagAnim);
 				LogPerfStage(Client(), "appearance_hud_ddrace_section", HudDdraceTimer.ElapsedMs(), false, "page=appearance tab=hud section=ddrace");
 				CPerfTimer HudFreezeBarsTimer;
 				CheckboxRow(&g_Config.m_ClShowFreezeBars, "appearance-show-freeze-bars", Localize("Show freeze bars"), &g_Config.m_ClShowFreezeBars);

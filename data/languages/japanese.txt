@@ -978,9 +978,6 @@ Angle:
 Angular gradient
 == 角度グラデーション
 
-Animate country flags
-== 国旗をアニメーション
-
 Animated title style id
 == タイトルのアニメーションスタイル ID
 
@@ -4973,9 +4970,6 @@ Enable background 3D particle pulse scaling
 
 Enable background 3D particle trail
 == 背景 3D パーティクルの軌跡を有効化
-
-Enable bounce-in entrance animation when country flags finish loading
-== 国旗アイコン読み込み完了時にバウンス入場アニメーションを再生
 
 Enable camera drift
 == カメラドリフトを有効化

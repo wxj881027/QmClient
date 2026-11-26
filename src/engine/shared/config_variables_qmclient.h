@@ -81,7 +81,6 @@ MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT |
 MACRO_CONFIG_INT(QmUiScrollBounce, qm_ui_scroll_bounce, 25, 0, 64, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops")
 MACRO_CONFIG_INT(QmUiScrollSpringResponse, qm_ui_scroll_spring_response, 300, 80, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel response time in milliseconds; lower reaches the target sooner")
 MACRO_CONFIG_INT(QmUiScrollSpringDamping, qm_ui_scroll_spring_damping, 90, 50, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel damping ratio in percent; 100 stops without overshoot")
-MACRO_CONFIG_INT(QmCountryFlagAnim, qm_country_flag_anim, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable bounce-in entrance animation when country flags finish loading")
 MACRO_CONFIG_INT(QmUiCardRainbowTitles, qm_ui_card_rainbow_titles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card titles use rainbow colors")
 MACRO_CONFIG_INT(QmUiCardBorders, qm_ui_card_borders, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show settings card borders")
 MACRO_CONFIG_COL(QmUiCardBorderColor, qm_ui_card_border_color, 0x1AFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Settings card border color")

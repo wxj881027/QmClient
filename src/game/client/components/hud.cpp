@@ -32,6 +32,7 @@
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/dummy_miniview_render.h>
+#include <game/client/components/qmclient/local_time_format.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/player_state_hud_bounds.h>
@@ -3766,7 +3767,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 	str_format(aSpectatorBuf, sizeof(aSpectatorBuf), "%d", ShowSpectator ? SpectatorCount : std::max(0, m_MediaIslandAnimState.m_SpectatorDisplayCount));
 
 	char aTimeBuf[16];
-	str_timestamp_format(aTimeBuf, sizeof(aTimeBuf), "%H:%M");
+	QmFormatLocalTime(aTimeBuf, sizeof(aTimeBuf), g_Config.m_QmShowLocalTimeSeconds != 0);
 	if(aTimeBuf[0] == '\0')
 		str_copy(aTimeBuf, "00:00", sizeof(aTimeBuf));
 
@@ -4237,7 +4238,7 @@ void CHud::RenderMediaIsland()
 	str_format(aSpectatorBuf, sizeof(aSpectatorBuf), "%d", std::max(0, AnimState.m_SpectatorDisplayCount));
 
 	char aTimeBuf[16];
-	str_timestamp_format(aTimeBuf, sizeof(aTimeBuf), "%H:%M");
+	QmFormatLocalTime(aTimeBuf, sizeof(aTimeBuf), g_Config.m_QmShowLocalTimeSeconds != 0);
 	if(aTimeBuf[0] == '\0')
 		str_copy(aTimeBuf, "00:00", sizeof(aTimeBuf));
 
@@ -5919,9 +5920,8 @@ void CHud::RenderSpectatorCount()
 		const float BoxWidth = IconWidth + 3.0f + TextWidth + 10.0f;
 
 		const float TimeAnchorX = (m_Width / 7.0f) * 3.0f;
-		const bool Seconds = g_Config.m_QmShowLocalTimeSeconds; // TClient
 		char aTimeStr[16];
-		str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
+		QmFormatLocalTime(aTimeStr, sizeof(aTimeStr), g_Config.m_QmShowLocalTimeSeconds != 0);
 		const float TimeWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
 		const float TimeLeft = TimeAnchorX - (TimeWidth + 15.0f);
 		StartX = TimeLeft - 5.0f - BoxWidth;
@@ -6944,16 +6944,17 @@ void CHud::RenderLocalTime(float x)
 	{
 		m_LocalTimeV2AnimState.Reset();
 
-		char aTimeStr[6];
-		str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
-		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, {x - 30.0f, 0.0f, 25.0f, 12.5f});
-		const CUIRect LocalTimeRect{x - 30.0f, 0.0f, 25.0f, 12.5f};
+		char aTimeStr[16];
+		QmFormatLocalTime(aTimeStr, sizeof(aTimeStr), g_Config.m_QmShowLocalTimeSeconds != 0);
+		const float TextWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
+		const CUIRect LocalTimeRect{x - (TextWidth + 15.0f), 0.0f, TextWidth + 10.0f, 12.5f};
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, LocalTimeRect);
 		Ui()->RenderGaussianBlur(LocalTimeRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 		SRoundedSurfaceParams LocalTimeSurface;
 		LocalTimeSurface.m_Radius = ui_token::radius::BASE;
 		LocalTimeSurface.m_Corners = HudEditorScope.m_Corners;
 		DrawRoundedSurface(Ui(), LocalTimeRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), LocalTimeSurface);
-		TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
+		TextRender()->Text(x - (TextWidth + 10.0f), (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
@@ -6965,10 +6966,8 @@ void CHud::RenderLocalTime(float x)
 	else
 		m_LocalTimeV2AnimState.Reset();
 
-	const bool Seconds = g_Config.m_QmShowLocalTimeSeconds; // TClient
-
 	char aTimeStr[16];
-	str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
+	QmFormatLocalTime(aTimeStr, sizeof(aTimeStr), g_Config.m_QmShowLocalTimeSeconds != 0);
 	const float TextWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
 
 	if(!UseV2LocalTime)

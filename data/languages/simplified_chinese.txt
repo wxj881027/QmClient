@@ -1005,9 +1005,6 @@ Angle:
 Angular gradient
 == 角度渐变
 
-Animate country flags
-== 国旗入场动画
-
 Animated title style id
 == 头衔动态风格 ID
 
@@ -5150,9 +5147,6 @@ Enable background 3D particle pulse scaling
 
 Enable background 3D particle trail
 == 启用背景 3D 粒子拖尾
-
-Enable bounce-in entrance animation when country flags finish loading
-== 国旗图标加载完成时播放弹跳入场动画
 
 Enable camera drift
 == 启用镜头漂移

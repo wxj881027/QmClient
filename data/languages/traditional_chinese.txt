@@ -978,9 +978,6 @@ Angle:
 Angular gradient
 == 角度漸層
 
-Animate country flags
-== 國旗入場動畫
-
 Animated title style id
 == 頭銜動態風格 ID
 
@@ -4973,9 +4970,6 @@ Enable background 3D particle pulse scaling
 
 Enable background 3D particle trail
 == 啟用背景 3D 粒子拖尾
-
-Enable bounce-in entrance animation when country flags finish loading
-== 國旗圖標加載完成時播放彈跳入場動畫
 
 Enable camera drift
 == 啟用鏡頭漂移

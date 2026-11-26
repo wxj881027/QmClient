@@ -5766,6 +5766,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_hud_notifications_legacy_contract_test.cpp
     src/test/contract/qmclient/client/qm_hud_editor_contract_test.cpp
     src/test/unit/qmclient/client/country_flag_anim_start_time_test.cpp
+    src/test/unit/qmclient/client/qm_local_time_format_test.cpp
     src/test/unit/qmclient/client/qm_ime_candidate_failure_test.cpp
     src/test/unit/qmclient/client/qm_ime_platform_test.cpp
     src/test/unit/qmclient/client/qm_serverlist_cache_test.cpp

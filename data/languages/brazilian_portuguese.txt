@@ -978,9 +978,6 @@ Angle:
 Angular gradient
 == Gradiente angular
 
-Animate country flags
-== Animar as bandeiras dos países
-
 Animated title style id
 == ID do estilo de título animado
 
@@ -4973,9 +4970,6 @@ Enable background 3D particle pulse scaling
 
 Enable background 3D particle trail
 == Ativar rastro de partículas 3D de fundo
-
-Enable bounce-in entrance animation when country flags finish loading
-== Ativar animação elástica de entrada ao carregar bandeiras de países
 
 Enable camera drift
 == Ativar deriva da câmera

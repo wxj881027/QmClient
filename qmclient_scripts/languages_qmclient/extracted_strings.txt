@@ -333,7 +333,6 @@ And pick one randomly
 Angle
 Angle:
 Angular gradient
-Animate country flags
 Animated title style id
 Animates the weapon in your hand when you switch or reload, plus an optional hammer rotation mode.
 Animation
@@ -1715,7 +1714,6 @@ Enable background 3D particle flicker
 Enable background 3D particle glow
 Enable background 3D particle pulse scaling
 Enable background 3D particle trail
-Enable bounce-in entrance animation when country flags finish loading
 Enable camera drift
 Enable camera drift effect, slightly drags camera based on speed
 Enable camera path

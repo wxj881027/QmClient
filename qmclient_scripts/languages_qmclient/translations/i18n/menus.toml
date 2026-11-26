@@ -837,22 +837,6 @@ simplified_chinese = "聊天框、表情选择、计分板和观战选择的展�
 traditional_chinese = "聊天框、表情選擇、計分板和觀戰選擇的展示動畫"
 
 [[message]]
-key = "Animate country flags"
-[message.translations]
-simplified_chinese = "国旗入场动画"
-traditional_chinese = "國旗入場動畫"
-japanese = "国旗をアニメーション"
-korean = "국기 애니메이션"
-russian = "Анимация флагов стран"
-german = "Länderflaggen animieren"
-spanish = "Animar las banderas de países"
-french = "Animer les drapeaux des pays"
-brazilian_portuguese = "Animar as bandeiras dos países"
-portuguese = "Animar as bandeiras dos países"
-turkish = "Ülke bayraklarını canlandır"
-polish = "Animuj flagi krajów"
-
-[[message]]
 key = "Animate settings card expand and collapse height changes"
 [message.translations]
 simplified_chinese = "展开或折叠设置卡片时播放高度过渡动画"

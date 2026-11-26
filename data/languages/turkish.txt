@@ -978,9 +978,6 @@ Angle:
 Angular gradient
 == Açısal gradyan
 
-Animate country flags
-== Ülke bayraklarını canlandır
-
 Animated title style id
 == Animasyonlu unvan stili kimliği
 
@@ -4973,9 +4970,6 @@ Enable background 3D particle pulse scaling
 
 Enable background 3D particle trail
 == Arka plan 3D parçacık izlerini etkinleştir
-
-Enable bounce-in entrance animation when country flags finish loading
-== Ülke bayrakları yüklendiğinde zıplayarak giriş animasyonunu etkinleştir
 
 Enable camera drift
 == Kamera sürüklenmesini etkinleştir
