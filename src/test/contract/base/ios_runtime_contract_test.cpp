@@ -50,26 +50,3 @@ TEST(IosRuntime, SocketBreakageIsOnlyDetectedFromIosEpipeFailures)
 	EXPECT_NE(SendBody.find("#if defined(CONF_PLATFORM_IOS)"), std::string::npos);
 	EXPECT_NE(SendBody.find("priv_net_udp_send_failed(sock, addr);"), std::string::npos);
 }
-
-TEST(IosRuntime, ResumeRecreatesSocketsBeforeRestoringMainAndDummyConnections)
-{
-	const std::string ClientSource = ReadTestSourceFile("src/engine/client/client.cpp");
-	const std::string ClientHeader = ReadTestSourceFile("src/engine/client/client.h");
-	const std::string NetworkHeader = ReadTestSourceFile("src/engine/shared/network.h");
-	const std::string RecreateBody = ExtractFunctionBody(ClientSource, "void CClient::RecreateBrokenSockets()");
-
-	ASSERT_FALSE(RecreateBody.empty());
-	EXPECT_NE(NetworkHeader.find("bool SocketIsBroken() const"), std::string::npos);
-	EXPECT_NE(ClientHeader.find("bool m_DummyReconnectOnResume = false;"), std::string::npos);
-	EXPECT_NE(ClientHeader.find("bool ResetSocket();"), std::string::npos);
-	EXPECT_NE(ClientHeader.find("void RecreateBrokenSockets();"), std::string::npos);
-	EXPECT_NE(RecreateBody.find("NetClient.SocketIsBroken()"), std::string::npos);
-	EXPECT_NE(RecreateBody.find("Disconnect();"), std::string::npos);
-	EXPECT_NE(RecreateBody.find("NetClient.Close();"), std::string::npos);
-	const size_t ResetResult = RecreateBody.find("if(!ResetSocket())");
-	ASSERT_NE(ResetResult, std::string::npos);
-	EXPECT_GT(RecreateBody.find("LoadDDNetInfo();"), ResetResult);
-	EXPECT_GT(RecreateBody.find("Connect(aConnectAddress);"), ResetResult);
-	EXPECT_NE(ClientSource.find("else if(m_DummyReconnectOnResume)"), std::string::npos);
-	EXPECT_NE(ClientSource.find("RecreateBrokenSockets();"), std::string::npos);
-}

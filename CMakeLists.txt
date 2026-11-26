@@ -3224,6 +3224,7 @@ if(CLIENT)
     input_tsf.cpp
     input_tsf.h
     input_tsf_sink.h
+    ios_socket_recovery.h
     audio_sdl3.h
     sound_buffer.h
     keynames.cpp
@@ -5580,6 +5581,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/mem_test.cpp
     src/test/unit/server/mutes_test.cpp
     src/test/unit/engine/name_ban_test.cpp
+    src/test/unit/engine/ios_socket_recovery_test.cpp
     src/test/unit/engine/net_test.cpp
     src/test/integration/engine/net_dup_upstream_test.cpp
     src/test/contract/base/net_protocol_contract_test.cpp

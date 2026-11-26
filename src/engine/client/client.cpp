@@ -5,6 +5,7 @@
 
 #include "demoedit.h"
 #include "friends.h"
+#include "ios_socket_recovery.h"
 #include "map_download_request.h"
 #include "map_download_resolver.h"
 #include "message_repack.h"
@@ -2071,26 +2072,14 @@ void CClient::RecreateBrokenSockets()
 	const bool ReconnectDummy = Reconnect && m_DummyConnected;
 	const bool DeactivateDummy = g_Config.m_ClDummy == 0;
 
-	DisconnectInternal();
-	for(CNetClient &NetClient : m_aNetClient)
-		NetClient.Close();
-	if(!ResetSocket())
+	auto QueueDummy = [this, DeactivateDummy]() {
+		// 等主连接就绪后再连接分身。
+		m_DummyReconnectOnResume = true;
+		m_DummyDeactivateOnReconnect = DeactivateDummy;
+	};
+	if(!RestoreIosSockets(*this, m_aNetClient, Reconnect ? aConnectAddress : nullptr, ReconnectDummy, QueueDummy))
 	{
 		log_error("client", "network socket recreation failed");
-		return;
-	}
-	// 重建后的 socket 不包含旧实例加载的 STUN server。
-	LoadDDNetInfo();
-
-	if(Reconnect)
-	{
-		ConnectInternal(aConnectAddress);
-		if(ReconnectDummy)
-		{
-			// 等主连接就绪后再连接分身，沿用既有 dummy 建连流程。
-			m_DummyReconnectOnResume = true;
-			m_DummyDeactivateOnReconnect = DeactivateDummy;
-		}
 	}
 }
 #endif

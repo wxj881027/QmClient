@@ -14,6 +14,11 @@ struct SCardWikiCopy
 	const char *m_pWhat; // 一句话说明这张卡控制什么
 	const char *m_pHow; // 操作路径，使用界面上真实存在的控件名
 	const char *m_pAdvice; // 新手建议或需要留意的副作用
+
+	constexpr SCardWikiCopy(const char *pStableId, const char *pWhat, const char *pHow, const char *pAdvice) :
+		m_pStableId(pStableId), m_pWhat(pWhat), m_pHow(pHow), m_pAdvice(pAdvice)
+	{
+	}
 };
 
 // 弹出的 Wiki 文档：一张卡的三段说明、一个弹窗的完整说明都编译成同一种文档，
