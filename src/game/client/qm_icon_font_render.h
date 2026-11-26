@@ -41,6 +41,12 @@ void QmRenderImmediateFontIcon(TTextRender &TextRender, CTextCursor *pCursor, co
 	TextRender.TextColor(ColorRGBA(1, 1, 1, 1));
 	TextRender.TextOutlineColor(ColorRGBA(1, 1, 1, 1));
 	TextRender.SetRenderFlags(State.m_Flags | TEXT_RENDER_FLAG_ONE_TIME_USE);
+	if(const auto *pCached = TextRender.CachedDrawContainer(pCursor, pText, Length))
+	{
+		State.Restore();
+		TextRender.RenderTextContainer(*pCached, Color, Protection);
+		return;
+	}
 	STextContainerIndex Container;
 	try
 	{

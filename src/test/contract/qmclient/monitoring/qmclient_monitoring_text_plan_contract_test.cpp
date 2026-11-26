@@ -57,7 +57,4 @@ TEST(QmMonitoringTextPlanContract, SettingsStableTextPlanKeysMatchVisibleWrapper
 	EXPECT_NE(SplitScrollbarBody.find("ScrollBar.VMargin(minimum(10.0f, Rect.w * 0.025f), &ScrollBar);"), std::string::npos);
 
 	EXPECT_EQ(Header.find("BuildSettingsScrollbarTextStyle("), std::string::npos);
-	EXPECT_NE(Header.find("SMenuTextStyleKey BuildSettingsShellTitleTextStyle(const CUIRect &Rect, CUIRect *pOutLabel = nullptr) const;"), std::string::npos);
-	EXPECT_NE(Menus.find("BuildSettingsShellTitleTextStyle("), std::string::npos);
-	EXPECT_NE(Menus.find("settings-shell-title"), std::string::npos);
 }

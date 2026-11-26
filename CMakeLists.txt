@@ -6997,6 +6997,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/map_preview_allocation_test.cpp
       src/test/integration/qmclient/ui/qm_settings_action_group_test.cpp
       src/test/integration/qmclient/ui/qm_settings_text_columns_test.cpp
+      src/test/integration/qmclient/ui/qm_settings_text_render_test.cpp
       src/test/integration/qmclient/ui/qm_adaptive_choice_test.cpp
       src/test/integration/qmclient/ui/qm_console_button_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_server_browser_filter_layout_test.cpp

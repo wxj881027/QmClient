@@ -1062,10 +1062,6 @@ namespace ui_token::page_title
 	// 图标的视觉下沉量：字形有内部留白，纯按矩形居中时图标会显得偏高，
 	// 标题「图标 + 文字」的重心因此不稳。按字号比例给一点点下沉。
 	inline constexpr float ICON_Y_OFFSET = 1.5f;
-	// 文字矩形的横向余量。标签渲染器按「最大宽度」断行，而中文没有空格，
-	// 一旦实际推进宽度比给的宽度多出零点几个像素，就会在**字与字之间**断开
-	// （「设置」变成上下两行）。矩形与文字等宽也不安全，必须留 1px。
-	inline constexpr float TEXT_WIDTH_SLACK = 1.0f;
 
 	// 「图标 + 文字」是一个整体：文字若单独按整行居中、图标再挂到它左边，
 	// 组的重心会偏左 (图标宽 + 缝)/2。这里一次算出两个矩形，保证组中心 == 行中心。
@@ -1089,13 +1085,6 @@ namespace ui_token::page_title
 		return Layout;
 	}
 
-	// 传给标签渲染器的最大宽度：自然宽度 + 余量，**向上取整**。
-	// 不能向下截断（(int)40.6 → 40）——那会让「不论窗口什么比例都折行」，
-	// 因为截断后的宽度永远小于文字实际推进宽度。
-	inline int ResolveTitleTextMaxWidth(const float TextWidth)
-	{
-		return (int)std::ceil(std::max(0.0f, TextWidth) + TEXT_WIDTH_SLACK);
-	}
 } // namespace ui_token::page_title
 
 // 面板间距：页面级面板之间、面板与内容之间只用这两档。

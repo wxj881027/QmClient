@@ -108,7 +108,7 @@ inline CTextCursor QmTooltipTextCursor(const CUIRect &Content, float FontSize, f
 	return Cursor;
 }
 
-inline CTextCursor QmTooltipCreateText(ITextRender &TextRender, const SQmTooltipTextLayout &Layout, const char *pText, vec2 Position, STextContainerIndex &Index, bool Ellipsis = false)
+inline CTextCursor QmTooltipCreateText(ITextRender &TextRender, const SQmTooltipTextLayout &Layout, const char *pText, vec2 Position, STextContainerIndex &Index, bool Ellipsis = false, const STextContainerIndex **ppCached = nullptr)
 {
 	CQmTooltipRenderFlags Flags(TextRender);
 	CTextCursor Cursor = QmTooltipTextCursor({Position.x, Position.y, 0, 0}, Layout.m_FontSize, Layout.m_LineWidth, Layout.m_Truncated ? std::max(1, Layout.m_VisibleLines - 1) : 0);
@@ -123,8 +123,15 @@ inline CTextCursor QmTooltipCreateText(ITextRender &TextRender, const SQmTooltip
 	}
 	else if(Layout.m_Truncated)
 		Cursor.m_MaxLines = std::max(1, Layout.m_VisibleLines - 1);
+	if(ppCached)
+		*ppCached = nullptr;
 	if(Layout.m_VisibleLines > 0 && (Ellipsis || !Layout.m_Truncated || Layout.m_VisibleLines > 1))
-		TextRender.CreateTextContainer(Index, &Cursor, pText);
+	{
+		if(ppCached)
+			*ppCached = TextRender.CachedDrawContainer(&Cursor, pText);
+		if(!ppCached || !*ppCached)
+			TextRender.CreateTextContainer(Index, &Cursor, pText);
+	}
 	return Cursor;
 }
 

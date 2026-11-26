@@ -52,6 +52,7 @@
 #include FT_MULTIPLE_MASTERS_H
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <bitset>
 #include <chrono>
@@ -66,6 +67,7 @@
 #include <memory>
 #include <mutex>
 #include <stdexcept>
+#include <string_view>
 #include <thread>
 #include <tuple>
 #include <unordered_map>
@@ -1417,6 +1419,8 @@ public:
 		}
 		return true;
 	}
+
+	FT_Face PreviewFace() const { return m_PreviewFace; }
 
 	void SetFontPreviewFace(const char *pFamilyName)
 	{
@@ -3042,6 +3046,31 @@ class CTextRender : public IEngineTextRender
 	CTextContainerPool<STextContainer> m_TextContainers;
 	int m_FirstPendingTextContainer = -1;
 
+	struct SDrawEntry
+	{
+		STextContainerIndex m_Container;
+		std::string m_Text;
+		CTextCursor m_Input, m_Output;
+		FT_Face m_PreviewFace = nullptr;
+		vec2 m_PixelScale{};
+		EFontPreset m_Preset{};
+		unsigned m_Flags = 0;
+		ColorRGBA m_Fill{};
+	};
+	// 每桶保留最近两项。列表滚动或播放进度不断改变时，旧文字占用的 GPU 容器有上限。
+	std::array<std::array<std::unique_ptr<SDrawEntry>, 2>, 256> m_aDrawCache{};
+
+	void ClearDrawCache()
+	{
+		for(auto &Bucket : m_aDrawCache)
+			for(auto &pEntry : Bucket)
+				if(pEntry)
+				{
+					ReleaseTemporaryTextContainer(pEntry->m_Container);
+					pEntry.reset();
+				}
+	}
+
 	SBufferContainerInfo m_DefaultTextContainerInfo;
 	std::vector<STextCharQuad> m_vTextEffectQuads;
 	std::chrono::nanoseconds m_NextGraphicsRestoreAttempt{0};
@@ -3904,6 +3933,7 @@ public:
 		// 主循环已 ShutdownJobs，未接收的文件字节在此释放。
 		m_pQmSystemFontScan.reset();
 		m_QmFontRestore.Reset();
+		ClearDrawCache();
 		RetryPendingTextContainerDeletions();
 		ClearTextEffectBuffers();
 		InvalidateTextContainers();
@@ -4707,6 +4737,7 @@ public:
 
 	void SetIconFontWeight(int Weight) override
 	{
+		ClearDrawCache();
 		m_pGlyphMap->SetIconFontWeight(Weight);
 		if(m_FontPreset == EFontPreset::ICON_FONT)
 			m_pGlyphMap->SetFontPreset(EFontPreset::ICON_FONT);
@@ -4714,6 +4745,7 @@ public:
 
 	void SetFontLanguageVariant(const char *pLanguageFile) override
 	{
+		ClearDrawCache();
 		for(const auto &Variant : m_vVariants)
 		{
 			if(str_comp(pLanguageFile, Variant.m_aLanguageFile) == 0)
@@ -4848,6 +4880,66 @@ public:
 			TextContainer.m_RenderFlags = m_RenderFlags;
 	}
 
+	const STextContainerIndex *CachedDrawContainer(CTextCursor *pCursor, const char *pText, int Length = -1) override
+	{
+		if(!m_CacheTextDraws || (pCursor->m_Flags & TEXTFLAG_RENDER) == 0)
+			return nullptr;
+
+		if(!pText)
+			pText = "";
+		const std::string_view Text(pText, QmTextLayoutByteLength(pText, Length));
+		const vec2 Scale = Graphics()->ScreenPixelScale();
+		const unsigned Flags = m_RenderFlags & ~TEXT_RENDER_FLAG_ONE_TIME_USE;
+		const size_t Hash = (std::hash<std::string_view>{}(Text) * 31 + std::hash<float>{}(pCursor->m_X)) * 31 + std::hash<float>{}(pCursor->m_Y);
+		auto &Bucket = m_aDrawCache[Hash % m_aDrawCache.size()];
+		for(auto &pEntry : Bucket)
+		{
+			// 回调可能读取每帧变化的颜色，地址相同也必须重新采样。
+			if(pCursor->m_pfnColorSampler == nullptr && pEntry && pEntry->m_Container.Valid() &&
+				pEntry->m_PixelScale == Scale && pEntry->m_Flags == Flags && pEntry->m_Preset == m_FontPreset && pEntry->m_PreviewFace == m_pGlyphMap->PreviewFace() &&
+				pEntry->m_Fill == m_Color && pEntry->m_Text == Text && pEntry->m_Input == *pCursor)
+			{
+				*pCursor = pEntry->m_Output;
+				pEntry.swap(Bucket.front());
+				return &Bucket.front()->m_Container;
+			}
+		}
+
+		auto &pEntry = Bucket.back();
+		if(!pEntry)
+			pEntry = std::make_unique<SDrawEntry>();
+		const unsigned PreviousFlags = m_RenderFlags;
+		try
+		{
+			DeleteTextContainer(pEntry->m_Container);
+			pEntry->m_Text = Text;
+			pEntry->m_Flags = Flags;
+			pEntry->m_Preset = m_FontPreset;
+			pEntry->m_PreviewFace = m_pGlyphMap->PreviewFace();
+			pEntry->m_Fill = m_Color;
+			pEntry->m_PixelScale = Scale;
+			pEntry->m_Input = *pCursor;
+			m_RenderFlags = Flags;
+			CreateTextContainer(pEntry->m_Container, pCursor, pText, static_cast<int>(Text.size()));
+			m_RenderFlags = PreviousFlags;
+			pEntry->m_Output = *pCursor;
+			// 采样上下文只在本次建字形期间有效。
+			if(pCursor->m_pfnColorSampler)
+			{
+				pEntry->m_Input.m_pColorSamplerContext = nullptr;
+				pEntry->m_Output.m_pColorSamplerContext = nullptr;
+			}
+		}
+		catch(...)
+		{
+			m_RenderFlags = PreviousFlags;
+			ReleaseTemporaryTextContainer(pEntry->m_Container);
+			throw;
+		}
+		pEntry.swap(Bucket.front());
+		return &Bucket.front()->m_Container;
+	}
+
 	void TextEx(CTextCursor *pCursor, const char *pText, int Length = -1) override
 	{
 		if((pCursor->m_Flags & TEXTFLAG_RENDER) == 0)
@@ -4856,6 +4948,12 @@ public:
 			STextContainer LayoutContainer;
 			InitTextContainer(LayoutContainer, pCursor);
 			AppendTextContainerImpl(LayoutContainer, pCursor, pText, Length);
+			return;
+		}
+
+		if(const auto *pCached = CachedDrawContainer(pCursor, pText, Length))
+		{
+			RenderTextContainer(*pCached, DefaultTextColor(), DefaultTextOutlineColor());
 			return;
 		}
 
@@ -6148,6 +6246,7 @@ public:
 
 	void OnPreWindowResize() override
 	{
+		ClearDrawCache();
 		RetryPendingTextContainerDeletions();
 		ClearTextEffectBuffers();
 		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
@@ -6165,6 +6264,7 @@ public:
 	{
 		// 旧 GPU 缓冲和选区都已销毁，所有副本句柄须失效，由原 owner 重新排版。
 		InvalidateTextContainers();
+		ClearDrawCache();
 		m_DefaultTextContainerInfo.m_VertBufferBindingIndex = -1;
 		m_TextEffectBufferObject = m_TextEffectBufferContainer = -1;
 		m_vTextEffectQuads.clear();

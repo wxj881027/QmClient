@@ -2961,7 +2961,6 @@ public:
 	void CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps, const SMenuTextStyleKey &StyleKey);
 	SMenuTextStyleKey BuildMenuTextStyleKey(const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps) const;
 	SMenuTextStyleKey SettingsMenuTextPlanStyleKey(const SMenuTextPlanItem &Item) const;
-	SMenuTextStyleKey BuildSettingsShellTitleTextStyle(const CUIRect &Rect, CUIRect *pOutLabel = nullptr) const;
 	SMenuTextPlanItem AddStableTextDefault(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, float Width, float Height, float FontSize, int Align = TEXTALIGN_ML, const char *pSourceTag = nullptr) const;
 	SMenuTextPlanItem AddStableTextLabel(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect &Rect, float FontSize, int Align = TEXTALIGN_ML, const SLabelProperties &LabelProps = {}, const char *pSourceTag = nullptr) const;
 	SMenuTextPlanItem AddStableTextCheckbox(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect &Rect, const char *pSourceTag = nullptr) const;

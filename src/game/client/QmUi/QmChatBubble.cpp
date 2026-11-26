@@ -80,7 +80,6 @@ namespace qm_chat_bubble
 
 	void RenderText(ITextRender *pTextRender, CTextCursor &Cursor, const char *pText, ColorRGBA Color, ColorRGBA Outline)
 	{
-		STextContainerIndex Container;
 		struct SRestoreTextState
 		{
 			ITextRender &m_TextRender;
@@ -95,6 +94,12 @@ namespace qm_chat_bubble
 		const SRestoreTextState Restore{*pTextRender, pTextRender->GetRenderFlags(), pTextRender->GetTextColor()};
 		pTextRender->SetRenderFlags(Restore.m_RenderFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
 		pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
+		if(const auto *pCached = pTextRender->CachedDrawContainer(&Cursor, pText))
+		{
+			pTextRender->RenderTextContainer(*pCached, Color, Outline);
+			return;
+		}
+		STextContainerIndex Container;
 		try
 		{
 			// 气泡显式提交自己的文字与描边颜色。

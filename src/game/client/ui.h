@@ -340,15 +340,7 @@ inline SUiQuadBatchSubmissionPlan UiPlanQuadBatchSubmission(bool BatchActive, in
 // 只比较 hash 会在碰撞时静默沿用旧颜色，所以重建判定必须精确比较。
 inline bool QmColorSplitsEqual(const std::vector<STextColorSplit> &Left, const std::vector<STextColorSplit> &Right)
 {
-	if(Left.size() != Right.size())
-		return false;
-	for(size_t i = 0; i < Left.size(); ++i)
-	{
-		if(Left[i].m_CharIndex != Right[i].m_CharIndex || Left[i].m_Length != Right[i].m_Length ||
-			Left[i].m_Color != Right[i].m_Color || Left[i].m_ColorEnd != Right[i].m_ColorEnd)
-			return false;
-	}
-	return true;
+	return Left == Right;
 }
 
 // 单条「从首字符到末尾」的色段覆盖全文，此时容器底色不会被任何字符看到。
@@ -389,6 +381,7 @@ public:
 		std::array<EQmIcon, 8> m_aQmIcons;
 		int m_NumQmIcons;
 		EFontPreset m_FontPreset;
+		vec2 m_TextPixelScale{};
 		float m_FontSize;
 		int m_TextAlign;
 		float m_LabelMaxWidth;

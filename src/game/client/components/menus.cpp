@@ -2152,17 +2152,14 @@ const char *CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const cha
 	SLabelProperties LabelProps = EffectiveProps;
 	if(MaxWidth >= 0)
 		LabelProps.m_MaxWidth = (float)MaxWidth;
-	CUIRect ShellTitleLabel;
-	const bool ShellTitle = pTextId != nullptr && str_comp(pTextId, "settings-shell-title") == 0;
-	const SMenuTextStyleKey StyleKey = ShellTitle ? BuildSettingsShellTitleTextStyle(*pRect, &ShellTitleLabel) : BuildMenuTextStyleKey(pRect, Size, Align, LabelProps);
-	const CUIRect *pLabelRect = ShellTitle ? &ShellTitleLabel : pRect;
+	const SMenuTextStyleKey StyleKey = BuildMenuTextStyleKey(pRect, Size, Align, LabelProps);
 	if(m_MenuTextPlanCollecting)
 	{
-		CollectMenuTextPlanItem(MENU_TEXT_SCOPE_SETTINGS, Page, Tab, Subtab, pTextId, pText, pLabelRect, Size, Align, LabelProps, StyleKey);
+		CollectMenuTextPlanItem(MENU_TEXT_SCOPE_SETTINGS, Page, Tab, Subtab, pTextId, pText, pRect, Size, Align, LabelProps, StyleKey);
 		return pText;
 	}
 	CUIElement &Element = MenuTextElement(MENU_TEXT_SCOPE_SETTINGS, Page, Tab, Subtab, pTextId, StyleKey);
-	DoSettingsLabelStreamed(Element, pLabelRect, pText, Size, Align, LabelProps, -1, nullptr, true);
+	DoSettingsLabelStreamed(Element, pRect, pText, Size, Align, LabelProps, -1, nullptr, true);
 	return pText;
 }
 
@@ -4525,6 +4522,7 @@ bool CMenus::CanDisplayWarning() const
 
 void CMenus::Render()
 {
+	const ITextRender::CScopedDrawCache MenuText(*TextRender(), IsSettingsPageActive());
 	const int MenuOpenFrame = m_MenuOpenFrame++;
 	// ESC 菜单滑入/滑出：只挂在游戏内壳层（在线/回放）。主菜单常驻，没有「打开」时刻，
 	// 让它走同一套轨道会干扰启动画面与加载流程。
@@ -5067,7 +5065,10 @@ void CMenus::Render()
 	{
 		CPerfTimer StageTimer;
 		if(!GameClient()->m_GameConsole.IsActive())
+		{
+			const ITextRender::CScopedDrawCache PopupText(*TextRender(), IsSettingsPageActive());
 			Ui()->RenderPopupMenus();
+		}
 		LogPerfStage(Client(), "popup_menus", StageTimer.ElapsedMs());
 	}
 
@@ -7228,17 +7229,6 @@ CMenus::SMenuTextPlanItem CMenus::AddStableTextDefault(int Page, int Tab, int Su
 	return Item;
 }
 
-CMenus::SMenuTextStyleKey CMenus::BuildSettingsShellTitleTextStyle(const CUIRect &Rect, CUIRect *pOutLabel) const
-{
-	CUIRect Label = Rect;
-	SLabelProperties Props;
-	Props.m_MaxWidth = Label.w;
-	if(pOutLabel != nullptr)
-		*pOutLabel = Label;
-	// 标题字号取页面标题档：写死 16 会让「设置」与正文一样细（用户实机反馈的观感问题）。
-	return BuildMenuTextStyleKey(&Label, ui_token::page_title::FONT_SIZE, TEXTALIGN_MC, Props);
-}
-
 CMenus::SMenuTextPlanItem CMenus::AddStableTextCheckbox(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect &Rect, const char *pSourceTag) const
 {
 	CUIRect Box, Label;
@@ -7585,7 +7575,7 @@ bool CMenus::MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRe
 	// CUi::DoLabelStreamed 完全一致（同一个谓词），否则这里排队、那边不重建
 	// 会逐帧空转。
 	const bool BakedColorChanged = !pElementRect->BakedColorMatches(LabelProps.m_vColorSplits, TextRender()->GetTextColor());
-	const bool StyleChanged = BakedColorChanged || pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
+	const bool StyleChanged = BakedColorChanged || pElementRect->m_TextPixelScale != Graphics()->ScreenPixelScale() || pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
 	const bool NeedsBuild =
 		(!pElementRect->m_UITextContainer.Valid() && pText[0] != '\0' && StrLen != 0) ||
 		TextChanged ||
@@ -7630,6 +7620,9 @@ void CMenus::QueueMenuTextContainerBuild(EMenuTextScope Scope, CUIElement &Eleme
 
 void CMenus::DrainMenuTextContainerBuildRequests()
 {
+	if(m_vMenuTextContainerBuildRequests.empty())
+		return;
+	const CSettingsTextScreenScope Screen(*Ui());
 	while(!m_vMenuTextContainerBuildRequests.empty())
 	{
 		auto ReadyRequest = std::find_if(m_vMenuTextContainerBuildRequests.begin(), m_vMenuTextContainerBuildRequests.end(), [this](const SMenuTextContainerBuildRequest &Candidate) {
@@ -7700,7 +7693,7 @@ void CMenus::DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, cons
 
 	if(&Element == &m_MenuTextFallbackElement)
 	{
-		if(Render && m_MenuTextPoolVisibleGuard)
+		if(Render && m_MenuTextPoolVisibleGuard && Scope != MENU_TEXT_SCOPE_SETTINGS)
 			++m_MenuTextStableFallbackImmediateThisFrame;
 		if(Render && !(Scope == MENU_TEXT_SCOPE_INGAME && m_IngameServerInfoRenderActive))
 			Ui()->DoLabel(pRect, pText, Size, Align, LabelProps);
@@ -7733,7 +7726,7 @@ void CMenus::DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, cons
 				++m_MenuTextStableReusedThisFrame;
 			}
 		}
-		else
+		else if(Scope != MENU_TEXT_SCOPE_SETTINGS)
 		{
 			Ui()->DoLabel(pRect, pText, Size, Align, LabelProps);
 		}
@@ -8131,7 +8124,6 @@ void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollecti
 		const CSettingsTextPlanValueRestore SettingsPageRestore(g_Config.m_UiSettingsPage);
 		const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, vItems);
 		g_Config.m_UiSettingsPage = Unit.m_Page;
-		Ui()->MapScreen();
 		RunSettingsTextPlanMeasurement(Ui(), [&] { RenderSettings(SettingsMainView); });
 		break;
 	}
@@ -8149,7 +8141,6 @@ void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollecti
 			m_AppearanceSettingsTab = Unit.m_Tab;
 		else if(Unit.m_Page == SETTINGS_DDNET)
 			g_Config.m_QmDdnetTab = Unit.m_Tab;
-		Ui()->MapScreen();
 		RunSettingsTextPlanMeasurement(Ui(), [&] { RenderSettings(SettingsMainView); });
 		break;
 	}
@@ -8254,10 +8245,7 @@ void CMenus::BuildSettingsMenuTextGlyphDemand()
 {
 	if(Ui()->Screen() == nullptr || Graphics() == nullptr)
 		return;
-	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	(void)ScreenX0;
-	(void)ScreenX1;
+	const float MenuHeight = Ui()->Screen()->h;
 	const int GraphicsHeight = Graphics()->ScreenHeight();
 	const bool Ingame = m_SettingsMenuTextVisiblePlanContext[0] == 1;
 	CUIRect VisibleViewport{};
@@ -8278,7 +8266,7 @@ void CMenus::BuildSettingsMenuTextGlyphDemand()
 			const SMenuTextPlanItem &Item = m_vSettingsMenuTextPrebuildPlan[Index];
 			if(!SettingsMenuTextPlanItemBuildable(Item))
 				continue;
-			const auto PixelSize = SettingsGlyphPixelSize(Item.m_FontSize, (float)(ScreenY1 - ScreenY0), (float)GraphicsHeight);
+			const auto PixelSize = SettingsGlyphPixelSize(Item.m_FontSize, MenuHeight, (float)GraphicsHeight);
 			if(!PixelSize)
 				continue;
 			bool Visible = Index < VisiblePlanItems && Item.m_Scope == (EMenuTextScope)m_SettingsMenuTextVisiblePlanContext[0];
@@ -8442,6 +8430,7 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	if(Budget <= 0 || Ui()->Screen() == nullptr || SettingsMenuTextPrebuildReady(pOperationOverride))
 		return maximum(Budget, 0);
 
+	const CSettingsTextScreenScope Screen(*Ui());
 	// 预建与正常菜单绘制共用同一套 UI 帧时钟，避免两条路径互相覆盖
 	// 身份哈希缓存后，在每个预建条目上重复做字体路径哈希。
 	const uint64_t CurrentFrame = Ui()->PopupSourceFrame();
