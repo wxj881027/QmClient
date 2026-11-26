@@ -48,7 +48,7 @@ namespace
 		{Localizable("Pressed: Hook line tip"), nullptr, "按下后：辅助线提示"},
 		{Localizable("Pressed: Nothing hookable"), nullptr, "按下后：未瞄准可钩物体"},
 		{Localizable("Pressed: Something hookable"), nullptr, "按下后：可钩物体"},
-		{Localizable("Use the custom colors below while the hook key is held"), nullptr, "按住钩子键时使用下方的自定义颜色"},
+		{Localizable("In Always Show mode, holding the hook collision line key uses four custom colors when enabled. When disabled, only the main line is inverted; the end segment keeps its color."), nullptr, "钩索碰撞线始终显示时的按下色与主线反色"},
 		{Localizable("Show other players' hook collision lines"), nullptr, "显示其他玩家的钩子辅助线"},
 		{Localizable("Show own player's hook collision line"), nullptr, "显示自己的钩子辅助线"},
 		{Localizable("Something hookable"), nullptr, "可钩物体"},

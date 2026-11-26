@@ -16253,22 +16253,6 @@ turkish = "Kanca tuşu basılıyken kanca yardımcı çizgisi gösterildiğinde 
 polish = "Używa poniższych własnych kolorów, gdy linia haka jest pokazywana z wciśniętym klawiszem haka; gdy wyłączone, kolory niewciśnięte są automatycznie odwracane"
 
 [[message]]
-key = "Use the custom colors below while the hook key is held"
-[message.translations]
-simplified_chinese = "按住钩子键时使用下方的自定义颜色"
-traditional_chinese = "按住鉤索鍵時使用下方的自訂顏色"
-japanese = "フックキー押下中は下のカスタムカラーを使用"
-korean = "훅 키를 누르고 있는 동안 아래의 사용자 지정 색상 사용"
-russian = "Использовать указанные ниже цвета, пока удерживается клавиша зацепа"
-german = "Verwendet die folgenden eigenen Farben, während die Haktaste gehalten wird"
-spanish = "Usa los colores personalizados de abajo mientras se mantiene la tecla de gancho"
-french = "utilise les couleurs personnalisées ci-dessous tant que la touche de grappin est maintenue"
-brazilian_portuguese = "Usa as cores personalizadas abaixo enquanto a tecla de gancho é mantida"
-portuguese = "Usa as cores personalizadas abaixo enquanto a tecla de gancho é mantida premida"
-turkish = "Kanca tuşu basılı tutulurken aşağıdaki özel renkleri kullan"
-polish = "Używa poniższych własnych kolorów, gdy wciśnięty jest klawisz haka"
-
-[[message]]
 key = "Use the mouse wheel on a hovered module to scale it by 5%"
 [message.translations]
 simplified_chinese = "将鼠标悬停在 HUD 模块上并滚动滚轮可按 5% 缩放"

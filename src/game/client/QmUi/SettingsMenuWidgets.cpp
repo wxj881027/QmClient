@@ -107,7 +107,7 @@ bool CMenus::RenderQmFunctionCheckbox(const void *pId, const char *pTextId, cons
 	const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pId, pTextId, pText, *pValue, pRect, LabelProps, pOverrideTooltip == nullptr) != 0;
 	if(Changed)
 		*pValue ^= 1;
-	if(pTooltip != nullptr)
+	if(pTooltip != nullptr && pOverrideTooltip == nullptr)
 		GameClient()->m_Tooltips.DoToolTip(pId, pRect, pTooltip);
 	if(PrewarmOnly || Ui()->RenderOnly())
 		*pValue = OriginalValue;

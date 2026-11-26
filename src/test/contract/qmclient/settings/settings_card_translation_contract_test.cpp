@@ -1,4 +1,5 @@
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/SettingsLabelMetadata.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
@@ -35,12 +36,21 @@ TEST(SettingsCardTranslationContract, EveryCardDescriptionHasSimplifiedChineseRu
 TEST(SettingsCardTranslationContract, AuditedUiLabelsHaveSimplifiedChineseRuntimeTranslations)
 {
 	const std::string SimplifiedChinese = ReadTestSourceFile("data/languages/simplified_chinese.txt");
-	static const char *const s_apKeys[] = {"Deprecated compatibility alias for qm_graphics_trace (macOS signposts)", "Enable client stutter diagnostics at startup", "Enable enhanced scoreboard presentation", "Smooth the mouse-driven camera in live and demo free spectating", "Smooth free spectator camera", "Global UI size percentage", "Gores", "Hide chat messages from players marked as enemies", "Interface surface", "Ping", "Relative X position of the draggable back button", "Relative Y position of the draggable back button", "RTT", "Show draggable virtual back button", "UI rounded corner segments (even numbers recommended)", "UI icon custom color", "Word filter action: 0=replace matching words, 1=hide entire message"};
+	static const char *const s_apKeys[] = {"Deprecated compatibility alias for qm_graphics_trace (macOS signposts)", "Enable enhanced scoreboard presentation", "Smooth the mouse-driven camera in live and demo free spectating", "Smooth free spectator camera", "Global UI size percentage", "Gores", "Hide chat messages from players marked as enemies", "Interface surface", "Ping", "Relative X position of the draggable back button", "Relative Y position of the draggable back button", "RTT", "Show draggable virtual back button", "UI rounded corner segments (even numbers recommended)", "UI icon custom color", "Word filter action: 0=replace matching words, 1=hide entire message"};
 	for(const char *pKey : s_apKeys)
 	{
 		SCOPED_TRACE(pKey);
 		const std::string Translation = FindRuntimeTranslation(SimplifiedChinese, pKey);
 		ASSERT_FALSE(Translation.empty());
 		EXPECT_NE(Translation, pKey);
+	}
+	for(const char *pId : {"tclient-mini-debug", "tclient-fast-input", "tclient-antiping-negative-buffer"})
+	{
+		SCOPED_TRACE(pId);
+		const auto *pMetadata = SettingsLabelMetadata(pId);
+		ASSERT_NE(pMetadata, nullptr);
+		const std::string Translation = FindRuntimeTranslation(SimplifiedChinese, pMetadata->m_pTip);
+		EXPECT_FALSE(Translation.empty());
+		EXPECT_NE(Translation, pMetadata->m_pTip);
 	}
 }

@@ -463,7 +463,7 @@ namespace
 		{Localizable("Zhipu AI"), nullptr, "智谱清言"},
 		{Localizable("Zhipu API key"), nullptr, "智谱 API 密钥"},
 		{Localizable("Zhipu free models allow only 1 concurrent request"), nullptr, "智谱免费模型只允许 1 个并发请求"},
-		{Localizable("⚠️ FTAPI is a free service. Excessive use may cause service suspension."), nullptr, "⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停"},
+		{Localizable("Allow FTAPI to auto-translate received chat messages. Busy chats can overload the free service. Outgoing auto-translation is controlled separately."), nullptr, "接收消息 FTAPI 自动翻译，发送自动翻译单独设置"},
 		{Localizable("Show original text below outgoing translation"), nullptr, "发送翻译下方显示原文"},
 		{nullptr, "qm_translate_auto", nullptr},
 		{nullptr, "qm_translate_auto_mode", nullptr},

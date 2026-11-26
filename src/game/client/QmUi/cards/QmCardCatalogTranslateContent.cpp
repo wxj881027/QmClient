@@ -255,10 +255,6 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			RenderCheckbox(&g_Config.m_QmTranslateFtapiAutoEnable, "Enable FTAPI auto-translate (may overload the service)", Localize("Enable FTAPI auto-translate (may overload the service)"), &g_Config.m_QmTranslateFtapiAutoEnable, &Row, LineHeight);
 		}
 		Flow.Space(ui_token::settings::RowGap(LineSpacing));
-
-		// FTAPI 警告提示
-		if(!Flow.Declaring())
-			GameClient()->m_Tooltips.DoToolTipForRect(&g_Config.m_QmTranslateFtapiAutoEnable, &Row, Localize("⚠️ FTAPI is a free service. Excessive use may cause service suspension."));
 	}
 
 	auto RenderLanguageDropDownWithCustomInput = [this, BodySize, PrewarmOnly, &RenderTextInput](const CUIRect &HelpRow, const CUIRect &ControlColumn, const char *const *apNames, const char *const *apCodes, int Count, CUi::SDropDownState &DropDownState, char *pConfigValue, size_t ConfigValueSize, CLineInput &LineInput, const char *pEmptyText) {

@@ -246,7 +246,14 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 			const int Checked = Entry.m_Mask != 0 ? (*Entry.m_pValue & Entry.m_Mask) != 0 : *Entry.m_pValue != 0;
 			const void *pId = Entry.m_pId != nullptr ? Entry.m_pId : Entry.m_pValue;
 			const char *pOverrideTooltip = TemporaryOverrideTooltip(Entry.m_pValue);
-			const int Clicked = DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pRowId, Entry.m_pLabel, Checked, &Row);
+			SLabelProperties LabelProps;
+			if(pOverrideTooltip != nullptr)
+			{
+				LabelProps.SetColor(ui_token::color::TEXT_DISABLED);
+				if(!m_MenuTextPlanCollecting)
+					Ui()->Tooltips().DoToolTipForRect(pId, &Row, pOverrideTooltip);
+			}
+			const int Clicked = DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pRowId, Entry.m_pLabel, Checked, &Row, LabelProps, pOverrideTooltip == nullptr);
 			if(ApplySettingsToggleEntry(Entry, Clicked != 0, ProcessInput && !m_MenuTextPlanCollecting && !Ui()->RenderOnly(), pOverrideTooltip != nullptr))
 				Changed = true;
 			if(Entry.m_pTooltip != nullptr && !m_MenuTextPlanCollecting)
