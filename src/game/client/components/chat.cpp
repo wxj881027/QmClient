@@ -3944,7 +3944,9 @@ void CChat::OnRender()
 		return;
 	}
 
-	y -= ScaledFontSize;
+	// 历史底边始终给输入行留出一整行（没输入时这一格是空的），
+	// 最后一条消息因此停在「全体」上方，不会贴到输入行或状态栏。
+	y -= maximum(ScaledFontSize, QmChatInputRowHeight(ScaledFontSize));
 
 	const float HeightLimit = ShowLargeArea ? CHAT_HEIGHT_MIN : CHAT_HEIGHT_FULL;
 	const ColorRGBA ConfigBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
@@ -4240,6 +4242,11 @@ void CChat::OnRender()
 			Line.m_Presentation.m_RenderY = SmoothPresentationY(Line.m_Presentation.m_RenderY, Line.m_Presentation.m_TargetY, DeltaSeconds);
 
 		const float RenderY = Line.m_Presentation.m_RenderY + Line.m_Presentation.m_RenderOffsetY;
+		// 硬性下边界：滚动弹簧过冲时行会被推过历史区底边，
+		// 文本容器不受裁剪约束就会压到输入行/状态栏上。超出就整行不画，
+		// 最后一条消息因此始终停在“全体”上方，和 HUD 编辑器预览一致。
+		if(RenderY + LineHeight + ExtraLineSpacing > HistoryBottom)
+			continue;
 		const float AnimAlpha = ClampPresentationProgress(Line.m_Presentation.m_RenderAlpha);
 		const float AnimOffsetX = Line.m_Presentation.m_RenderOffsetX;
 		const float AnimOffsetY = (RenderY + RealMsgPaddingY / 2.0f) - Line.m_TextYOffset;
@@ -4421,7 +4428,8 @@ void CChat::OnRender()
 
 		// 从历史和输入行的交界处往上铺，填满展开后的聊天区，
 		// 底边位置与真正聊天时最后一条消息一致；内容仍是固定样例，不取实时快照。
-		const float PreviewBottom = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f)) - ScaledFontSize;
+		// 与真实历史同一条底边：给输入行留一整行，预览最后一条消息停在「全体」上方。
+		const float PreviewBottom = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f)) - maximum(ScaledFontSize, QmChatInputRowHeight(ScaledFontSize));
 		int PreviewIndex = 0;
 		for(float PreviewY = PreviewBottom - RowHeight; PreviewY >= CHAT_HEIGHT_MIN; PreviewY -= RowHeight, ++PreviewIndex)
 		{
