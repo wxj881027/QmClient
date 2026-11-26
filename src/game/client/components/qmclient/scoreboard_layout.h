@@ -28,7 +28,7 @@ inline float QmScoreboardTeamBottomPadding(int LastTeam)
 	return LastTeam > TEAM_FLOCK ? ui_token::spacing::SM : 0.0f;
 }
 
-inline SRoundedSurfaceParams QmScoreboardTeamBandSurface(int PreviousTeam, int NextTeam, float Radius)
+inline SRoundedSurfaceParams QmScoreboardTeamBandSurface(int PreviousTeam, int NextTeam, float LineHeight)
 {
 	SRoundedSurfaceParams Surface;
 	Surface.m_Corners = IGraphics::CORNER_NONE;
@@ -36,7 +36,7 @@ inline SRoundedSurfaceParams QmScoreboardTeamBandSurface(int PreviousTeam, int N
 		Surface.m_Corners |= IGraphics::CORNER_T;
 	if(NextTeam == TEAM_FLOCK)
 		Surface.m_Corners |= IGraphics::CORNER_B;
-	Surface.m_Radius = Surface.m_Corners == IGraphics::CORNER_NONE ? 0.0f : Radius;
+	Surface.m_Radius = Surface.m_Corners == IGraphics::CORNER_NONE ? 0.0f : ui_token::list::RowRadius(LineHeight);
 	return Surface;
 }
 

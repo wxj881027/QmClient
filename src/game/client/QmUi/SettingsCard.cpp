@@ -24,7 +24,6 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/tooltips.h>
 #include <game/client/qm_icon.h>
-#include <game/client/qm_icon_label.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
@@ -57,17 +56,10 @@ namespace
 
 	// 卡片头部图标的「底板 + hover 缩放 + 取色」骨架；具体图标由回调画，
 	// 折叠箭头才有机会把图标换成带过渡的交换实现。
-	template<typename F>
-	void RenderSettingsCardIconFrame(const IUiContext &Ctx, const CUIRect &Rect, const float DrawAlpha, const void *pId, F &&DrawIcon)
+	void RenderSettingsCardIconFrame(const IUiContext &Ctx, const CUIRect &Rect, float DrawAlpha, const void *pId, EQmIcon Icon, const char *pGlyph, const ui_widget::SIconButtonIconDraw *pIconDraw = nullptr)
 	{
 		const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
-		const bool Hovered = Ctx.m_pUi->MouseHovered(&Rect);
-		const float Alpha = std::clamp(DrawAlpha, 0.0f, 1.0f);
-		const CUIRect &ChromeRect = Rect;
-		const float Radius = std::min(ui_token::radius::TIGHT * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.25f);
-		const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? (Ctx.m_pUi->MouseButton(0) ? 0.36f : 0.28f) : 0.18f) * Alpha);
-		if(!Ctx.m_pUi->MeasurementOnly())
-			DrawRoundedSurface(Ctx, ChromeRect, ChromeColor, ChromeColor, Radius);
+		const bool Hovered = Ctx.m_pUi->VisualSurfaceHovered(&Rect);
 		const bool Pressed = Hovered && Ctx.m_pUi->MouseButton(0);
 		const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ str_quickhash("card-icon-feedback"), reinterpret_cast<uint64_t>(pId));
 		// 设置页的 Ctx.m_pAnim 在内容趟会被置空，这里与其它 QmUi 控件一样回退全局运行时，
@@ -75,11 +67,11 @@ namespace
 		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
 		const float Scale = pAnim != nullptr && pId != nullptr ? ResolveSettingsIconScale(*pAnim, NodeKey, Hovered, Pressed, !Ctx.m_pUi->RenderOnly()) : 1.0f;
 		const float IconSize = std::clamp(ui_token::font::BODY * UiScale, 10.0f, ui_token::font::BODY) * Scale;
-		const ColorRGBA IconColor = ResolveUiSurfaceIconColor(ChromeColor, Ctx.m_pUi->TextRender()->GetTextColor().WithAlpha(Alpha));
-		ITextRender *pTextRender = Ctx.m_pUi->TextRender();
-		ExecuteSettingsCardHeaderIcon(*pTextRender, IconColor, [&]() {
-			DrawIcon(ChromeRect, IconSize, IconColor);
-		});
+		CUiScopedControlAlphaScale Alpha(Ctx.m_pUi, DrawAlpha);
+		ui_widget::SButtonSurfaceOptions Options;
+		Options.m_TransparentInactive = true;
+		Options.m_pHitRect = &Rect;
+		ui_widget::DrawIconButton(Ctx, pId, Icon, pGlyph, Rect, Options, pIconDraw, IconSize);
 	}
 
 }
@@ -88,9 +80,7 @@ void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, co
 {
 	if(Ctx.m_pUi == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f)
 		return;
-	RenderSettingsCardIconFrame(Ctx, Rect, DrawAlpha, pId, [&](const CUIRect &DrawRect, const float Size, const ColorRGBA &IconColor) {
-		Ctx.m_pUi->DoLabel_QmIcon(&DrawRect, Icon, pGlyph, Size, TEXTALIGN_MC);
-	});
+	RenderSettingsCardIconFrame(Ctx, Rect, DrawAlpha, pId, Icon, pGlyph);
 }
 
 void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, const bool Collapsed, const float DrawAlpha, const void *pId)
@@ -105,13 +95,8 @@ void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect
 		EQmIcon::CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_DOWN,
 		EQmIcon::CHEVRON_UP, FontIcons::FONT_ICON_CHEVRON_UP,
 		Collapsed ? 0.0f : 1.0f, str_quickhash("card-collapse-icon"), pId);
-	RenderSettingsCardIconFrame(Ctx, Rect, DrawAlpha, pId, [&](const CUIRect &DrawRect, const float Size, const ColorRGBA &IconColor) {
-		// 静止态与动画态必须落在同一个图标盒和同一个字号上：盒由 QmIconLabelRect 收敛成
-		// Size×Size，字号是盒宽的 0.8 倍（QmIconFontSize）。帧条若按 Size 直接换算画布，
-		// 会比字形大 1/0.8 = 25%，笔画也跟着变粗——观感就是「播放中比静止态大一圈」。
-		const CUIRect IconRect = QmIconLabelRect(DrawRect, Size, TEXTALIGN_MC);
-		ui_widget::DrawIconSwapBinding(Ctx, IconRect, IconColor, &CollapseIcon);
-	});
+	const ui_widget::SIconButtonIconDraw IconDraw{ui_widget::DrawIconSwapBinding, &CollapseIcon};
+	RenderSettingsCardIconFrame(Ctx, Rect, DrawAlpha, pId, EQmIcon::CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_DOWN, &IconDraw);
 	if(Ctx.m_pTooltips != nullptr)
 		Ctx.m_pTooltips->DoToolTip(pId, &Rect, Collapsed ? Localize("Expand") : Localize("Collapse"));
 }

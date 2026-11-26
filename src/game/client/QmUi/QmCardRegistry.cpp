@@ -135,7 +135,7 @@ namespace qm_card_registry
 		std::vector<SCardDefault> Cards = {
 			// === 栖梦侧栏模块 · qm:<key>（来源 s_aQmModuleDefaults + 数据债补录；行序即默认阅读序）===
 			{"qm:chat_completion", "visual", false, "Chat completion appearance", "聊天补全外观 liaotian buquan waiguan 聊天指令 命令 表情 配色 背景 透明度 文字 选中 chat command emoji completion appearance background opacity text selection color qm_chat_completion_bg_color qm_chat_completion_opacity qm_chat_completion_text_color qm_chat_completion_selected_text_color qm_chat_completion_selected_color", "Colors for chat command and emoji completion"},
-			{"qm:tooltip", "visual", false, "Tooltips", "提示 气泡 说明 背景 文字 字号 颜色 回弹 tooltip help font color bounce qm_tooltip_background_color qm_tooltip_text_color qm_tooltip_font_size qm_tooltip_animation", "Appearance of help bubbles"},
+			{"qm:tooltip", "visual", false, "Tooltips", "提示 气泡 说明 字号 回弹 tooltip help font bounce qm_tooltip_font_size qm_tooltip_animation", "Appearance of help bubbles"},
 			{"qm:info", "visual", true, "QmClient", "qmclient info", "QmClient information and project links", "credits-qmclient", "deck:qmclient-contributors-community"},
 			{"qm:appearance_preset", "visual", true, "Qm recommended appearance", "栖梦 推荐 预设 外观 字体 霞鹜文楷 lxgw wenkai font preset recommended appearance qm_custom_font qm_custom_font_cjk ui_color qm_ui_scale qm_ui_motion_level qm_gaussian_blur", "Preview and apply a fixed appearance preset"},
 			{"qm:chat_bubble", "appearance-chat", false, "Chat bubble", "消息气泡 漫画 对白 QQ 糖果 渐变 云朵 聚集 散开 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao", "Show chat messages above players"},

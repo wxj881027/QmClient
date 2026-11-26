@@ -26,6 +26,7 @@
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTextRenderState.h>
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/cursor_rotation.h>
@@ -5709,7 +5710,7 @@ void CHud::RenderDummyActions()
 
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::DummyActions, {StartX, StartY, BoxWidth, BoxHeight});
 
-	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ResolveConfiguredInterfaceSurface(), HudEditorScope.m_Corners, ui_token::radius::BASE);
 
 	float y = StartY + 2;
 	float x = StartX + 2;

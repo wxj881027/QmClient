@@ -7,6 +7,8 @@
 #include <game/client/QmUi/SettingsCardContentBridge.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
+#include <game/client/QmUi/SettingsRowReveal.h>
+#include <game/client/QmUi/UiForms.h>
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui_scrollregion.h>
@@ -71,6 +73,35 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmEmoticonShadow, "Emoticon shadow", Localize("Emoticon shadow"), &g_Config.m_QmEmoticonShadow);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHammerSwapSkin, "Hammer skin steal", Localize("Hammer skin steal"), &g_Config.m_QmHammerSwapSkin);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinChangeTransition, "Skin transition animation", Localize("Skin transition animation"), &g_Config.m_QmSkinChangeTransition);
+	const auto Checkbox = [&](const char *pId, const char *pLabel, int *pValue) {
+		RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, pValue, pId, pLabel, pValue);
+	};
+	Checkbox("tee-color-freeze", Localize("Use colored skins for frozen tees"), &g_Config.m_QmColorFreeze);
+	const float FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+	static CSettingsConditionalRows s_ColorFreezeRows;
+	if(s_ColorFreezeRows.Update(g_Config.m_QmColorFreeze, FrameDt, g_Config.m_QmUiMotionLevel))
+	{
+		const CSettingsContentRevealScope Reveal(Ui(), Flow, s_ColorFreezeRows.Fade(g_Config.m_QmUiMotionLevel));
+		CUIRect Row;
+		if(Flow.Control("tee-color-freeze-darken", LineHeight, Row, ui_token::settings::SubRowGap(LineSpacing)))
+			DoSettingsScrollbarOption(SETTINGS_TEE, -1, "tee-color-freeze-darken", &g_Config.m_QmColorFreezeDarken, &g_Config.m_QmColorFreezeDarken, &Row, Localize("Frozen color darkening"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+		Checkbox("tee-color-freeze-feet", Localize("Use skin color for frozen feet"), &g_Config.m_QmColorFreezeFeet);
+	}
+	Checkbox("tee-freeze-katana", Localize("Show katana on frozen players"), &g_Config.m_QmFreezeKatana);
+	Checkbox("tee-white-feet", Localize("Render all custom colored feet as white feet skin"), &g_Config.m_QmWhiteFeet);
+	static CSettingsConditionalRows s_WhiteFeetRows;
+	if(s_WhiteFeetRows.Update(g_Config.m_QmWhiteFeet, FrameDt, g_Config.m_QmUiMotionLevel))
+	{
+		const CSettingsContentRevealScope Reveal(Ui(), Flow, s_WhiteFeetRows.Fade(g_Config.m_QmUiMotionLevel));
+		CUIRect Row;
+		if(Flow.Control("tee-white-feet-skin", Metrics.m_InputHeight, Row, ui_token::settings::SubRowGap(LineSpacing)))
+		{
+			Row.VSplitMid(&Row, nullptr);
+			static CLineInput s_FeetSkin(g_Config.m_QmWhiteFeetSkin, sizeof(g_Config.m_QmWhiteFeetSkin));
+			s_FeetSkin.SetEmptyText("x_ninja");
+			ui_widget::InputField(SettingsUiContext("tee_white_feet", Metrics.m_UiScale), &s_FeetSkin, Row, nullptr, BodySize);
+		}
+	}
 	float SectionReveal = 0.0f;
 	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:skin_appearance", Metrics, &SectionReveal, PrewarmOnly))
 		return;

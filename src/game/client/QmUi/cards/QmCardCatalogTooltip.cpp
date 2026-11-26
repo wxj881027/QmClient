@@ -6,6 +6,7 @@
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
@@ -24,9 +25,10 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 		RenderQmFunctionCheckbox(&g_Config.m_QmTooltipAnimation, "Tooltip bounce animation", Localize("Tooltip bounce animation"), &g_Config.m_QmTooltipAnimation, &Row, ReadOnly);
 	if(Flow.Control("tooltip-preview", std::max(Metrics.m_LineHeight, g_Config.m_QmTooltipFontSize * 1.5f), Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
-		Row.Draw(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true)), IGraphics::CORNER_ALL, 5.0f);
+		const SUiTheme Theme = ResolveConfiguredSecondaryPanelTheme();
+		Row.Draw(Theme.m_Surface, IGraphics::CORNER_ALL, ui_token::tooltip::RADIUS * Metrics.m_UiScale);
 		const ColorRGBA PreviousColor = TextRender()->GetTextColor();
-		TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipTextColor, true)));
+		TextRender()->TextColor(Theme.m_TextBody);
 		Row.HMargin(2.0f, &Row);
 		Props.m_MaxWidth = Row.w;
 		Ui()->DoLabel(&Row, Localize("Tooltip preview"), static_cast<float>(g_Config.m_QmTooltipFontSize), TEXTALIGN_MC, Props);
@@ -38,19 +40,7 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 		return;
 	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
-	static CButtonContainer s_Background, s_Text;
-	CUIRect ColorRow;
-	if(Flow.Control("tooltip-background", Metrics.m_LineHeight, ColorRow))
-	{
-		DoLine_ColorPicker(&s_Background, Metrics, &ColorRow, Localize("Tooltip background color"), &g_Config.m_QmTooltipBackgroundColor,
-			color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTooltipBackgroundColor, true)), false, nullptr, true);
-	}
-	if(Flow.Control("tooltip-text", Metrics.m_LineHeight, ColorRow, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
-	{
-		DoLine_ColorPicker(&s_Text, Metrics, &ColorRow, Localize("Tooltip text color"), &g_Config.m_QmTooltipTextColor,
-			color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTooltipTextColor, true)), false, nullptr, true);
-	}
-	if(Flow.Control("tooltip-font-size", Metrics.m_LineHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+	if(Flow.Control("tooltip-font-size", Metrics.m_LineHeight, Row))
 	{
 		Row.VSplitMid(&Label, &Control, Metrics.m_LineSpacing);
 		Props.m_MaxWidth = Label.w;
@@ -63,8 +53,6 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 	static CButtonContainer s_Reset;
 	if(Flow.Control("tooltip-reset", Metrics.m_LineHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)) && ui_widget::SecondaryButton(SettingsUiContext("settings_tooltip", Metrics.m_UiScale), &s_Reset, Localize("Reset tooltip appearance"), Row, PrewarmOnly) && Flow.Input() && !ReadOnly)
 	{
-		g_Config.m_QmTooltipBackgroundColor = DefaultConfig::QmTooltipBackgroundColor;
-		g_Config.m_QmTooltipTextColor = DefaultConfig::QmTooltipTextColor;
 		g_Config.m_QmTooltipFontSize = DefaultConfig::QmTooltipFontSize;
 		g_Config.m_QmTooltipAnimation = DefaultConfig::QmTooltipAnimation;
 	}

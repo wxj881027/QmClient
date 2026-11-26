@@ -14,6 +14,8 @@
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/components/qmclient/search_answers.h>
+#include <game/client/components/tooltips.h>
+#include <game/client/qm_icon.h>
 
 #include <algorithm>
 #include <array>
@@ -28,11 +30,29 @@ namespace
 	struct SAnswerButtons
 	{
 		CButtonContainer m_Select;
-		CButtonContainer m_CopyAnswer;
 		CButtonContainer m_CopyCommand;
 		CButtonContainer m_OpenDirectory;
 		const char *m_pStatus = "";
 	};
+
+	void SetCopyAction(SSettingsCardDefinition &Card, IUiContext Ctx, const void *pId, const SSettingsContentMetrics &Metrics, bool ReadOnly, std::function<bool()> Copy)
+	{
+		Card.m_LeadingHeaderActionWidth = ui_token::settings::CARD_HANDLE_SIZE * Metrics.m_UiScale;
+		Card.m_LeadingHeaderAction = [Ctx, pId, FontSize = Metrics.m_SmallSize](const SSettingsCardFrame &Frame, bool) {
+			const CUIRect Button = QmUiSquareIconButtonRect(Frame.m_LeadingHeaderActionRect);
+			if(Button.w <= 0.0f)
+				return;
+			RenderSettingsCardHeaderIcon(Ctx, Button, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, 1.0f, pId);
+			if(Ctx.m_pTooltips != nullptr)
+				Ctx.m_pTooltips->DoSmallToolTip(pId, &Button, "复制答案", FontSize);
+		};
+		Card.m_LeadingHeaderInput = [pUi = Ctx.m_pUi, pId, ReadOnly, Copy = std::move(Copy)](const SSettingsCardFrame &Frame, bool) {
+			if(ReadOnly || !pUi->PreLayoutInput() || pUi->RenderOnly() || pUi->IsPopupOpen())
+				return false;
+			const CUIRect Button = QmUiSquareIconButtonRect(Frame.m_LeadingHeaderActionRect);
+			return Button.w > 0.0f && pUi->DoButtonLogic(pId, 0, &Button, BUTTONFLAG_LEFT) && Copy();
+		};
+	}
 }
 
 struct qm_card_catalog::SSearchAnswerCardState
@@ -69,6 +89,17 @@ void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, con
 	};
 	SSettingsCardDefinition Candidate;
 	Candidate.m_Spec = {SEARCH_ANSWER_CARD_ID, "常见问题", "输入常见问法可以查看说明，并在下方直接调整相关设置。"};
+	if(const auto *pAnswer = Result.m_pAnswer)
+	{
+		auto HeaderCtx = ui_widget::ControlContext(Ctx.m_pUi);
+		HeaderCtx.m_UiScale = Metrics.m_UiScale;
+		HeaderCtx.m_pTooltips = Ctx.m_pTooltips;
+		SetCopyAction(Candidate, HeaderCtx, pAnswer, Metrics, ReadOnly, [pAnswer, pInput = Ctx.m_pInput, pState] {
+			pInput->SetClipboardText(pAnswer->m_pAnswer);
+			pState->m_Buttons.at(pAnswer).m_pStatus = "已复制答案";
+			return true;
+		});
+	}
 	Candidate.m_RenderMeasured = [Ctx, Result, ReadOnly, Metrics, SelectQuestion, pState, DrawText, MeasureButton](CUIRect &Content) {
 		// 条目地址属于静态问答表；按钮按条目区分，候选重排不会复用其他问题的按下状态。
 		CSettingsContentLayoutFlow Flow(Content);
@@ -109,11 +140,6 @@ void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, con
 		auto &Buttons = pState->m_Buttons.find(pAnswer)->second;
 		Text("answer-question", pAnswer->m_pQuestion);
 		Text("answer-body", pAnswer->m_pAnswer);
-		if(Button("answer-copy", "复制答案", Buttons.m_CopyAnswer))
-		{
-			Ctx.m_pInput->SetClipboardText(pAnswer->m_pAnswer);
-			Buttons.m_pStatus = "已复制答案";
-		}
 		if(pAnswer->m_pCommand != nullptr)
 		{
 			Text("answer-command", pAnswer->m_pCommand);
@@ -154,65 +180,63 @@ void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, con
 	Out = std::move(Candidate);
 }
 
-void qm_card_catalog::BuildDdnetWikiSearchCard(const IUiContext &Ctx, const std::vector<qm_wiki_docs::SDdnetWikiMatch> &vMatches, bool PreferChinese, bool ReadOnly, const SSettingsContentMetrics &Metrics, SSettingsCardDefinition &Out)
+void qm_card_catalog::BuildDdnetWikiSearchCard(const IUiContext &Ctx, const qm_wiki_docs::SDdnetWikiMatch &Match, bool PreferChinese, bool ReadOnly, const SSettingsContentMetrics &Metrics, SSettingsCardDefinition &Out)
 {
 	using namespace qm_wiki_docs;
-	Out.m_Spec = {DDNET_WIKI_SEARCH_CARD_ID, "DDNet Wiki", ""};
-	Out.m_RenderMeasured = [Ctx, vMatches, PreferChinese, ReadOnly, Metrics](CUIRect &Content) {
+	const auto &Article = DdnetWikiArticle(Match.m_Article);
+	int Language = PreferChinese ? SIMPLIFIED_CHINESE : ENGLISH;
+	const int OtherLanguage = PreferChinese ? ENGLISH : SIMPLIFIED_CHINESE;
+	if(!Match.m_aAvailable[Language] || (Match.m_aExcerpts[Language].empty() && !Match.m_aExcerpts[OtherLanguage].empty()))
+		Language = OtherLanguage;
+	std::string Excerpt = Match.m_aExcerpts[Language].empty() ? Article.m_apIntroductions[Language] : Match.m_aExcerpts[Language].c_str();
+	Out.m_Spec = {Article.m_pCardId, Article.m_apTitles[Language], "DDNet Wiki"};
+	SetCopyAction(Out, Ctx, &Article, Metrics, ReadOnly, [pUi = Ctx.m_pUi, Excerpt] {
+		pUi->Input()->SetClipboardText(Excerpt.c_str());
+		return false;
+	});
+	Out.m_RenderMeasured = [Ctx, ArticleIndex = Match.m_Article, Available = Match.m_aAvailable, Blocks = Match.m_aBlocks, Excerpt = std::move(Excerpt), ReadOnly, Metrics](CUIRect &Content) {
 		static std::array<std::array<CButtonContainer, NUM_LANGUAGES>, NUM_DDNET_WIKI_ARTICLES> s_aOpenButtons{};
 		CSettingsContentLayoutFlow Flow(Content);
 		const bool Interactive = Flow.Input() && !ReadOnly && !Ctx.m_pUi->RenderOnly() && !Ctx.m_pUi->MeasurementOnly() && !Ctx.m_pUi->BackgroundRender() && !Ctx.m_pUi->IsPopupOpen();
 		const float Gap = ui_token::settings::RowGap(Metrics.m_LineSpacing);
-		for(const auto &Match : vMatches)
+		const auto &Wiki = DdnetWikiArticle(ArticleIndex);
+		const auto DrawText = [Ctx, Metrics](const CUIRect &Rect, const char *pText) {
+			SLabelProperties Props;
+			Props.m_MaxWidth = Rect.w;
+			Props.m_EnableWidthCheck = false;
+			Ctx.m_pUi->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
+		};
+		char aExcerptId[64];
+		char aOpenId[64];
+		str_format(aExcerptId, sizeof(aExcerptId), "%s-excerpt", Wiki.m_pSlug);
+		str_format(aOpenId, sizeof(aOpenId), "%s-open", Wiki.m_pSlug);
+		Flow.Text(aExcerptId, Excerpt.c_str(), 0, Metrics.m_BodySize, Gap, {}, DrawText, Metrics.m_LineHeight);
+		CUIRect Row;
+		if(Flow.Control(aOpenId, Metrics.m_ButtonHeight, Row))
 		{
-			const auto &Article = DdnetWikiArticle(Match.m_Article);
-			int Language = PreferChinese ? SIMPLIFIED_CHINESE : ENGLISH;
-			const int OtherLanguage = PreferChinese ? ENGLISH : SIMPLIFIED_CHINESE;
-			if(!Match.m_aAvailable[Language] || (Match.m_aExcerpts[Language].empty() && !Match.m_aExcerpts[OtherLanguage].empty()))
-				Language = OtherLanguage;
-			const char *pTitle = Article.m_apTitles[Language];
-			const char *pExcerpt = Match.m_aExcerpts[Language].empty() ? Article.m_apIntroductions[Language] : Match.m_aExcerpts[Language].c_str();
-			const auto DrawText = [Ctx, Metrics](const CUIRect &Rect, const char *pText) {
-				SLabelProperties Props;
-				Props.m_MaxWidth = Rect.w;
-				Props.m_EnableWidthCheck = false;
-				Ctx.m_pUi->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
-			};
-			char aTitleId[64];
-			char aExcerptId[64];
-			char aOpenId[64];
-			str_format(aTitleId, sizeof(aTitleId), "%s-title", Article.m_pSlug);
-			str_format(aExcerptId, sizeof(aExcerptId), "%s-excerpt", Article.m_pSlug);
-			str_format(aOpenId, sizeof(aOpenId), "%s-open", Article.m_pSlug);
-			Flow.Text(aTitleId, pTitle, 0, Metrics.m_BodySize, Gap, {}, DrawText, Metrics.m_LineHeight);
-			Flow.Text(aExcerptId, pExcerpt, 0, Metrics.m_BodySize, Gap, {}, DrawText, Metrics.m_LineHeight);
-			CUIRect Row;
-			if(Flow.Control(aOpenId, Metrics.m_ButtonHeight, Row))
+			const int Buttons = Available[ENGLISH] + Available[SIMPLIFIED_CHINESE];
+			const auto Layout = ResolveSettingsActionGroupLayout(Row, Buttons, Metrics, 0.0f);
+			const char *apLabels[] = {"English", "简体中文"};
+			int ButtonIndex = 0;
+			for(int ArticleLanguage = 0; ArticleLanguage < NUM_LANGUAGES; ++ArticleLanguage)
 			{
-				const int Buttons = Match.m_aAvailable[ENGLISH] + Match.m_aAvailable[SIMPLIFIED_CHINESE];
-				const auto Layout = ResolveSettingsActionGroupLayout(Row, Buttons, Metrics, 0.0f);
-				const char *apLabels[] = {"English", "简体中文"};
-				int ButtonIndex = 0;
-				for(int ArticleLanguage = 0; ArticleLanguage < NUM_LANGUAGES; ++ArticleLanguage)
+				if(!Available[ArticleLanguage])
+					continue;
+				const CUIRect &Button = Layout.m_aButtons[ButtonIndex++];
+				auto &Id = s_aOpenButtons[ArticleIndex][ArticleLanguage];
+				if(Interactive && Ctx.m_pStorage != nullptr && Ctx.m_pUi->DoButtonLogic(&Id, 0, &Button, BUTTONFLAG_LEFT))
 				{
-					if(!Match.m_aAvailable[ArticleLanguage])
-						continue;
-					const CUIRect &Button = Layout.m_aButtons[ButtonIndex++];
-					auto &Id = s_aOpenButtons[Match.m_Article][ArticleLanguage];
-					if(Interactive && Ctx.m_pStorage != nullptr && Ctx.m_pUi->DoButtonLogic(&Id, 0, &Button, BUTTONFLAG_LEFT))
-					{
-						std::string Markdown = ReadDdnetWikiArticle(*Ctx.m_pStorage, Match.m_Article, static_cast<EDdnetWikiLanguage>(ArticleLanguage));
-						OpenWikiMarkdownPopup(Ctx, Article.m_apTitles[ArticleLanguage], std::move(Markdown), Match.m_aBlocks[ArticleLanguage]);
-					}
-					if(Flow.Drawing())
-					{
-						ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ctx.m_pUi), &Id, Button);
-						Ctx.m_pUi->DoLabel(&Button, apLabels[ArticleLanguage], Metrics.m_BodySize, TEXTALIGN_MC);
-					}
+					std::string Markdown = ReadDdnetWikiArticle(*Ctx.m_pStorage, ArticleIndex, static_cast<EDdnetWikiLanguage>(ArticleLanguage));
+					OpenWikiMarkdownPopup(Ctx, Wiki.m_apTitles[ArticleLanguage], std::move(Markdown), Blocks[ArticleLanguage]);
+				}
+				if(Flow.Drawing())
+				{
+					ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ctx.m_pUi), &Id, Button);
+					Ctx.m_pUi->DoLabel(&Button, apLabels[ArticleLanguage], Metrics.m_BodySize, TEXTALIGN_MC);
 				}
 			}
-			Flow.Space(Gap);
 		}
+		Flow.Space(Gap);
 	};
 	qm_settings_content::UseDeclaredContent(Out, Ctx.m_pUi, Ctx.m_pTextRender);
 }

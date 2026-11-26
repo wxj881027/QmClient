@@ -12,6 +12,8 @@ When someone is frozen, a bar appears below them and unfreezes them once it fill
 
 "Show player position", "Show player speed" and "Show player target angle" put three numbers on screen for measuring distances while practicing.
 
+“Freeze stars” shows a burst at each countdown tick reported by the server. You can enable it independently of the bar.
+
 ## How to tune it
 
 Turn the master on first, then items as needed. Keep position and speed while practicing; turn them off in serious matches to save screen space.

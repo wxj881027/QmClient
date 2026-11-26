@@ -103,6 +103,8 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_appearance_hud_ddrace[] = {
+		{Localizable("Freeze stars"), nullptr, "显示冻结效果的星星动画"},
+		{nullptr, "cl_freeze_stars", nullptr},
 		{Localizable("HUD rainbow colors"), nullptr, "HUD 彩虹色"},
 		{Localizable("Opacity of freeze bars inside freeze"), nullptr, "解冻进度条不透明度"},
 		{Localizable("Show DDRace HUD"), nullptr, "显示 DDRace HUD"},

@@ -327,6 +327,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					if(Flow.Control("appearance-freeze-bars-alpha-inside-freeze", LineSize, AlphaRow, RowSpacing))
 						DoAppearanceNumericField(APPEARANCE_TAB_HUD, "appearance-freeze-bars-alpha-inside-freeze", &g_Config.m_ClFreezeBarsAlphaInsideFreeze, &g_Config.m_ClFreezeBarsAlphaInsideFreeze, AlphaRow, Localize("Opacity of freeze bars inside freeze"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				}
+				CheckboxRow(&g_Config.m_ClFreezeStars, "appearance-freeze-stars", Localize("Freeze stars"), &g_Config.m_ClFreezeStars);
 				LogPerfStage(Client(), "appearance_hud_freeze_bars_section", HudFreezeBarsTimer.ElapsedMs(), false, "page=appearance tab=hud section=freeze_bars");
 			});
 			// 计分板颜色组独立成卡：原先塞在 HUD 卡的「个性调整」折叠区里，行 id 保持不变，

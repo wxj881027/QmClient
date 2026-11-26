@@ -697,8 +697,8 @@ namespace
 		{
 			"qm:tooltip",
 			Localizable("The look of the help bubbles that appear when you hover over buttons, settings and bind rows."),
-			Localizable("Pick \"Tooltip background color\" and \"Tooltip text color\", drag \"Tooltip font size\", and keep \"Tooltip bounce animation\" on for a small pop."),
-			Localizable("Keep the text light on a dark background; press \"Reset tooltip appearance\" to return to the defaults."),
+			Localizable("Adjust the tooltip font size and bounce animation here. The background follows the popup layer color."),
+			Localizable("Reset tooltip appearance to restore the default font size and bounce animation."),
 		},
 		{
 			"qm:translate",

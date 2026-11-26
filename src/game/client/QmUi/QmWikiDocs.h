@@ -24,11 +24,11 @@ namespace qm_wiki_docs
 		NUM_LANGUAGES,
 	};
 	inline constexpr int NUM_DDNET_WIKI_ARTICLES = 2;
-	inline constexpr const char *DDNET_WIKI_SEARCH_CARD_ID = "deck:global-search-ddnet-wiki";
 
 	struct SDdnetWikiArticle
 	{
 		const char *m_pSlug;
+		const char *m_pCardId;
 		std::array<const char *, NUM_LANGUAGES> m_apTitles;
 		std::array<const char *, NUM_LANGUAGES> m_apIntroductions;
 	};

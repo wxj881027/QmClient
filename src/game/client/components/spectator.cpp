@@ -843,6 +843,8 @@ void CSpectator::OnRender()
 	};
 
 	int TeamBandEnd = 0;
+	CUIRect TeamBand{};
+	const float BandRadius = minimum(RoundRadius, LineHeight * 0.5f);
 	const auto TeamAt = [&](int Row) { return aDisplayPlayers[aDisplayOrder[Row]].m_DDTeam; };
 	int ColumnRow = 0;
 	for(int i = 0; i < DisplayCount; ++i)
@@ -873,7 +875,8 @@ void CSpectator::OnRender()
 		const bool IsGhost = pInfo->m_IsGhost;
 		const CUIRect RowRect{CenterX + x - RowHitInset + BoxOffset, ContentY + y + BoxMove, RowWidth - BoxOffset, LineHeight};
 
-		if(DDTeam != TEAM_FLOCK && i >= TeamBandEnd)
+		const bool StartsTeamBand = DDTeam != TEAM_FLOCK && i >= TeamBandEnd;
+		if(StartsTeamBand)
 		{
 			int GroupEnd = minimum(DisplayCount, i + PerLine - ColumnRow);
 			if(i < FriendCount)
@@ -884,24 +887,31 @@ void CSpectator::OnRender()
 
 			// 整段共用一个表面，队内行之间不再叠加两道抗锯齿边缘。
 			const ColorRGBA Color = GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ContentAlpha);
-			CUIRect Band = RowRect;
-			Band.h *= TeamBandEnd - i;
-			DrawRoundedSurface(Ui(), Band, Color, ColorRGBA(), minimum(RoundRadius, LineHeight * 0.5f));
+			TeamBand = RowRect;
+			TeamBand.h *= TeamBandEnd - i;
+			DrawRoundedSurface(Ui(), TeamBand, Color, ColorRGBA(), BandRadius);
 		}
 
-		if((IsGhost ? ViewModeActive : !ViewModeActive) && SelectedId() == pInfo->m_Id)
+		const bool CanSelectRow = IsGhost ? ViewModeActive : !ViewModeActive;
+		const bool RowHovered = WantActive && RowRect.Inside(Mouse);
+		if(CanSelectRow && (SelectedId() == pInfo->m_Id || RowHovered))
 		{
+			const ColorRGBA Highlight(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha);
+			if(DDTeam == TEAM_FLOCK)
+				DrawRoundedSurface(Ui(), RowRect, Highlight, ColorRGBA(), BandRadius);
+			else
 			{
-				SRoundedSurfaceParams SelectionSurface;
-				SelectionSurface.m_Radius = RoundRadius;
-				SelectionSurface.m_Corners = IGraphics::CORNER_ALL;
-				DrawRoundedSurface(Ui(), RowRect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), ColorRGBA(), SelectionSurface);
+				// 裁出队伍色带的当前行，两层共用外轮廓和像素对齐。
+				const float ClipScale = Ui()->Screen()->h / Height;
+				const CUIRect Clip{RowRect.x * ClipScale, RowRect.y * ClipScale, RowRect.w * ClipScale, RowRect.h * ClipScale};
+				Ui()->ClipEnable(&Clip);
+				DrawRoundedSurface(Ui(), TeamBand, Highlight, ColorRGBA(), BandRadius);
+				Ui()->ClipDisable();
 			}
 		}
 
 		bool PlayerSelected = false;
-		const bool CanSelectRow = IsGhost ? ViewModeActive : !ViewModeActive;
-		if(WantActive && RowRect.Inside(Mouse))
+		if(RowHovered)
 		{
 			if(CanSelectRow)
 			{
@@ -971,6 +981,17 @@ void CSpectator::OnRender()
 		NameCursor.m_FontSize = FontSize;
 		NameCursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 		NameCursor.m_LineWidth = 180.0f * LayoutScale;
+		if(StartsTeamBand && !IsGhost)
+		{
+			char aTeam[32];
+			str_format(aTeam, sizeof(aTeam), Localize("Team %d"), DDTeam);
+			const float LabelSize = FontSize * 0.7f;
+			const float LabelWidth = TextRender()->TextWidth(LabelSize, aTeam);
+			const float Right = CenterX + x + NameOffsetX + NameCursor.m_LineWidth;
+			NameCursor.m_LineWidth = std::max(1.0f, NameCursor.m_LineWidth - LabelWidth - ui_token::spacing::XS * LayoutScale);
+			TextRender()->TextColor(1.0f, 1.0f, 1.0f, ContentAlpha);
+			TextRender()->Text(Right - LabelWidth, RowRect.y + (LineHeight - LabelSize) * 0.5f, LabelSize, aTeam);
+		}
 		const int ClientId = pInfo->m_Id;
 		const bool HideIdentity = !ViewModeActive && !IsGhost && GameClient()->ShouldHideStreamerIdentity(ClientId);
 		const bool IsFriend = pInfo->m_Friend;

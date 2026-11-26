@@ -118,8 +118,6 @@ MACRO_CONFIG_INT(QmUiAccentOpacity, qm_ui_accent_opacity, 24, 0, 100, CFGFLAG_CL
 MACRO_CONFIG_INT(QmUiOpacity, qm_ui_opacity, 12, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Interface transparency")
 MACRO_CONFIG_INT(QmColorPickerShape, qm_color_picker_shape, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Color picker saturation/value area shape: 0=square, 1=wheel")
 MACRO_CONFIG_STR(QmColorPickerPalette, qm_color_picker_palette, 4096, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Color picker saved swatches (format: name|#hex entries separated by semicolons)")
-MACRO_CONFIG_COL(QmTooltipBackgroundColor, qm_tooltip_background_color, 0xD9000066, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip background color")
-MACRO_CONFIG_COL(QmTooltipTextColor, qm_tooltip_text_color, 0xFF0000FF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip text color")
 MACRO_CONFIG_INT(QmTooltipFontSize, qm_tooltip_font_size, 10, 10, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip font size")
 MACRO_CONFIG_INT(QmTooltipAnimation, qm_tooltip_animation, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip bounce animation")
 // 控件与弹层各自只留一份背景色：按钮/输入框原本各有一份配置，展开列表/二级菜单也是。
@@ -877,11 +875,11 @@ MACRO_CONFIG_INT(QmChatRelatedOnly, qm_chat_related_only, 0, 0, 1, CFGFLAG_CLIEN
 MACRO_CONFIG_INT(QmChatSaveDraft, qm_chat_save_draft, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep unsent message on chat close")
 MACRO_CONFIG_INT(QmChatCommandCompletion, qm_chat_command_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show command completion in chat")
 MACRO_CONFIG_INT(QmChatEmojiCompletion, qm_chat_emoji_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show emoji completion in chat")
-MACRO_CONFIG_COL(QmChatCompletionBgColor, qm_chat_completion_bg_color, 0x1C1C1E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat completion background color")
-MACRO_CONFIG_INT(QmChatCompletionOpacity, qm_chat_completion_opacity, 96, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat completion background opacity")
-MACRO_CONFIG_COL(QmChatCompletionTextColor, qm_chat_completion_text_color, 0xF50000FF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Chat completion text color")
-MACRO_CONFIG_COL(QmChatCompletionSelectedTextColor, qm_chat_completion_selected_text_color, 0xFF98D68E, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Chat completion selected text color")
-MACRO_CONFIG_COL(QmChatCompletionSelectedColor, qm_chat_completion_selected_color, 0x4799FFA1, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Chat completion selection background color")
+MACRO_CONFIG_COL(QmChatCompletionBgColor, qm_chat_completion_bg_color, 0x00002C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat completion background color")
+MACRO_CONFIG_INT(QmChatCompletionOpacity, qm_chat_completion_opacity, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat completion background opacity")
+MACRO_CONFIG_COL(QmChatCompletionTextColor, qm_chat_completion_text_color, 0xFF0000CC, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Chat completion text color")
+MACRO_CONFIG_COL(QmChatCompletionSelectedTextColor, qm_chat_completion_selected_text_color, 0xFF26DFCF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Chat completion selected text color")
+MACRO_CONFIG_COL(QmChatCompletionSelectedColor, qm_chat_completion_selected_color, 0x3326DFCF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Chat completion selection background color")
 MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Merge consecutive identical player messages within 2 seconds")
 // echo 合并的滑动窗口：同一段 echo 文本在窗口内连续重复时只保留一次并计数。
 // 该行为始终生效，不受 qm_message_merge 影响；设为 0 关闭合并。

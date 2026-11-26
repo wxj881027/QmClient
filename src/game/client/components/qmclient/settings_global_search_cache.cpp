@@ -74,12 +74,13 @@ bool CSettingsGlobalSearchCache::TryUpdate(const char *pQuery, const char *pLang
 		}
 		const auto &vCards = Results.m_vAllVisibleCards;
 		std::vector<qm_card_order::SEntry> vEntries;
-		vEntries.reserve(vCards.size() + 3);
+		vEntries.reserve(vCards.size() + Results.m_vWikiMatches.size() + 2);
+		int SearchOrder = -static_cast<int>(Results.m_vWikiMatches.size()) - 2;
 		if(!Results.m_Answers.m_vCandidates.empty())
-			vEntries.push_back({qm_card_catalog::SEARCH_ANSWER_CARD_ID, "global-search", 0, -3});
-		if(!Results.m_vWikiMatches.empty())
-			vEntries.push_back({qm_wiki_docs::DDNET_WIKI_SEARCH_CARD_ID, "global-search", 0, -2});
-		vEntries.push_back({"deck:global-search-empty", "global-search", 0, -1});
+			vEntries.push_back({qm_card_catalog::SEARCH_ANSWER_CARD_ID, "global-search", 0, SearchOrder++});
+		for(const auto &Match : Results.m_vWikiMatches)
+			vEntries.push_back({qm_wiki_docs::DdnetWikiArticle(Match.m_Article).m_pCardId, "global-search", 0, SearchOrder++});
+		vEntries.push_back({"deck:global-search-empty", "global-search", 0, SearchOrder});
 		for(size_t Index = 0; Index < vCards.size(); ++Index)
 			vEntries.push_back({vCards[Index].m_pStableId, "global-search", Index % 2 == 0 ? 1 : 2, (int)(Index / 2)});
 		Candidate->m_Model.SetEntries(vEntries);

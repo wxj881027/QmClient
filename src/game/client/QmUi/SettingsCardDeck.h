@@ -46,6 +46,8 @@ struct SSettingsCardDefinition
 	bool m_RenderWhenClipped = false;
 	FSettingsCardHeaderAction m_LeadingHeaderAction;
 	float m_LeadingHeaderActionWidth = 0.0f;
+	// 前置操作有自己的输入回调，可以与默认折叠按钮同时使用。
+	FSettingsCardPreLayoutHeaderInput m_LeadingHeaderInput;
 };
 
 struct SSettingsCardDeckInput
