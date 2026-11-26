@@ -228,7 +228,7 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 			RenderQmFunctionCheckbox(pId, pTextId, Localize(pText), pValue, &Row, PrewarmOnly);
 	};
 	RenderCheckbox(&g_Config.m_QmSoloSplitLinkDummy, "qmclient-solo-split-link-dummy", "Auto-connect dummy", &g_Config.m_QmSoloSplitLinkDummy);
-	RenderCheckbox(&g_Config.m_QmSoloSplitAutoTeamLock, "qmclient-solo-split-auto-team-lock", "Lock both teams immediately when entering solo split mode", &g_Config.m_QmSoloSplitAutoTeamLock);
+	RenderCheckbox(&g_Config.m_QmSoloSplitAutoTeamLock, "qmclient-solo-split-auto-team-lock", "Lock team", &g_Config.m_QmSoloSplitAutoTeamLock);
 	if(Flow.Control("qmclient-solo-split-restore-team", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -444,8 +444,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
-		{
-		},
+		{},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	// 计分板相关的 5 项（更好的计分板/积分检查/死亡后显示/滚轮滚动/过滤器）只在 qm:better_scoreboard 卡里渲染一次，
 	// 这里不再重复，避免同一条配置在两张卡里各出现一遍。

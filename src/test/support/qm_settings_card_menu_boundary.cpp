@@ -13,7 +13,7 @@ namespace
 	}
 }
 
-void CMenus::DoSettingsMenuLabel(int, int, int, const char *, const CUIRect *, const char *, float, int, const SLabelProperties &, int, bool, bool)
+const char *CMenus::DoSettingsMenuLabel(int, int, int, const char *, const CUIRect *, const char *, float, int, const SLabelProperties &, int, bool, bool, bool)
 {
 	UnexpectedMenuBoundary();
 }

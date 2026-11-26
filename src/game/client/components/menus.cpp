@@ -1479,6 +1479,7 @@ ColorRGBA CMenus::SettingsTabbarColor(float AlphaScale) const
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, const unsigned Flags)
 {
 	const int Clicked = Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
+	Ui()->DoConfigTooltip(pId, pRect, pId);
 	ui_widget::DrawToggle(ui_widget::ControlContext(Ui()), pId, Checked != 0, *pRect, Active);
 	return Clicked;
 }
@@ -1972,9 +1973,11 @@ void CMenus::SplitSettingsScrollbarRects(const CUIRect &Rect, unsigned Flags, CU
 		*pScrollBarRect = ScrollBar;
 }
 
-int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, const unsigned Flags, CUIElement *pLabelElement, const bool ProcessInput, const float LabelFontSize, const bool MarkedControl)
+int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, const unsigned Flags, CUIElement *pLabelElement, const bool ProcessInput, const float LabelFontSize, const bool MarkedControl, const void *pConfigValue)
 {
-	Ui()->DoConfigTooltip(pId, pRect, pId);
+	pConfigValue = pConfigValue != nullptr ? pConfigValue : pId;
+	if(!IsSettingsPageActive())
+		Ui()->DoConfigTooltip(pId, pRect, pConfigValue);
 	const bool HasLabel = pText != nullptr && pText[0] != '\0';
 	const bool HasCustomGlyph = MarkedControl || (pBoxText[0] != '\0' && pBoxText[0] != 'X');
 	const int Clicked = ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
@@ -1998,7 +2001,7 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 		ui_widget::DrawToggle(Context, pId, pBoxText[0] == 'X', Control, true, ProcessInput, pRect);
 	}
 	if(!m_MenuTextPlanCollecting)
-		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pConfigValue, &Label, nullptr, HasCustomGlyph ? nullptr : pText);
 	if(HasLabel)
 	{
 		SLabelProperties Props;
@@ -2029,14 +2032,14 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	return DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pTextId, pText, Checked, pRect, LabelProps, true);
 }
 
-int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize, const bool AllowHintSplit)
+int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize, const bool AllowHintSplit, const void *pConfigValue)
 {
-	Ui()->DoConfigTooltip(pId, pRect, pId);
+	pConfigValue = pConfigValue != nullptr ? pConfigValue : pId;
 	const float BodySize = RequestedFontSize > 0.0f ? RequestedFontSize : CurrentSettingsContentMetrics().m_BodySize;
 	if(pTextId == nullptr)
 	{
 		const qm_settings_highlight::CScopedLabelColor LabelColor(TextRender(), !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(nullptr, pText, *pRect));
-		return DoButton_CheckBox_Common_WithLabelElement(pId, pText, Checked ? "X" : "", pRect, BUTTONFLAG_LEFT, nullptr, ProcessInput, BodySize);
+		return DoButton_CheckBox_Common_WithLabelElement(pId, pText, Checked ? "X" : "", pRect, BUTTONFLAG_LEFT, nullptr, ProcessInput, BodySize, false, pConfigValue);
 	}
 	const auto Layout = ui_widget::ResolveBooleanControlLayout(*pRect, pText != nullptr && pText[0] != '\0', BodySize);
 	const CUIRect &Label = Layout.m_LabelRect;
@@ -2045,9 +2048,14 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	Props.m_MaxWidth = Label.w;
 	// 这里的 true 是「允许命中高亮」：合并后高亮由 CScopedLabelColor 染色承担，
 	// 不再有底色块可关；传 false 会让搜索命中的复选框行整行都不高亮。
-	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, true, AllowHintSplit, ProcessInput);
+	const char *pLabel = DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, true, AllowHintSplit && ProcessInput, ProcessInput);
 	if(!m_MenuTextPlanCollecting)
-		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
+	{
+		if(IsSettingsPageActive())
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pConfigValue, &Label, nullptr, pLabel);
+		else
+			Ui()->DoConfigTooltip(pId, pRect, pConfigValue);
+	}
 	if(m_MenuTextPlanCollecting)
 		return 0;
 
@@ -2061,7 +2069,6 @@ int CMenus::DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const 
 {
 	CUIRect CheckBoxRect;
 	pRect->HSplitTop(RowHeight, &CheckBoxRect, pRect);
-	Ui()->DoConfigTooltip(pId, &CheckBoxRect, pValue);
 	if(RowSpacing > 0.0f)
 		pRect->HSplitTop(RowSpacing, nullptr, pRect);
 
@@ -2083,7 +2090,7 @@ int CMenus::DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const 
 			GameClient()->m_Tooltips.DoToolTip(pId, &CheckBoxRect, pOverrideTooltip);
 		}
 	}
-	const int Logic = DoSettingsButton_CheckBox(Page, Tab, -1, pId, pTextId, pText, *pValue, &CheckBoxRect, LabelProps, pOverrideTooltip == nullptr, BodySize);
+	const int Logic = DoSettingsButton_CheckBox(Page, Tab, -1, pId, pTextId, pText, *pValue, &CheckBoxRect, LabelProps, pOverrideTooltip == nullptr, BodySize, true, pValue);
 	if(Logic)
 		*pValue ^= 1;
 	return Logic;
@@ -2120,7 +2127,7 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 	DoSettingsLabelStreamed(Element, pRect, pText, Size, Align, EffectiveProps, -1, nullptr, Render);
 }
 
-void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground, const bool AllowHintSplit, const bool ShowMetadataTip)
+const char *CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground, const bool AllowHintSplit, const bool ShowMetadataTip)
 {
 	const char *pFullText = pText;
 	const auto Presentation = ResolveSettingsLabelPresentation(pTextId, pText, [](const char *pKey) { return Localize(pKey); }, ShowMetadataTip);
@@ -2140,7 +2147,7 @@ void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTex
 	if(pTextId == nullptr)
 	{
 		Ui()->DoLabel(pRect, pText, Size, Align, EffectiveProps);
-		return;
+		return pText;
 	}
 	SLabelProperties LabelProps = EffectiveProps;
 	if(MaxWidth >= 0)
@@ -2152,10 +2159,11 @@ void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTex
 	if(m_MenuTextPlanCollecting)
 	{
 		CollectMenuTextPlanItem(MENU_TEXT_SCOPE_SETTINGS, Page, Tab, Subtab, pTextId, pText, pLabelRect, Size, Align, LabelProps, StyleKey);
-		return;
+		return pText;
 	}
 	CUIElement &Element = MenuTextElement(MENU_TEXT_SCOPE_SETTINGS, Page, Tab, Subtab, pTextId, StyleKey);
 	DoSettingsLabelStreamed(Element, pLabelRect, pText, Size, Align, LabelProps, -1, nullptr, true);
+	return pText;
 }
 
 int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor, float BodySize, EQmIcon Icon, const char *pFallbackIcon, const IGraphics::CTextureHandle *pIconTexture)

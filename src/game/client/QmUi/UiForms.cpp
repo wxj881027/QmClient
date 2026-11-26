@@ -798,7 +798,6 @@ namespace ui_widget
 	{
 		if(Ctx.m_pUi == nullptr || Ctx.m_pUi->DrawingSuppressed())
 			return;
-		Ctx.m_pUi->DoConfigTooltip(pId, pHitRect != nullptr ? pHitRect : &Rect, pId);
 		if(Ctx.m_pUi->MeasurementOnly())
 			return;
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
@@ -919,6 +918,8 @@ namespace ui_widget
 		const bool Clicked = !Ctx.m_pUi->RenderOnly() && ProcessInput && Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) != 0;
 		if(Clicked)
 			*pValue = !*pValue;
+		if(!Ctx.m_pUi->DrawingSuppressed())
+			Ctx.m_pUi->DoConfigTooltip(pId, &Rect, pId);
 		DrawToggle(Ctx, pId, *pValue, Rect, true, Animate);
 		return Clicked;
 	}

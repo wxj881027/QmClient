@@ -444,7 +444,6 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			RowAction("graphics-high-detail", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_GfxHighDetail, "High Detail", Localize("High Detail"), g_Config.m_GfxHighDetail, &Button))
 					g_Config.m_GfxHighDetail ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_GfxHighDetail, &Button, Localize("Allows maps to render with more detail"));
 			});
 
 			RowAction("graphics-refresh-rate", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {

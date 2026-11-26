@@ -88,7 +88,6 @@ const char *CMenus::TemporaryOverrideTooltip(const int *pValue) const
 
 bool CMenus::RenderQmFunctionCheckbox(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly, const char *pTooltip)
 {
-	Ui()->DoConfigTooltip(pId, pRect, pValue);
 	const int OriginalValue = *pValue;
 	const char *pOverrideTooltip = TemporaryOverrideTooltip(pValue);
 	SLabelProperties LabelProps;
@@ -104,7 +103,7 @@ bool CMenus::RenderQmFunctionCheckbox(const void *pId, const char *pTextId, cons
 		}
 	}
 	// 被临时接管的项灰化并停止响应点击：接管期间用户改它会被接管逻辑覆盖。
-	const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pId, pTextId, pText, *pValue, pRect, LabelProps, pOverrideTooltip == nullptr) != 0;
+	const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pId, pTextId, pText, *pValue, pRect, LabelProps, pOverrideTooltip == nullptr, -1.0f, true, pValue) != 0;
 	if(Changed)
 		*pValue ^= 1;
 	if(pTooltip != nullptr && pOverrideTooltip == nullptr)
@@ -124,7 +123,6 @@ bool CMenus::RenderQmVisualCheckbox(CUIRect &Content, float LineHeight, float Li
 	if(!HasRow)
 		return false;
 	const char *pOverrideTooltip = TemporaryOverrideTooltip(pValue);
-	Ui()->DoConfigTooltip(pId, &Row, pValue);
 	SLabelProperties LabelProps;
 	if(pOverrideTooltip != nullptr)
 	{
@@ -136,7 +134,7 @@ bool CMenus::RenderQmVisualCheckbox(CUIRect &Content, float LineHeight, float Li
 			GameClient()->m_Tooltips.DoToolTip(pId, &Row, pOverrideTooltip);
 		}
 	}
-	const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, pId, pTextId, pText, *pValue, &Row, LabelProps, pOverrideTooltip == nullptr) != 0;
+	const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, pId, pTextId, pText, *pValue, &Row, LabelProps, pOverrideTooltip == nullptr, -1.0f, true, pValue) != 0;
 	if(Changed)
 		*pValue ^= 1;
 	return Changed;

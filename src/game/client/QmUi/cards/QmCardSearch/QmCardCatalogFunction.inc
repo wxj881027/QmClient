@@ -398,7 +398,7 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_solo_split[] = {
-		{Localizable("Lock both teams immediately when entering solo split mode"), nullptr, "进入单刷模式时立即锁定双方队伍"},
+		{Localizable("Lock team"), nullptr, "进入单刷模式时立即锁定双方队伍"},
 		{Localizable("Auto-connect dummy"), nullptr, "自动连接分身"},
 		{Localizable("Solo split enter key"), nullptr, "单刷模式进队按键"},
 		{Localizable("Solo split key"), nullptr, "单刷模式按键 单人分身 一键分队"},

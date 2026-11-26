@@ -505,7 +505,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.14 提示（Tooltip）
 
-- 定义：悬停后的补充说明，默认不常显、不占布局；配置项说明取配置描述。
+- 定义：悬停后的补充说明，默认不常显、不占布局；配置项默认使用配置描述。带文字的布尔开关由 `ui_switch_tip::Fallback`（`src/game/client/QmUi/UiSwitchTipPolicy.h`）过滤只复述标签或卡片标题的兜底说明；普通页不弹空提示，功能搜索仍显示命令名。机制说明仅在当前译文与标签逐字相同时省略。逐行开关优先显示临时接管原因，其次是提供额外信息的条目说明，最后取配置说明。筛选胶囊在输入趟绑定命令与标签。图标按钮保留动作提示。
 - 唯一实现：`ui_widget::Tooltip`（`src/game/client/QmUi/UiOverlays.h`）、`GameClient()->m_Tooltips.DoToolTip(...)` / `DoToolTipForRect(...)` / `DoToolTipForRectForced(...)` / `DoSmallToolTip(...)` / `DoSettingsToolTipForConfig(...)`（`CTooltips`，`src/game/client/ui.h`）；设置页按系统鼠标命中，游戏内虚拟光标由调用方完成命中后用 `DoToolTipForRectForced`。尺寸与颜色 `ui_token::tooltip::*`、`ui_token::motion::TOOLTIP_FADE`。
 - 禁止的反面写法：用 tooltip 承载必须常显的信息（应当用行尾说明）；自己画矩形加文字；把长句塞进 tooltip 而不给 `m_MaxWidth`。
 

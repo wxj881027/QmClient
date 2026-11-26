@@ -3416,6 +3416,7 @@ if(CLIENT)
     QmUi/SettingsCardInfo.cpp
     QmUi/SettingsCardInfo.h
     QmUi/SettingsToggleGrid.h
+    QmUi/SettingsToggleInput.h
     QmUi/SettingsIconFeedback.h
     QmUi/SettingsCard.h
     QmUi/SettingsCardSubtitle.h
@@ -3452,6 +3453,7 @@ if(CLIENT)
     QmUi/UiScaledLabel.h
     QmUi/UiSurface.cpp
     QmUi/UiSurface.h
+    QmUi/UiSwitchTipPolicy.h
     QmUi/UiTextRenderState.h
     QmUi/UiTag.cpp
     QmUi/UiTag.h
@@ -5813,6 +5815,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_scroll_content_drag_test.cpp
     src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp
+    src/test/integration/qmclient/settings/settings_switch_tooltip_test.cpp
+    src/test/unit/qmclient/ui/qm_switch_tooltip_test.cpp
     src/test/unit/qmclient/ui/qm_tooltip_ownership_test.cpp
     src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp
     src/test/contract/qmclient/ui/qm_ui_scale_contract_test.cpp

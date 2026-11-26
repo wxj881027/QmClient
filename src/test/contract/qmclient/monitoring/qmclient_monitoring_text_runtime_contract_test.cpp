@@ -71,7 +71,7 @@ TEST(QmMonitoringTextRuntimeContract, SettingsStableTextVisibleMissBuildsSynchro
 
 	const std::string Header = ReadRepoFile("src/game/client/components/menus.h");
 	EXPECT_TRUE(ContainsAll(Header, {
-						"void DoSettingsMenuLabel(int Page, int Tab, int Subtab",
+						"const char *DoSettingsMenuLabel(int Page, int Tab, int Subtab",
 						"int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC",
 						"int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab",
 						"bool DoSettingsScrollbarOption(int Page, int Tab, int Subtab",

@@ -22,7 +22,7 @@ void CTooltips::DoConfigToolTip(const void *, const CUIRect *, const void *, con
 {
 }
 
-void CTooltips::DoSettingsToolTipForConfig(const void *, const CUIRect *, const void *, const CUIRect *, const void *)
+void CTooltips::DoSettingsToolTipForConfig(const void *, const CUIRect *, const void *, const CUIRect *, const void *, const char *)
 {
 }
 
