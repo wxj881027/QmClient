@@ -2573,9 +2573,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Kliknięcie języka na liście od razu go stosuje; flaga po lewej pokazuje aktualny wybór.
 
-Click a part on the right to edit its color, blend mode and strength.
-== Kliknij część po prawej, aby dostosować kolor, tryb i siłę mieszania.
-
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == Kliknij wiersz taki jak HDF lub Skok w lewo i naciśnij wybrany klawisz; ikona kosza obok usuwa przypisanie.
 
@@ -2635,6 +2632,9 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == Kliknij, aby wybrać serwer. Kliknij dwukrotnie, aby dołączyć do znajomego.
+
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
+== Kliknij, aby wybrać. Kliknij dwukrotnie, aby zabarwić. Przeciągnij, aby zastąpić część. Prawy przycisk myszy przywraca ustawienia.
 
 Client
 == Klient
@@ -4490,9 +4490,6 @@ Drift intensity
 Drift smoothness
 == Gładkość dryfu
 
-Drop on right canvas to replace one part.
-== Upuść na prawym płótnie, aby zastąpić jedną część.
-
 Droplet
 == Kropla
 
@@ -5628,7 +5625,7 @@ Export failed
 == Eksport nie powiódł się
 
 Export failed. Could not compose %d edited slot(s).
-== Export failed. Could not compose %d edited slot(s).
+== Eksport nie powiódł się. Nie udało się połączyć zmodyfikowanych części (%d).
 
 Export name contains invalid characters.
 == Nazwa eksportu zawiera niedozwolone znaki.
@@ -6163,9 +6160,6 @@ Frames buffered between capture and encoding. Deeper queues absorb slow encoder 
 
 Frames drawn per second when V-Sync is off; 0 = unlimited
 == Maksymalna liczba klatek na sekundę przy wyłączonej synchronizacji pionowej; 0 = bez ograniczeń
-
-Frankenstein (drop parts on right)
-== Frankenstein (upuść części po prawej)
 
 Free move
 == Swobodny ruch
@@ -8126,9 +8120,6 @@ Leave the pose session
 Left jump
 == Lewy skok
 
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
-== Kliknij lewym przyciskiem część Frankensteina, aby zmienić jej odcień. Przeciągnij części, aby je zastąpić. Kliknij prawym przyciskiem, aby zresetować.
-
 Left/right channel width
 == Szerokość kanału lewego/prawego
 
@@ -9619,9 +9610,6 @@ No assets
 
 No assets available for composition.
 == Brak zasobów dostępnych do kompozycji.
-
-No assets found.
-== Nie znaleziono zasobów.
 
 No audio issues detected
 == Nie wykryto problemów z audio
@@ -12323,6 +12311,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == Zastąp skórki nieznajomych domyślną
 
+Replace same-size parts in the target family.
+== Zastąp części tego samego rozmiaru w grupie docelowej.
+
 Replace selected variant
 == Zastąp wybrany wariant
 
@@ -12752,6 +12743,9 @@ Same clan color in scoreboard
 Same group full map listening
 == Słuchaj całej mapy w tej samej grupie
 
+Same-size family
+== Grupa tego samego rozmiaru
+
 Sans-serif
 == Bezszeryfowa
 
@@ -13159,9 +13153,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == Wybrany kandydat %d/%d pod kursorem.
-
-Selected part: %d
-== Wybrana część: %d
 
 Selected text color
 == Kolor zaznaczonego tekstu
@@ -16178,9 +16169,6 @@ The selected button is not visible. Do you want to deselect it or edit its visib
 The selected button is overlapping with other buttons.
 == Wybrany przycisk nakłada się na inne przyciski.
 
-The selected part stays highlighted while you adjust its color.
-== Wybrana część pozostaje podświetlona podczas dostosowywania jej koloru.
-
 The server is running a non-standard tuning on a pure game type.
 == Serwer używa niestandardowego tuningu w czystym typie gry.
 
@@ -16402,9 +16390,6 @@ Ticks after freeze before applying max prediction reduction
 
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 == Liczba ticków odtwarzanych bez nagrywania przed każdym segmentem, aby efekty i czat zgadzały się z początkiem segmentu. 50 ticków to jedna sekunda.
-
-tile
-== kafelek
 
 Tile outlines
 == Kontury kafelków

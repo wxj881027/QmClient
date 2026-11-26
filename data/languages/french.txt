@@ -2573,9 +2573,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Clique sur une langue de la liste pour l'appliquer immédiatement ; le drapeau à gauche indique le choix actuel.
 
-Click a part on the right to edit its color, blend mode and strength.
-== Cliquez sur une partie à droite pour régler sa couleur, son mode de fusion et son intensité.
-
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == Clique sur une ligne comme HDF ou Saut à gauche et appuie sur la touche voulue ; l'icône de corbeille supprime ce raccourci.
 
@@ -2635,6 +2632,9 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == Cliquez pour sélectionner le serveur. Double-cliquez pour rejoindre un(e) ami(e).
+
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
+== Cliquez pour sélectionner, double-cliquez pour teinter. Faites glisser pour remplacer une pièce. Un clic droit la réinitialise.
 
 Client
 == Client
@@ -4490,9 +4490,6 @@ Drift intensity
 Drift smoothness
 == Fluidité de la dérive
 
-Drop on right canvas to replace one part.
-== Déposez sur le canevas de droite pour remplacer une partie.
-
 Droplet
 == Goutte
 
@@ -5628,7 +5625,7 @@ Export failed
 == Échec de l'exportation
 
 Export failed. Could not compose %d edited slot(s).
-== Export failed. Could not compose %d edited slot(s).
+== Échec de l’exportation. Impossible de composer %d pièces modifiées.
 
 Export name contains invalid characters.
 == Le nom d'exportation contient des caractères invalides.
@@ -6163,9 +6160,6 @@ Frames buffered between capture and encoding. Deeper queues absorb slow encoder 
 
 Frames drawn per second when V-Sync is off; 0 = unlimited
 == Images par seconde lorsque la V-Sync est désactivée ; 0 = illimité
-
-Frankenstein (drop parts on right)
-== Frankenstein (déposez les parties à droite)
 
 Free move
 == Mouvement libre
@@ -8126,9 +8120,6 @@ Leave the pose session
 Left jump
 == Saut gauche
 
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
-== Clic gauche sur une partie Frankenstein pour la teinter. Faites glisser les parties pour les remplacer. Clic droit pour réinitialiser.
-
 Left/right channel width
 == Largeur du canal gauche/droit
 
@@ -9619,9 +9610,6 @@ No assets
 
 No assets available for composition.
 == Aucun élément disponible pour la composition.
-
-No assets found.
-== Aucun élément trouvé.
 
 No audio issues detected
 == Aucun problème audio détecté
@@ -12323,6 +12311,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == Remplacer les skins non-amis par le skin par défaut
 
+Replace same-size parts in the target family.
+== Remplace les pièces de même taille dans la famille cible.
+
 Replace selected variant
 == Remplacer la variante sélectionnée
 
@@ -12752,6 +12743,9 @@ Same clan color in scoreboard
 Same group full map listening
 == Écouter tout le groupe sur toute la carte
 
+Same-size family
+== Groupe de même taille
+
 Sans-serif
 == Sans serif
 
@@ -13159,9 +13153,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == Candidat sélectionné %d/%d sous le curseur.
-
-Selected part: %d
-== Partie sélectionnée : %d
 
 Selected text color
 == Couleur du texte sélectionné
@@ -16178,9 +16169,6 @@ The selected button is not visible. Do you want to deselect it or edit its visib
 The selected button is overlapping with other buttons.
 == Le bouton sélectionné chevauche d'autres boutons.
 
-The selected part stays highlighted while you adjust its color.
-== La partie sélectionnée reste en surbrillance pendant que vous ajustez sa couleur.
-
 The server is running a non-standard tuning on a pure game type.
 == Le serveur exécute un réglage non standard sur un type de jeu pur.
 
@@ -16402,9 +16390,6 @@ Ticks after freeze before applying max prediction reduction
 
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 == Ticks joués sans enregistrer avant chaque segment pour que les effets et le chat correspondent au début du segment. 50 ticks = une seconde.
-
-tile
-== tuile
 
 Tile outlines
 == Contours des tuiles

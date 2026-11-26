@@ -3500,6 +3500,9 @@ if(CLIENT)
     QmUi/cards/QmFriendCodeCard.cpp
     QmUi/cards/QmCardCatalogPlayer.cpp
     QmUi/cards/QmCardCatalogGraphics.cpp
+    QmUi/AssetsEditor.cpp
+    QmUi/AssetsEditorInput.h
+    QmUi/AssetsEditorLayout.h
     QmUi/AudioPackEditor.cpp
     QmUi/AudioPackEditorLayout.h
     components/qmclient/audio_pack_catalog.h
@@ -5322,6 +5325,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/base/aio_test.cpp
     src/test/integration/base/async_logger_test.cpp
     src/test/integration/base/logger_file_creation_test.cpp
+    src/test/unit/client/assets_editor_gesture_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
     src/test/unit/client/assets_preview_scale_test.cpp
     src/test/unit/client/assets_preview_budget_conversion_test.cpp

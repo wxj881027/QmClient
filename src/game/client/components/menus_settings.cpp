@@ -1044,7 +1044,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		if(Page != SETTINGS_ASSETS && (m_AssetsEditorState.m_Open || m_AssetsEditorState.m_Initialized))
 		{
 			if(m_AssetsEditorState.m_Open)
-				AssetsEditorRequestClose();
+				AssetsEditorRequestAction({EAssetsEditorAction::CLOSE});
 			else
 				AssetsEditorCloseNow();
 			if(m_AssetsEditorState.m_Open)
@@ -1057,7 +1057,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 	};
 	if(Interactive)
 	{
-		if(!m_AssetsEditorState.m_ShowExitConfirm)
+		if(!m_AssetsEditorState.m_PendingAction)
 			s_AssetsEditorExitRequest = {};
 		SelectSettingsPage(g_Config.m_UiSettingsPage);
 	}
@@ -1475,7 +1475,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		{
 			if(m_AssetsEditorState.m_Open && m_AssetsEditorState.m_HasUnsavedChanges)
 			{
-				AssetsEditorRequestClose();
+				AssetsEditorRequestAction({EAssetsEditorAction::CLOSE});
 				s_AssetsEditorExitRequest = {std::nullopt, true};
 			}
 			else
@@ -1524,7 +1524,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 	}
 	Ui()->SetDropDownFontSize(PreviousDropDownFontSize);
 	m_SettingsShellLayoutValid = false;
-	if(Interactive && !m_AssetsEditorState.m_ShowExitConfirm)
+	if(Interactive && !m_AssetsEditorState.m_PendingAction)
 	{
 		if(!m_AssetsEditorState.m_Open)
 		{

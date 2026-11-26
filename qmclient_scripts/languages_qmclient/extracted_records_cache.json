@@ -572,7 +572,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 2379
+      "line": 1899
     },
     {
       "key": "%s has requested to swap with %s",
@@ -2959,7 +2959,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1032
+      "line": 976
     },
     {
       "key": "Added %s as friend",
@@ -4597,7 +4597,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1686
+      "line": 1575
     },
     {
       "key": "Applies an animated rainbow color to selected elements such as nameplates or the hook.",
@@ -5031,14 +5031,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1365
+      "line": 1309
     },
     {
       "key": "Asset with this name already exists.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1441
+      "line": 1385
     },
     {
       "key": "Assets",
@@ -5081,6 +5081,13 @@
       "source": "src/game/client/components/menus_settings_assets.cpp",
       "context": "",
       "line": 8038
+    },
+    {
+      "key": "Assets editor",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 397
     },
     {
       "key": "Assets editor",
@@ -7724,30 +7731,16 @@
     {
       "key": "Blend mode",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2023
-    },
-    {
-      "key": "Blend mode",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2025
+      "line": 237
     },
     {
       "key": "Blend strength",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2046
-    },
-    {
-      "key": "Blend strength",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2055
+      "line": 240
     },
     {
       "key": "Blink the active local tee",
@@ -8587,14 +8580,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1660
-    },
-    {
-      "key": "Can only drop onto same-size parts.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2280
+      "line": 1549
     },
     {
       "key": "Can't /spec that quickly.",
@@ -8704,6 +8690,13 @@
     {
       "key": "Cancel",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 308
+    },
+    {
+      "key": "Cancel",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPopconfirm.cpp",
       "context": "",
       "line": 66
@@ -8777,13 +8770,6 @@
       "source": "src/game/client/components/menus.cpp",
       "context": "",
       "line": 5971
-    },
-    {
-      "key": "Cancel",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 1545
     },
     {
       "key": "Cancel",
@@ -10582,7 +10568,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1319
+      "line": 1263
     },
     {
       "key": "Choose game layer entities image for different gametypes.",
@@ -11131,13 +11117,6 @@
       "line": 226
     },
     {
-      "key": "Click a part on the right to edit its color, blend mode and strength.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2060
-    },
-    {
       "key": "Click a row such as \"HDF\" or \"Left jump\", press the key you want, and use the trash icon to remove a bind.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWiki.cpp",
@@ -11297,6 +11276,13 @@
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
       "line": 3720
+    },
+    {
+      "key": "Click to select, double-click to tint. Drag to replace a part. Right-click to reset.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 171
     },
     {
       "key": "Click to show the color picker. Shift+right click to copy color to clipboard. Shift+left click to paste color from clipboard.",
@@ -11546,6 +11532,13 @@
     {
       "key": "Close",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 401
+    },
+    {
+      "key": "Close",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
       "line": 536
@@ -11702,7 +11695,14 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 775
+      "line": 768
+    },
+    {
+      "key": "Color",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 201
     },
     {
       "key": "Color",
@@ -11800,14 +11800,14 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 781
+      "line": 774
     },
     {
       "key": "Color Dodge",
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 783
+      "line": 776
     },
     {
       "key": "Color Env",
@@ -15818,7 +15818,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 780
+      "line": 773
     },
     {
       "key": "Darken Tee color when frozen (0-100)",
@@ -17862,7 +17862,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 786
+      "line": 779
     },
     {
       "key": "Difficulty",
@@ -17944,9 +17944,9 @@
     {
       "key": "Direction Keys",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 235
+      "line": 49
     },
     {
       "key": "Direction Keys",
@@ -18070,9 +18070,9 @@
     {
       "key": "Discard",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 1541
+      "line": 308
     },
     {
       "key": "Discard",
@@ -18546,23 +18546,16 @@
     {
       "key": "Donor (drag parts from left)",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2092
+      "line": 412
     },
     {
       "key": "Donor Asset",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2389
-    },
-    {
-      "key": "Donor Asset",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2402
+      "line": 411
     },
     {
       "key": "Dont predict other players if you are frozen",
@@ -19445,13 +19438,6 @@
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
       "line": 587
-    },
-    {
-      "key": "Drop on right canvas to replace one part.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2479
     },
     {
       "key": "Droplet",
@@ -21185,9 +21171,9 @@
     {
       "key": "Emoticons",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 229
+      "line": 43
     },
     {
       "key": "Emoticons",
@@ -23180,6 +23166,13 @@
     {
       "key": "Entities",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 44
+    },
+    {
+      "key": "Entities",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogAppearance.cpp",
       "context": "",
       "line": 1447
@@ -23190,13 +23183,6 @@
       "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogAppearance.inc",
       "context": "",
       "line": 180
-    },
-    {
-      "key": "Entities",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 230
     },
     {
       "key": "Entities",
@@ -23966,7 +23952,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 787
+      "line": 780
     },
     {
       "key": "exec",
@@ -24181,16 +24167,16 @@
     {
       "key": "Export",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 1868
+      "line": 105
     },
     {
       "key": "Export",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2070
+      "line": 117
     },
     {
       "key": "Export",
@@ -24309,14 +24295,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1342
+      "line": 1286
     },
     {
       "key": "Export name contains invalid characters.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1331
+      "line": 1275
     },
     {
       "key": "Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)",
@@ -24435,14 +24421,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1413
+      "line": 1357
     },
     {
       "key": "Exported to %s",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1460
+      "line": 1404
     },
     {
       "key": "Exporting chat images: %d",
@@ -24552,9 +24538,9 @@
     {
       "key": "Extras",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 237
+      "line": 51
     },
     {
       "key": "Extreme",
@@ -24890,7 +24876,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1183
+      "line": 1127
     },
     {
       "key": "Failed to create bgdraw folder",
@@ -25002,7 +24988,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1406
+      "line": 1350
     },
     {
       "key": "Failed to fetch the replay list",
@@ -25107,7 +25093,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1172
+      "line": 1116
     },
     {
       "key": "Failed to load map from file '%s'.",
@@ -25198,7 +25184,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1193
+      "line": 1137
     },
     {
       "key": "Failed to preview candidate file.",
@@ -25408,7 +25394,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1450
+      "line": 1394
     },
     {
       "key": "Failed to write sound to file '%s'.",
@@ -27084,13 +27070,6 @@
       "line": 459
     },
     {
-      "key": "Frankenstein (drop parts on right)",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2098
-    },
-    {
       "key": "Free move",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogAppearance.cpp",
@@ -27877,6 +27856,13 @@
     {
       "key": "Game",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 52
+    },
+    {
+      "key": "Game",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardRegistry.cpp",
       "context": "",
       "line": 220
@@ -27887,13 +27873,6 @@
       "source": "src/game/client/components/menus.cpp",
       "context": "",
       "line": 2951
-    },
-    {
-      "key": "Game",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 238
     },
     {
       "key": "Game",
@@ -29559,7 +29538,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 785
+      "line": 778
     },
     {
       "key": "Has people playing",
@@ -31363,6 +31342,13 @@
     {
       "key": "HUD",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 46
+    },
+    {
+      "key": "HUD",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientConfigs.inc",
       "context": "",
       "line": 13
@@ -31373,13 +31359,6 @@
       "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTClientMain.inc",
       "context": "",
       "line": 145
-    },
-    {
-      "key": "HUD",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 232
     },
     {
       "key": "HUD",
@@ -31470,7 +31449,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 788
+      "line": 781
     },
     {
       "key": "Hue",
@@ -35442,13 +35421,6 @@
       "line": 3941
     },
     {
-      "key": "Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2480
-    },
-    {
       "key": "Left-drag empty space to box-select, middle-drag to pan, wheel to zoom.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
@@ -35628,7 +35600,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 782
+      "line": 775
     },
     {
       "key": "Limit cursor to game window",
@@ -37077,7 +37049,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 791
+      "line": 784
     },
     {
       "key": "LX Music open API port (0=auto-detect from LX Music config)",
@@ -37215,16 +37187,9 @@
     {
       "key": "Main Asset",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2453
-    },
-    {
-      "key": "Main Asset",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2456
+      "line": 414
     },
     {
       "key": "Main menu",
@@ -39434,13 +39399,6 @@
     {
       "key": "Mode",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 1887
-    },
-    {
-      "key": "Mode",
-      "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_ingame.cpp",
       "context": "",
       "line": 3079
@@ -39595,9 +39553,9 @@
     {
       "key": "Mouse",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 234
+      "line": 48
     },
     {
       "key": "Mouse",
@@ -39947,7 +39905,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 792
+      "line": 785
     },
     {
       "key": "Music",
@@ -40239,16 +40197,16 @@
     {
       "key": "my_%s",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 910
+      "line": 109
     },
     {
       "key": "my_%s",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1982
+      "line": 854
     },
     {
       "key": "MyMemory (free)",
@@ -41641,14 +41599,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1163
-    },
-    {
-      "key": "No assets found.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 1920
+      "line": 1107
     },
     {
       "key": "No audio issues detected",
@@ -42101,16 +42052,9 @@
     {
       "key": "No matching assets.",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2430
-    },
-    {
-      "key": "No matching assets.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2477
+      "line": 147
     },
     {
       "key": "No matching features found. Try other keywords",
@@ -42271,14 +42215,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1733
+      "line": 1649
     },
     {
       "key": "No preview",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1740
+      "line": 1656
     },
     {
       "key": "No Rank 1 replay for the current map (not generated by the official service yet)",
@@ -42887,7 +42831,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 777
+      "line": 770
     },
     {
       "key": "Normal",
@@ -45344,7 +45288,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 779
+      "line": 772
     },
     {
       "key": "Overlay entities",
@@ -45657,23 +45601,23 @@
     {
       "key": "Part color updated.",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2174
+      "line": 362
     },
     {
       "key": "Part reset to default asset.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 2207
+      "line": 1753
     },
     {
       "key": "Part updated.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1692
+      "line": 1581
     },
     {
       "key": "Particle alpha",
@@ -45846,9 +45790,9 @@
     {
       "key": "Particles",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 233
+      "line": 47
     },
     {
       "key": "Particles",
@@ -49173,7 +49117,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1711
+      "line": 1600
     },
     {
       "key": "Preview button visibility while the editor is active.",
@@ -52237,6 +52181,13 @@
     {
       "key": "Reload",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 399
+    },
+    {
+      "key": "Reload",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
       "line": 534
@@ -52247,20 +52198,6 @@
       "source": "src/game/client/QmUi/cards/QmWordFilterFileCard.cpp",
       "context": "",
       "line": 43
-    },
-    {
-      "key": "Reload",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 1869
-    },
-    {
-      "key": "Reload",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2063
     },
     {
       "key": "Reload",
@@ -52358,14 +52295,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 744
+      "line": 688
     },
     {
       "key": "Reloaded images. %d slot(s) fell back to main asset.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 739
+      "line": 683
     },
     {
       "key": "Remote console",
@@ -53488,6 +53425,13 @@
       "line": 192
     },
     {
+      "key": "Replace same-size parts in the target family.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 104
+    },
+    {
       "key": "Replace selected variant",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
@@ -53889,6 +53833,13 @@
     {
       "key": "Reset",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 253
+    },
+    {
+      "key": "Reset",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
       "line": 234
@@ -53952,16 +53903,9 @@
     {
       "key": "Reset All",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 2449
-    },
-    {
-      "key": "Reset All",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2482
+      "line": 415
     },
     {
       "key": "Reset all drawings on the background",
@@ -55175,6 +55119,13 @@
       "line": 582
     },
     {
+      "key": "Same-size family",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 101
+    },
+    {
       "key": "Sans-serif",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientFont.cpp",
@@ -55200,7 +55151,14 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 789
+      "line": 782
+    },
+    {
+      "key": "Save",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 308
     },
     {
       "key": "Save",
@@ -55250,13 +55208,6 @@
       "source": "src/game/client/components/hud_editor.cpp",
       "context": "",
       "line": 760
-    },
-    {
-      "key": "Save",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 1536
     },
     {
       "key": "Save",
@@ -55380,9 +55331,9 @@
     {
       "key": "Save asset before closing?",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 1519
+      "line": 304
     },
     {
       "key": "Save banlist in a file",
@@ -56236,7 +56187,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 778
+      "line": 771
     },
     {
       "key": "Screen",
@@ -56570,34 +56521,6 @@
     {
       "key": "Search",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2388
-    },
-    {
-      "key": "Search",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2392
-    },
-    {
-      "key": "Search",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2437
-    },
-    {
-      "key": "Search",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2440
-    },
-    {
-      "key": "Search",
-      "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
       "line": 2134
@@ -56640,9 +56563,9 @@
     {
       "key": "Search donor asset",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 1933
+      "line": 134
     },
     {
       "key": "Search ghosts",
@@ -56654,9 +56577,9 @@
     {
       "key": "Search main asset",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 1949
+      "line": 134
     },
     {
       "key": "Search maps and downloadedmaps, including subfolders",
@@ -57146,7 +57069,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1639
+      "line": 1528
     },
     {
       "key": "Selected node",
@@ -57161,13 +57084,6 @@
       "source": "src/game/client/components/qmclient/bind_workshop_ui.cpp",
       "context": "",
       "line": 2654
-    },
-    {
-      "key": "Selected part: %d",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2039
     },
     {
       "key": "Selected text color",
@@ -60210,16 +60126,9 @@
     {
       "key": "Show Grid",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 1867
-    },
-    {
-      "key": "Show Grid",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2074
+      "line": 99
     },
     {
       "key": "Show hammer icon",
@@ -63353,6 +63262,13 @@
     {
       "key": "Skin",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
+      "context": "",
+      "line": 45
+    },
+    {
+      "key": "Skin",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
       "context": "",
       "line": 1099
@@ -63377,13 +63293,6 @@
       "source": "src/game/client/QmUi/cards/QmCardSearch/QmCardCatalogTee.inc",
       "context": "",
       "line": 79
-    },
-    {
-      "key": "Skin",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 231
     },
     {
       "key": "Skin copying is only available for 0.6 skins",
@@ -64216,7 +64125,7 @@
       "category": "indirect",
       "source": "src/game/client/components/menus.h",
       "context": "Assets editor blend mode",
-      "line": 784
+      "line": 777
     },
     {
       "key": "Softness ",
@@ -66433,9 +66342,9 @@
     {
       "key": "Strong Weak Hook",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 236
+      "line": 50
     },
     {
       "key": "Strong Weak Hook",
@@ -69508,7 +69417,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_assets_editor.cpp",
       "context": "",
-      "line": 1325
+      "line": 1269
     },
     {
       "key": "The name of the selected envelope.",
@@ -69628,13 +69537,6 @@
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
       "line": 2320
-    },
-    {
-      "key": "The selected part stays highlighted while you adjust its color.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2480
     },
     {
       "key": "The server is running a non-standard tuning on a pure game type.",
@@ -70475,13 +70377,6 @@
       "source": "src/game/client/components/menus_demo.cpp",
       "context": "",
       "line": 1062
-    },
-    {
-      "key": "tile",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
-      "context": "",
-      "line": 2335
     },
     {
       "key": "Tile art",
@@ -79082,9 +78977,9 @@
     {
       "key": "You have unsaved changes.",
       "category": "localize_or_localizable",
-      "source": "src/game/client/components/menus_assets_editor.cpp",
+      "source": "src/game/client/QmUi/AssetsEditor.cpp",
       "context": "",
-      "line": 1524
+      "line": 305
     },
     {
       "key": "You have used practice mode already",

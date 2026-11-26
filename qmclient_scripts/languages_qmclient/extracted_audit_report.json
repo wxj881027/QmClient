@@ -1,9 +1,9 @@
 {
   "summary": {
-    "must_i18n": 11352,
-    "business_data": 13588,
+    "must_i18n": 11337,
+    "business_data": 13587,
     "test_only": 9539,
-    "needs_review": 5134,
+    "needs_review": 5138,
     "violation": 0
   },
   "must_i18n": [
@@ -13229,6 +13229,265 @@
       "text": "Save banlist in a file",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 43,
+      "text": "Emoticons",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 44,
+      "text": "Entities",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 45,
+      "text": "Skin",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 46,
+      "text": "HUD",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 47,
+      "text": "Particles",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 48,
+      "text": "Mouse",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 49,
+      "text": "Direction Keys",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 50,
+      "text": "Strong Weak Hook",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 51,
+      "text": "Extras",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 52,
+      "text": "Game",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 99,
+      "text": "Show Grid",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 101,
+      "text": "Same-size family",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 104,
+      "text": "Replace same-size parts in the target family.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 105,
+      "text": "Export",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 109,
+      "text": "my_%s",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 117,
+      "text": "Export",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 134,
+      "text": "Search donor asset",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 134,
+      "text": "Search main asset",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 147,
+      "text": "No matching assets.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 171,
+      "text": "Click to select, double-click to tint. Drag to replace a part. Right-click to reset.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 201,
+      "text": "Color",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 237,
+      "text": "Blend mode",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 240,
+      "text": "Blend strength",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 253,
+      "text": "Reset",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 304,
+      "text": "Save asset before closing?",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 305,
+      "text": "You have unsaved changes.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 308,
+      "text": "Cancel",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 308,
+      "text": "Discard",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 308,
+      "text": "Save",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 362,
+      "text": "Part color updated.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 397,
+      "text": "Assets editor",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 399,
+      "text": "Reload",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 401,
+      "text": "Close",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 411,
+      "text": "Donor Asset",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 412,
+      "text": "Donor (drag parts from left)",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 414,
+      "text": "Main Asset",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 415,
+      "text": "Reset All",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
@@ -48540,666 +48799,302 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 775,
+      "line": 768,
       "text": "Color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 777,
+      "line": 770,
       "text": "Normal",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 778,
+      "line": 771,
       "text": "Screen",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 779,
+      "line": 772,
       "text": "Overlay",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 780,
+      "line": 773,
       "text": "Darken",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 781,
+      "line": 774,
       "text": "Color Burn",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 782,
+      "line": 775,
       "text": "Lighten",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 783,
+      "line": 776,
       "text": "Color Dodge",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 784,
+      "line": 777,
       "text": "Soft Light",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 785,
+      "line": 778,
       "text": "Hard Light",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 786,
+      "line": 779,
       "text": "Difference",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 787,
+      "line": 780,
       "text": "Exclusion",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 788,
+      "line": 781,
       "text": "Hue",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 789,
+      "line": 782,
       "text": "Saturation",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 791,
+      "line": 784,
       "text": "Luminosity",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 792,
+      "line": 785,
       "text": "Multiply",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 229,
-      "text": "Emoticons",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 230,
-      "text": "Entities",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 231,
-      "text": "Skin",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 232,
-      "text": "HUD",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 233,
-      "text": "Particles",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 234,
-      "text": "Mouse",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 235,
-      "text": "Direction Keys",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 236,
-      "text": "Strong Weak Hook",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 237,
-      "text": "Extras",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 238,
-      "text": "Game",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 739,
+      "line": 683,
       "text": "Reloaded images. %d slot(s) fell back to main asset.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 744,
+      "line": 688,
       "text": "Reloaded images.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 910,
+      "line": 854,
       "text": "my_%s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1032,
+      "line": 976,
       "text": "Added %d missing required slot(s).",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1163,
+      "line": 1107,
       "text": "No assets available for composition.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1172,
+      "line": 1116,
       "text": "Failed to load main asset: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1183,
+      "line": 1127,
       "text": "Failed to copy main asset image.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1193,
+      "line": 1137,
       "text": "Failed to prepare main asset image.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1319,
+      "line": 1263,
       "text": "Choose export name first.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1325,
+      "line": 1269,
       "text": "The name \"default\" is reserved.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1331,
+      "line": 1275,
       "text": "Export name contains invalid characters.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1342,
+      "line": 1286,
       "text": "Export failed. Could not compose %d edited slot(s).",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1365,
+      "line": 1309,
       "text": "Asset with this name already exists.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1406,
+      "line": 1350,
       "text": "Failed to export skin files.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1413,
+      "line": 1357,
       "text": "Exported to %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1441,
+      "line": 1385,
       "text": "Asset with this name already exists.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1450,
+      "line": 1394,
       "text": "Failed to write PNG export.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1460,
+      "line": 1404,
       "text": "Exported to %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1519,
-      "text": "Save asset before closing?",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1524,
-      "text": "You have unsaved changes.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1536,
-      "text": "Save",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1541,
-      "text": "Discard",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1545,
-      "text": "Cancel",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1639,
+      "line": 1528,
       "text": "Selected candidate %d/%d under cursor.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1660,
+      "line": 1549,
       "text": "Can only drop onto same-size parts.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1686,
+      "line": 1575,
       "text": "Applied to %d same-family part(s).",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1692,
+      "line": 1581,
       "text": "Part updated.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1711,
+      "line": 1600,
       "text": "Preview built with %d skipped slot(s).",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1733,
+      "line": 1649,
       "text": "No preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1740,
+      "line": 1656,
       "text": "No preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1867,
-      "text": "Show Grid",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1868,
-      "text": "Export",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1869,
-      "text": "Reload",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1887,
-      "text": "Mode",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1920,
-      "text": "No assets found.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1933,
-      "text": "Search donor asset",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1949,
-      "text": "Search main asset",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1982,
-      "text": "my_%s",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2023,
-      "text": "Blend mode",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2025,
-      "text": "Blend mode",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2039,
-      "text": "Selected part: %d",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2046,
-      "text": "Blend strength",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2055,
-      "text": "Blend strength",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2060,
-      "text": "Click a part on the right to edit its color, blend mode and strength.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2063,
-      "text": "Reload",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2070,
-      "text": "Export",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2074,
-      "text": "Show Grid",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2092,
-      "text": "Donor (drag parts from left)",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2098,
-      "text": "Frankenstein (drop parts on right)",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2174,
-      "text": "Part color updated.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2207,
+      "line": 1753,
       "text": "Part reset to default asset.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2280,
-      "text": "Can only drop onto same-size parts.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2335,
-      "text": "tile",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2379,
+      "line": 1899,
       "text": "%s from %s",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2388,
-      "text": "Search",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2389,
-      "text": "Donor Asset",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2392,
-      "text": "Search",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2402,
-      "text": "Donor Asset",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2430,
-      "text": "No matching assets.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2437,
-      "text": "Search",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2440,
-      "text": "Search",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2449,
-      "text": "Reset All",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2453,
-      "text": "Main Asset",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2456,
-      "text": "Main Asset",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2477,
-      "text": "No matching assets.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2479,
-      "text": "Drop on right canvas to replace one part.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2480,
-      "text": "Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2480,
-      "text": "The selected part stays highlighted while you adjust its color.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2482,
-      "text": "Reset All",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -79535,6 +79430,62 @@
       "text": "Graphics error",
       "category": "business_data",
       "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 29,
+      "text": "gui_cursor",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 31,
+      "text": "strong_weak",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 117,
+      "text": "assets-editor-export",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 229,
+      "text": "Assets editor blend mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 241,
+      "text": "%",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 347,
+      "text": "assets_editor",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 349,
+      "text": "assets_editor",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 371,
+      "text": "assets_editor",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
@@ -116141,189 +116092,175 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 233,
+      "line": 235,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 360,
+      "line": 362,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 361,
+      "line": 363,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 594,
+      "line": 596,
       "text": "strong_weak:top",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 595,
+      "line": 597,
       "text": "strong_weak:middle",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 596,
+      "line": 598,
       "text": "strong_weak:bottom",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 605,
+      "line": 607,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 642,
+      "line": 644,
       "text": "skin:right_strip_0",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 643,
+      "line": 645,
       "text": "skin:right_strip_1",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 644,
+      "line": 646,
       "text": "skin:right_strip_2",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 645,
+      "line": 647,
       "text": "skin:right_strip_3",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 646,
+      "line": 648,
       "text": "skin:bottom_strip_0",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 647,
+      "line": 649,
       "text": "skin:bottom_strip_1",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 648,
+      "line": 650,
       "text": "skin:bottom_strip_2",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 649,
+      "line": 651,
       "text": "skin:bottom_strip_3",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 650,
+      "line": 652,
       "text": "skin:bottom_strip_4",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 651,
+      "line": 653,
       "text": "skin:bottom_strip_5",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 652,
+      "line": 654,
       "text": "skin:bottom_strip_6",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 653,
+      "line": 655,
       "text": "skin:bottom_strip_7",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 659,
+      "line": 661,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 694,
+      "line": 696,
       "text": "audio/",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 695,
+      "line": 697,
       "text": "audio/",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 714,
+      "line": 716,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 715,
+      "line": 717,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 715,
-      "text": "audio/",
-      "category": "business_data",
-      "reason": "path, file name, or URL data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 720,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 721,
+      "line": 717,
       "text": "audio/",
       "category": "business_data",
       "reason": "path, file name, or URL data"
@@ -116331,9 +116268,9 @@
     {
       "file": "src/game/client/components/menus.h",
       "line": 722,
-      "text": "audio/",
+      "text": "",
       "category": "business_data",
-      "reason": "path, file name, or URL data"
+      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
@@ -116344,7 +116281,70 @@
     },
     {
       "file": "src/game/client/components/menus.h",
+      "line": 724,
+      "text": "audio/",
+      "category": "business_data",
+      "reason": "path, file name, or URL data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 725,
+      "text": "audio/",
+      "category": "business_data",
+      "reason": "path, file name, or URL data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 768,
+      "text": "Assets editor blend mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 770,
+      "text": "Assets editor blend mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 771,
+      "text": "Assets editor blend mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 772,
+      "text": "Assets editor blend mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 773,
+      "text": "Assets editor blend mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 774,
+      "text": "Assets editor blend mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
       "line": 775,
+      "text": "Assets editor blend mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 776,
       "text": "Assets editor blend mode",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -116393,13 +116393,6 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 783,
-      "text": "Assets editor blend mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
       "line": 784,
       "text": "Assets editor blend mode",
       "category": "business_data",
@@ -116414,1092 +116407,1064 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 786,
-      "text": "Assets editor blend mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 787,
-      "text": "Assets editor blend mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 788,
-      "text": "Assets editor blend mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 789,
-      "text": "Assets editor blend mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 791,
-      "text": "Assets editor blend mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 792,
-      "text": "Assets editor blend mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 954,
+      "line": 947,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1044,
+      "line": 1037,
       "text": "DDmaX Easy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1044,
+      "line": 1037,
       "text": "DDmaX.Easy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1045,
+      "line": 1038,
       "text": "古典图 Easy",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1046,
+      "line": 1039,
       "text": "DDmaX Next",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1046,
+      "line": 1039,
       "text": "DDmaX.Next",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1047,
+      "line": 1040,
       "text": "古典图 Next",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1048,
+      "line": 1041,
       "text": "DDmaX Pro",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1048,
+      "line": 1041,
       "text": "DDmaX.Pro",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1049,
+      "line": 1042,
       "text": "古典图 Pro",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1050,
+      "line": 1043,
       "text": "DDmaX Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1050,
+      "line": 1043,
       "text": "DDmaX.Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1051,
+      "line": 1044,
       "text": "古典图 Nut",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1052,
+      "line": 1045,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1053,
+      "line": 1046,
       "text": "古典图",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1054,
+      "line": 1047,
       "text": "Oldschool",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1056,
+      "line": 1049,
       "text": "Novice",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1057,
+      "line": 1050,
       "text": "简单图",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1058,
+      "line": 1051,
       "text": "Moderate",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1059,
+      "line": 1052,
       "text": "中阶图",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1060,
+      "line": 1053,
       "text": "Brutal",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1061,
+      "line": 1054,
       "text": "高阶图",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1062,
+      "line": 1055,
       "text": "Insane",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1063,
+      "line": 1056,
       "text": "疯狂图",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1064,
+      "line": 1057,
       "text": "Dummy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1065,
+      "line": 1058,
       "text": "分身图",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1066,
+      "line": 1059,
       "text": "Solo",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1067,
+      "line": 1060,
       "text": "单人图",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1068,
+      "line": 1061,
       "text": "活动",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1076,
+      "line": 1069,
       "text": "Novice",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1071,
+      "text": "Moderate",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1073,
+      "text": "Brutal",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1075,
+      "text": "Insane",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1076,
+      "text": "疯狂",
+      "category": "business_data",
+      "reason": "server browser normalized game type display name"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1077,
+      "text": "Solo",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
       "line": 1078,
-      "text": "Moderate",
+      "text": "单人",
+      "category": "business_data",
+      "reason": "server browser normalized game type display name"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1079,
+      "text": "Dummy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
       "line": 1080,
-      "text": "Brutal",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1082,
-      "text": "Insane",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1083,
-      "text": "疯狂",
-      "category": "business_data",
-      "reason": "server browser normalized game type display name"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1084,
-      "text": "Solo",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1085,
-      "text": "单人",
-      "category": "business_data",
-      "reason": "server browser normalized game type display name"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1086,
-      "text": "Dummy",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1087,
       "text": "分身",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
+      "line": 1081,
+      "text": "活动",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1082,
+      "text": "活动",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1083,
+      "text": "极限",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1084,
+      "text": "极限",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1085,
+      "text": "训练",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1086,
+      "text": "训练",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1087,
+      "text": "娱乐",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
       "line": 1088,
-      "text": "活动",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1089,
-      "text": "活动",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1090,
-      "text": "极限",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1091,
-      "text": "极限",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1092,
-      "text": "训练",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1093,
-      "text": "训练",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1094,
       "text": "娱乐",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1095,
-      "text": "娱乐",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1104,
+      "line": 1097,
       "text": "DDmaX Easy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1104,
+      "line": 1097,
       "text": "DDmaX.Easy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1105,
+      "line": 1098,
       "text": "古典 Easy",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1106,
+      "line": 1099,
       "text": "DDmaX Next",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1106,
+      "line": 1099,
       "text": "DDmaX.Next",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1107,
+      "line": 1100,
       "text": "古典 Next",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1108,
+      "line": 1101,
       "text": "DDmaX Pro",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1108,
+      "line": 1101,
       "text": "DDmaX.Pro",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1109,
+      "line": 1102,
       "text": "古典 Pro",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1110,
+      "line": 1103,
       "text": "DDmaX Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1110,
+      "line": 1103,
       "text": "DDmaX.Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1111,
+      "line": 1104,
       "text": "古典 Nut",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1112,
+      "line": 1105,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1113,
+      "line": 1106,
       "text": "古典",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1114,
+      "line": 1107,
       "text": "Oldschool",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1121,
+      "line": 1114,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1137,
+      "line": 1130,
       "text": "DDmaX",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1132,
+      "text": "Easy",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1133,
+      "text": "DDmaX Easy",
+      "category": "business_data",
+      "reason": "server browser normalized game type display name"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1134,
+      "text": "Next",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1135,
+      "text": "DDmaX Next",
+      "category": "business_data",
+      "reason": "server browser normalized game type display name"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1136,
+      "text": "Pro",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1137,
+      "text": "DDmaX Pro",
+      "category": "business_data",
+      "reason": "server browser normalized game type display name"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1138,
+      "text": "Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
       "line": 1139,
-      "text": "Easy",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1140,
-      "text": "DDmaX Easy",
+      "text": "DDmaX Nut",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1141,
-      "text": "Next",
+      "line": 1140,
+      "text": "DDmaX",
+      "category": "business_data",
+      "reason": "server browser normalized game type display name"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1142,
+      "text": "DDmaX",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
       "line": 1142,
-      "text": "DDmaX Next",
-      "category": "business_data",
-      "reason": "server browser normalized game type display name"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1143,
-      "text": "Pro",
+      "text": "古典",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
       "line": 1144,
-      "text": "DDmaX Pro",
-      "category": "business_data",
-      "reason": "server browser normalized game type display name"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1145,
-      "text": "Nut",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1146,
-      "text": "DDmaX Nut",
-      "category": "business_data",
-      "reason": "server browser normalized game type display name"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1147,
-      "text": "DDmaX",
-      "category": "business_data",
-      "reason": "server browser normalized game type display name"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1149,
-      "text": "DDmaX",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1149,
-      "text": "古典",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1151,
       "text": "Easy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1152,
+      "line": 1145,
       "text": "DDmaX Easy",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1153,
+      "line": 1146,
       "text": "Next",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1154,
+      "line": 1147,
       "text": "DDmaX Next",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1155,
+      "line": 1148,
       "text": "Pro",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1156,
+      "line": 1149,
       "text": "DDmaX Pro",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1157,
+      "line": 1150,
       "text": "Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1158,
+      "line": 1151,
       "text": "DDmaX Nut",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1159,
+      "line": 1152,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1161,
+      "line": 1154,
       "text": "Oldschool",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1161,
+      "line": 1154,
       "text": "传统",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1163,
+      "line": 1156,
       "text": "Novice",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1163,
+      "line": 1156,
       "text": "普通",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1163,
+      "line": 1156,
       "text": "简单",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1165,
+      "line": 1158,
       "text": "Moderate",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1165,
+      "line": 1158,
       "text": "中阶",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1167,
+      "line": 1160,
       "text": "Brutal",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1167,
+      "line": 1160,
       "text": "困难",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1167,
+      "line": 1160,
       "text": "高阶",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1169,
+      "line": 1162,
       "text": "Insane",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1169,
+      "line": 1162,
       "text": "疯狂",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1171,
+      "line": 1164,
       "text": "Dummy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1171,
+      "line": 1164,
       "text": "分身",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1173,
+      "line": 1166,
       "text": "Solo",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1173,
+      "line": 1166,
       "text": "单人",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1176,
+      "line": 1169,
       "text": "Event",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
+      "line": 1169,
+      "text": "活动",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1170,
+      "text": "活动",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1171,
+      "text": "极限",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1172,
+      "text": "极限",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1173,
+      "text": "训练",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1174,
+      "text": "训练",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1175,
+      "text": "娱乐",
+      "category": "business_data",
+      "reason": "server game type matcher data"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
       "line": 1176,
-      "text": "活动",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1177,
-      "text": "活动",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1178,
-      "text": "极限",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1179,
-      "text": "极限",
+      "text": "娱乐",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
       "line": 1180,
-      "text": "训练",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1181,
-      "text": "训练",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1182,
-      "text": "娱乐",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1183,
-      "text": "娱乐",
-      "category": "business_data",
-      "reason": "server game type matcher data"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1187,
       "text": "gores",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1187,
+      "line": 1180,
       "text": "kog",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1191,
+      "line": 1184,
       "text": "kog",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1206,
+      "line": 1199,
       "text": "[kog.tw]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1214,
+      "line": 1207,
       "text": " #",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1222,
+      "line": 1215,
       "text": " - ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1235,
+      "line": 1228,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1249,
+      "line": 1242,
       "text": "Axiom",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1252,
+      "line": 1245,
       "text": "axrace",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1255,
+      "line": 1248,
       "text": "Novice",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1255,
+      "line": 1248,
       "text": "普通",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1255,
+      "line": 1248,
       "text": "简单",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1265,
+      "line": 1258,
       "text": "✦",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1278,
+      "line": 1271,
       "text": "Axiom",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1282,
+      "line": 1275,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1287,
+      "line": 1280,
       "text": " - ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1292,
+      "line": 1285,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1298,
+      "line": 1291,
       "text": "%s - %s %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1300,
+      "line": 1293,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1305,
+      "line": 1298,
       "text": "CHN",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1305,
+      "line": 1298,
       "text": "CHN DDR",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1305,
+      "line": 1298,
       "text": "DDNet CHN",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1305,
+      "line": 1298,
       "text": "DDNet Taiwan",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1310,
+      "line": 1303,
       "text": "DDNet ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1312,
+      "line": 1305,
       "text": "CHN DDR ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1314,
+      "line": 1307,
       "text": " - ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1323,
+      "line": 1316,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1330,
+      "line": 1323,
       "text": "古典",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1336,
+      "line": 1329,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1342,
+      "line": 1335,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1350,
+      "line": 1343,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1371,
+      "line": 1364,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1441,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1719,
+      "line": 1710,
       "text": ".demo",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1724,
+      "line": 1715,
       "text": ".poses",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1754,
+      "line": 1745,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1756,
+      "line": 1747,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1811,
+      "line": 1802,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1856,
+      "line": 1847,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1857,
+      "line": 1848,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1858,
+      "line": 1849,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1873,
+      "line": 1864,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1884,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1890,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1892,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -117513,49 +117478,35 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1899,
+      "line": 1958,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1901,
+      "line": 1959,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1902,
+      "line": 1960,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1967,
+      "line": 1962,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1968,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1969,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1971,
+      "line": 2345,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -117569,21 +117520,28 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2363,
+      "line": 2355,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2364,
+      "line": 2487,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2496,
+      "line": 2522,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 2529,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -117597,668 +117555,598 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2538,
+      "line": 2532,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2540,
+      "line": 2533,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2541,
+      "line": 2534,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2542,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 2543,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 2554,
+      "line": 2545,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2556,
+      "line": 2547,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2830,
+      "line": 2821,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2963,
+      "line": 2954,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2964,
+      "line": 2955,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2998,
+      "line": 2989,
       "text": "settings_open",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2998,
+      "line": 2989,
       "text": "target_settings",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 3545,
+      "line": 3536,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 85,
+      "line": 74,
       "text": "gui_cursor",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 87,
+      "line": 76,
       "text": "strong_weak",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 158,
+      "line": 147,
       "text": "default",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 164,
+      "line": 153,
       "text": "assets/entities/%s/ddnet.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 167,
+      "line": 156,
       "text": "assets/entities/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 174,
+      "line": 163,
       "text": "assets/%s/%s/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 177,
+      "line": 166,
       "text": "assets/%s/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 185,
+      "line": 174,
       "text": ".png",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 190,
+      "line": 179,
       "text": "default",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 194,
+      "line": 183,
       "text": "assets/entities/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 196,
+      "line": 185,
       "text": "skins/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 198,
+      "line": 187,
       "text": "assets/%s/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 217,
-      "text": "gui_cursor",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 219,
-      "text": "strong_weak",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 657,
+      "line": 601,
       "text": "editor/entities_clear/ddnet.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 659,
+      "line": 603,
       "text": "skins/default.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 662,
+      "line": 606,
       "text": "assets/%s/default.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 684,
+      "line": 628,
       "text": "assets/entities",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 688,
+      "line": 632,
       "text": "assets/%s",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 789,
+      "line": 733,
       "text": "entities:tile_%03d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 817,
+      "line": 761,
       "text": "full_image",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 857,
+      "line": 801,
       "text": "ninja_bar_full_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 858,
+      "line": 802,
       "text": "ninja_bar_full",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 859,
+      "line": 803,
       "text": "ninja_bar_empty",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 860,
+      "line": 804,
       "text": "ninja_bar_empty_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1004,
+      "line": 948,
       "text": "pickup_health",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1004,
+      "line": 948,
       "text": "pickup_heart",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1005,
+      "line": 949,
       "text": "pickup_armor",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1006,
+      "line": 950,
       "text": "pickup_armor_shotgun",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1007,
+      "line": 951,
       "text": "ninja_bar_full_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1008,
+      "line": 952,
       "text": "ninja_bar_full",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1009,
+      "line": 953,
       "text": "ninja_bar_empty",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1010,
+      "line": 954,
       "text": "ninja_bar_empty_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1014,
+      "line": 958,
       "text": "part_slice",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1015,
+      "line": 959,
       "text": "part_ball",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1016,
+      "line": 960,
       "text": "part_splat01",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1017,
+      "line": 961,
       "text": "part_splat02",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1018,
+      "line": 962,
       "text": "part_splat03",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1019,
+      "line": 963,
       "text": "part_smoke",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1020,
+      "line": 964,
       "text": "part_shell",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1021,
+      "line": 965,
       "text": "part_expl01",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1022,
+      "line": 966,
       "text": "part_airjump",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1023,
+      "line": 967,
       "text": "part_hit01",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1051,
+      "line": 995,
       "text": "weapon_",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1059,
+      "line": 1003,
       "text": "weapon:*:%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1066,
+      "line": 1010,
       "text": "_hit_disabled",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1071,
+      "line": 1015,
       "text": "hud_freeze_bar_",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1073,
+      "line": 1017,
       "text": "hud:freeze_bar",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1076,
+      "line": 1020,
       "text": "hud_ninja_bar_",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1078,
+      "line": 1022,
       "text": "hud:ninja_bar",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1084,
+      "line": 1028,
       "text": "single_image",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1323,
+      "line": 1267,
       "text": "default",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1329,
+      "line": 1273,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1329,
+      "line": 1273,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1329,
+      "line": 1273,
       "text": "\\",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1355,
+      "line": 1299,
       "text": "skins/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1356,
+      "line": 1300,
       "text": "skins7/body/%s.png",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1357,
+      "line": 1301,
       "text": "skins7/feet/%s.png",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1358,
+      "line": 1302,
       "text": "skins7/hands/%s.png",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1359,
+      "line": 1303,
       "text": "skins7/%s.json",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1370,
+      "line": 1314,
       "text": "skins",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1371,
+      "line": 1315,
       "text": "skins7",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1372,
+      "line": 1316,
       "text": "skins7/body",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1373,
+      "line": 1317,
       "text": "skins7/feet",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1374,
+      "line": 1318,
       "text": "skins7/hands",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1392,
+      "line": 1336,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1424,
+      "line": 1368,
       "text": "assets",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1425,
+      "line": 1369,
       "text": "assets/entities",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1426,
+      "line": 1370,
       "text": "assets/entities/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1427,
+      "line": 1371,
       "text": "assets/entities/%s",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1431,
+      "line": 1375,
       "text": "assets/%s",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1432,
+      "line": 1376,
       "text": "assets",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1434,
+      "line": 1378,
       "text": "assets/%s/%s.png",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1435,
+      "line": 1379,
       "text": "assets/%s/%s",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1717,
+      "line": 1435,
+      "text": "assets_editor",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/menus_assets_editor.cpp",
+      "line": 1606,
       "text": "assets_editor_preview",
       "category": "business_data",
       "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 1984,
-      "text": "assets_editor_export_name",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2018,
-      "text": "Assets editor blend mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2046,
-      "text": "%",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2055,
-      "text": "%s: %d%%",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2393,
-      "text": "assets_editor_donor_search",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2441,
-      "text": "assets_editor_main_search",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_assets_editor.cpp",
-      "line": 2514,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
@@ -241367,6 +241255,20 @@
   ],
   "needs_review": [
     {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 192,
+      "text": "#%d · %s",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/AssetsEditor.cpp",
+      "line": 433,
+      "text": "%d × %d px",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
       "file": "src/game/client/QmUi/MapTagsPanel.cpp",
       "line": 250,
       "text": "%s ×%d%s",
@@ -254661,43 +254563,57 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1055,
+      "line": 1048,
       "text": "传统图",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1069,
+      "line": 1062,
       "text": "活动图",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1077,
+      "line": 1070,
       "text": "简单",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1079,
+      "line": 1072,
       "text": "普通",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1081,
+      "line": 1074,
       "text": "困难",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1115,
+      "line": 1108,
       "text": "传统",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/menus_assets_editor.cpp",
+      "line": 1871,
+      "text": "%s · %d × %d px",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/menus_assets_editor.cpp",
+      "line": 1875,
+      "text": " · %d/%d",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },

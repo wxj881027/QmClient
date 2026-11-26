@@ -1431,6 +1431,70 @@ turkish = "Skor tablosunda yetkilendirilmiş isim rengi"
 polish = "Kolor nazwy autoryzowanego gracza na tablicy wyników"
 
 [[message]]
+key = "Click to select, double-click to tint. Drag to replace a part. Right-click to reset."
+[message.translations]
+simplified_chinese = "单击选中，双击调色。拖动替换部件，右键重置。"
+traditional_chinese = "按一下選取，按兩下調色。拖曳替換部件，按右鍵重設。"
+japanese = "クリックで選択、ダブルクリックで着色。ドラッグでパーツを置換し、右クリックで元に戻します。"
+korean = "클릭하면 선택하고 두 번 클릭하면 색을 바꿉니다. 끌어서 부품을 교체하고 우클릭으로 초기화합니다."
+russian = "Щелчок выбирает деталь, двойной щелчок открывает палитру. Перетащите деталь для замены. Правая кнопка сбрасывает изменения."
+german = "Klicken zum Auswählen, doppelklicken zum Färben. Zum Ersetzen ziehen, zum Zurücksetzen rechtsklicken."
+spanish = "Haz clic para seleccionar y doble clic para teñir. Arrastra para reemplazar una pieza. Haz clic derecho para restablecerla."
+french = "Cliquez pour sélectionner, double-cliquez pour teinter. Faites glisser pour remplacer une pièce. Un clic droit la réinitialise."
+brazilian_portuguese = "Clique para selecionar e clique duas vezes para colorir. Arraste para substituir uma peça. Clique com o botão direito para restaurar."
+portuguese = "Clique para selecionar e faça duplo clique para colorir. Arraste para substituir uma peça. Clique com o botão direito para repor."
+turkish = "Seçmek için tıklayın, renklendirmek için çift tıklayın. Parçayı değiştirmek için sürükleyin, sıfırlamak için sağ tıklayın."
+polish = "Kliknij, aby wybrać. Kliknij dwukrotnie, aby zabarwić. Przeciągnij, aby zastąpić część. Prawy przycisk myszy przywraca ustawienia."
+
+[[message]]
+key = "Export failed. Could not compose %d edited slot(s)."
+[message.translations]
+simplified_chinese = "导出失败。有 %d 个已编辑的部件无法合成。"
+traditional_chinese = "匯出失敗。有 %d 個已編輯的部件無法合成。"
+japanese = "書き出しに失敗しました。編集したパーツ %d 個を合成できませんでした。"
+korean = "내보내기에 실패했습니다. 편집한 부품 %d개를 합성할 수 없습니다."
+russian = "Не удалось экспортировать: не удалось собрать изменённые детали (%d)."
+german = "Export fehlgeschlagen. %d bearbeitete Teile konnten nicht zusammengesetzt werden."
+spanish = "No se pudo exportar. No se pudieron componer %d piezas editadas."
+french = "Échec de l’exportation. Impossible de composer %d pièces modifiées."
+brazilian_portuguese = "Falha ao exportar. Não foi possível compor %d peças editadas."
+portuguese = "A exportação falhou. Não foi possível compor %d peças editadas."
+turkish = "Dışa aktarma başarısız. Düzenlenen %d parça birleştirilemedi."
+polish = "Eksport nie powiódł się. Nie udało się połączyć zmodyfikowanych części (%d)."
+
+[[message]]
+key = "Replace same-size parts in the target family."
+[message.translations]
+simplified_chinese = "一起替换目标部件同族中尺寸相同的部件。"
+traditional_chinese = "一併替換目標部件同族中尺寸相同的部件。"
+japanese = "対象と同じ系統でサイズが一致するパーツをまとめて置き換えます。"
+korean = "대상과 같은 계열에서 크기가 같은 부품을 함께 교체합니다."
+russian = "Заменить все детали того же размера в группе выбранной детали."
+german = "Alle gleich großen Teile der Zielgruppe ersetzen."
+spanish = "Reemplaza las piezas del mismo tamaño en el grupo de destino."
+french = "Remplace les pièces de même taille dans la famille cible."
+brazilian_portuguese = "Substitui as peças do mesmo tamanho no grupo de destino."
+portuguese = "Substitui as peças do mesmo tamanho no grupo de destino."
+turkish = "Hedef gruptaki aynı boyutlu parçaları birlikte değiştirir."
+polish = "Zastąp części tego samego rozmiaru w grupie docelowej."
+
+[[message]]
+key = "Same-size family"
+[message.translations]
+simplified_chinese = "同族同尺寸"
+traditional_chinese = "同族同尺寸"
+japanese = "同系・同サイズ"
+korean = "같은 계열·크기"
+russian = "Группа по размеру"
+german = "Gruppe gleicher Größe"
+spanish = "Grupo del mismo tamaño"
+french = "Groupe de même taille"
+brazilian_portuguese = "Grupo do mesmo tamanho"
+portuguese = "Grupo do mesmo tamanho"
+turkish = "Aynı boyut grubu"
+polish = "Grupa tego samego rozmiaru"
+
+[[message]]
 key = "auto"
 [message.translations]
 simplified_chinese = "自动"

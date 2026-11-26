@@ -2573,9 +2573,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 一覧で言語をクリックするとすぐに反映されます。左側の国旗が現在の選択を示します。
 
-Click a part on the right to edit its color, blend mode and strength.
-== 右側のパーツをクリックして、色、ブレンドモード、強度を調整します。
-
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == HDFや左ジャンプなどの行をクリックして好きなキーを押すと割り当てられます。隣のゴミ箱アイコンでその割り当てを消せます。
 
@@ -2635,6 +2632,9 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == クリックでサーバー選択、ダブルクリックで友達のサーバーに参加。
+
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
+== クリックで選択、ダブルクリックで着色。ドラッグでパーツを置換し、右クリックで元に戻します。
 
 Client
 == クライアント
@@ -4490,9 +4490,6 @@ Drift intensity
 Drift smoothness
 == ドリフトの滑らかさ
 
-Drop on right canvas to replace one part.
-== 右側キャンバスにドロップして部品を1つ置き換える。
-
 Droplet
 == しずく
 
@@ -5628,7 +5625,7 @@ Export failed
 == エクスポートに失敗しました
 
 Export failed. Could not compose %d edited slot(s).
-== Export failed. Could not compose %d edited slot(s).
+== 書き出しに失敗しました。編集したパーツ %d 個を合成できませんでした。
 
 Export name contains invalid characters.
 == エクスポート名に無効な文字が含まれています。
@@ -6163,9 +6160,6 @@ Frames buffered between capture and encoding. Deeper queues absorb slow encoder 
 
 Frames drawn per second when V-Sync is off; 0 = unlimited
 == 垂直同期オフ時に毎秒描画するフレーム数の上限。0 = 無制限
-
-Frankenstein (drop parts on right)
-== フランケンシュタイン（パーツを右側にドロップ）
 
 Free move
 == 自由移動
@@ -8126,9 +8120,6 @@ Leave the pose session
 Left jump
 == 左ジャンプ
 
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
-== 左クリックでフランケンシュタインパーツの色を変更。ドラッグでパーツを入れ替え。右クリックでリセット。
-
 Left/right channel width
 == 左右チャンネル幅
 
@@ -9619,9 +9610,6 @@ No assets
 
 No assets available for composition.
 == 合成に利用可能なアセットがありません。
-
-No assets found.
-== アセットが見つかりません。
 
 No audio issues detected
 == オーディオの問題は検出されませんでした
@@ -12323,6 +12311,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == 非フレンドスキンをデフォルトに置換
 
+Replace same-size parts in the target family.
+== 対象と同じ系統でサイズが一致するパーツをまとめて置き換えます。
+
 Replace selected variant
 == 選択したバリアントを置換
 
@@ -12752,6 +12743,9 @@ Same clan color in scoreboard
 Same group full map listening
 == 同じグループ内でマップ全体の音声を聞く
 
+Same-size family
+== 同系・同サイズ
+
 Sans-serif
 == サンセリフ
 
@@ -13159,9 +13153,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == カーソル下の候補 %d/%d が選択されました。
-
-Selected part: %d
-== 選択中のパーツ：%d
 
 Selected text color
 == 選択文字色
@@ -16178,9 +16169,6 @@ The selected button is not visible. Do you want to deselect it or edit its visib
 The selected button is overlapping with other buttons.
 == 選択したボタンが他のボタンと重なっています。
 
-The selected part stays highlighted while you adjust its color.
-== 色を調整している間、選択したパーツがハイライト表示されます。
-
 The server is running a non-standard tuning on a pure game type.
 == サーバーが純粋なゲームタイプで非標準のチューニングを実行しています。
 
@@ -16402,9 +16390,6 @@ Ticks after freeze before applying max prediction reduction
 
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 == 各セグメントの前に録画せずに再生する tick 数。エフェクトやチャットの状態を区間の開始に合わせます。50 tick が 1 秒です。
-
-tile
-== タイル
 
 Tile outlines
 == タイルのアウトライン

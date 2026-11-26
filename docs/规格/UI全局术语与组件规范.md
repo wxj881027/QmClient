@@ -74,6 +74,23 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`UiTokens.h` 中的 `ui_token::finish_summary::*`（完成摘要卡数字及差值角色色）、`ui_token::map_preview::*`（预览背板及占位图标）、`ui_token::world_lyrics::*`（世界歌词正文及光晕）和 `ui_token::tag::MONET_PALETTE`（标签与取色器共用的固定预设）；通用色仍走 `ui_token::color`。
 - 禁止的反面写法：在绘制代码里写 `ColorRGBA(...)` 数字字面量；把组件身份色放进 `ui_token::color` 变成全局色；同一组件两处各写一份近似色；用近似值复制已有 token。
 
+#### 材质编辑器画布角色色（assets editor canvas roles）
+
+- 定义：双色棋盘格标识贴图透明区。槽位边框区分悬停、选中、染色和拖拽落点，拖动缩略图使用独立浮层表面。
+- 唯一实现：`src/game/client/QmUi/UiTokens.h` 的 `ui_token::assets_editor` 提供棋盘、网格、槽位、落点与拖动浮层颜色。染色边框直接取部件当前颜色。色块、工作台、面板与拖动浮层的圆角描边宽度共用 `BORDER_WIDTH`。
+- 禁止的反面写法：在画布绘制函数中写角色色字面量，或为每种边框新增玩家配置。
+
+#### 材质编辑器工作台（assets editor workbench）
+
+- 定义：标题和工具栏位于双画布上方，部件检查器和状态栏位于下方。检查器在折行时预留两行，首次选中部件时画布位置和尺寸保持不变。画布卡头容纳搜索与材质选择器，窄屏折行，矮屏滚动整个工作台。
+- 唯一实现：`src/game/client/QmUi/AssetsEditorLayout.h` 的 `ResolveWorkbench` 依据可用尺寸和设置度量计算各区。双画布共用 `AssetsEditorInput.h` 的 `CCanvasGesture`，按移动距离起拖，右侧单击选中、双击取色。
+- 禁止的反面写法：在左右画布底部重复预留搜索行，用按住时长判定拖动，或在模态层打开时继续处理画布按键。
+
+| 编辑器 | 主空间 | 选择后的操作 |
+| --- | --- | --- |
+| 材质编辑器 | 两张等大的材质画布 | 在检查器中调整部件，画布间可拖动替换 |
+| 音频包编辑器 | 槽位目录与候选文件列表 | 在工作区试听并替换选中变体 |
+
 ### 2.2 设置内容布局流（settings content flow）
 
 - 定义：卡片内容按「行」声明：高度、行前间距、ID；同一段代码在声明趟、测量趟、输入趟、绘制趟各跑一次，输出必须一致。

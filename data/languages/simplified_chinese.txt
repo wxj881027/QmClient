@@ -2724,9 +2724,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 在列表里点一种语言就会立即生效，左侧的国旗标出当前选择。
 
-Click a part on the right to edit its color, blend mode and strength.
-== 点击右侧部件，调整颜色、混合模式和强度。
-
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == 点一下 HDF 或左跳这类行，按下想用的键即可绑定；点旁边的垃圾桶图标可以清除这个绑定。
 
@@ -2789,6 +2786,9 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == 单击选择服务器；双击加入好友所在服
+
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
+== 单击选中，双击调色。拖动替换部件，右键重置。
 
 Client
 == 客户端
@@ -4716,9 +4716,6 @@ Drift smoothness
 Drop on an input port to link
 == 松开到输入端口即可连线
 
-Drop on right canvas to replace one part.
-== 拖到右侧画布可替换一个部件。
-
 Droplet
 == 水滴
 
@@ -5917,7 +5914,7 @@ Export failed
 == 导出失败
 
 Export failed. Could not compose %d edited slot(s).
-== Export failed. Could not compose %d edited slot(s).
+== 导出失败。有 %d 个已编辑的部件无法合成。
 
 Export name contains invalid characters.
 == 导出名称包含无效字符。
@@ -6491,9 +6488,6 @@ Frames buffered between capture and encoding. Deeper queues absorb slow encoder 
 
 Frames drawn per second when V-Sync is off; 0 = unlimited
 == 关闭垂直同步时每秒最多绘制多少帧；0 = 不限
-
-Frankenstein (drop parts on right)
-== 拼合结果（将部件拖放到右侧）
 
 Free move
 == 自由移动
@@ -8499,9 +8493,6 @@ Left
 Left jump
 == 左跳
 
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
-== 左键点击右侧部件可调色，拖拽可替换部件，右键可重置。
-
 Left-drag empty space to box-select, middle-drag to pan, wheel to zoom.
 == 左键拖空白框选，中键拖动平移，滚轮缩放。
 
@@ -10082,9 +10073,6 @@ No assets
 
 No assets available for composition.
 == 没有可用于合成的材质。
-
-No assets found.
-== 未找到材质。
 
 No audio issues detected
 == 未发现音频异常
@@ -12894,6 +12882,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == 用默认皮肤替换非好友皮肤
 
+Replace same-size parts in the target family.
+== 一起替换目标部件同族中尺寸相同的部件。
+
 Replace selected variant
 == 替换所选变体
 
@@ -13347,6 +13338,9 @@ Same function
 Same group full map listening
 == 同组全图收听
 
+Same-size family
+== 同族同尺寸
+
 Sans-serif
 == 无衬线体
 
@@ -13772,9 +13766,6 @@ Selected candidate %d/%d under cursor.
 
 Selected node
 == 选中节点
-
-Selected part: %d
-== 所选部件：%d
 
 Selected text color
 == 选中文字颜色
@@ -16866,9 +16857,6 @@ The selected button is not visible. Do you want to deselect it or edit its visib
 The selected button is overlapping with other buttons.
 == 选中的按键和其它按键重合。
 
-The selected part stays highlighted while you adjust its color.
-== 调色时会持续高亮当前选中的部件。
-
 The server is running a non-standard tuning on a pure game type.
 == 此服务器运行着经过调整的非标准游戏模式。
 
@@ -17102,9 +17090,6 @@ Ticks after freeze before applying max prediction reduction
 
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 == 每段开始前不带录制地播放的 tick 数，用来让特效和聊天状态与该段起点一致。50 tick 等于 1 秒。
-
-tile
-== 瓦片
 
 Tile outlines
 == 墙体轮廓

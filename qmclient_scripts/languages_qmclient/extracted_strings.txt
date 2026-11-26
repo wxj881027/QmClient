@@ -886,7 +886,6 @@ Clears the voting options
 Click "QmClient Settings", "Profiles", "War List" or "Chat Binds" to open that file, then use "Configuration packages" to export or import a whole set.
 Click a key on the keyboard picture or under "Mouse", then add a command with "Add function" or use the capture button to move an existing bind.
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
-Click a part on the right to edit its color, blend mode and strength.
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
 Click a slice to set color
@@ -908,6 +907,7 @@ Click to remove this clan from your friends list.
 Click to remove this community from favorites
 Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
 Client
 Client CPU usage is high
 Client frame time is abnormal
@@ -1545,7 +1545,6 @@ Drift direction
 Drift intensity
 Drift smoothness
 Drop on an input port to link
-Drop on right canvas to replace one part.
 Droplet
 Drown deaths
 Dual Kawase
@@ -2124,7 +2123,6 @@ Frags
 Frame time
 Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
 Frames drawn per second when V-Sync is off; 0 = unlimited
-Frankenstein (drop parts on right)
 Free move
 Free view
 Free-View
@@ -2794,7 +2792,6 @@ Leave the path empty to auto-detect; fill it in only when the status says "Steam
 Leave the pose session
 Left
 Left jump
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
 Left-drag empty space to box-select, middle-drag to pan, wheel to zoom.
 Left/right channel width
 Legacy bind script
@@ -3318,7 +3315,6 @@ No animation
 No answer from server yet.
 No assets
 No assets available for composition.
-No assets found.
 No audio issues detected
 No buttons match your filter criteria
 No callable peer found
@@ -4250,6 +4246,7 @@ Replace mode
 Replace mode 0=Regex 1=Full 2=Both
 Replace non-friend names with ID
 Replace non-friend skins with default
+Replace same-size parts in the target family.
 Replace selected variant
 Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
 Replace skin with one having this prefix (e.g. cats, santa)
@@ -4401,6 +4398,7 @@ Same as "vote no"
 Same clan color in scoreboard
 Same function
 Same group full map listening
+Same-size family
 Sans-serif
 Sat.
 Save
@@ -4540,7 +4538,6 @@ Select the country flag for each player
 Selected %d
 Selected candidate %d/%d under cursor.
 Selected node
-Selected part: %d
 Selected text color
 Selected timertype is not supported by your client
 Selecting download source...
@@ -5564,7 +5561,6 @@ The replay list is empty or malformed
 The scale name depends on the encoder (CRF, CQ, QP, ICQ) but the direction is the same. ProRes fixes quality by profile, so the field is disabled.
 The selected button is not visible. Do you want to deselect it or edit its visibility?
 The selected button is overlapping with other buttons.
-The selected part stays highlighted while you adjust its color.
 The server is running a non-standard tuning on a pure game type.
 The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
@@ -5642,7 +5638,6 @@ Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"
 Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
 Ticks after freeze before applying max prediction reduction
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
-tile
 Tile outlines
 Tile watermark
 Time

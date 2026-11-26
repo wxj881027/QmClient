@@ -21,6 +21,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/AssetsEditorInput.h>
 #include <game/client/QmUi/AudioPackEditorInput.h>
 #include <game/client/QmUi/MapTagsPanel.h>
 #include <game/client/QmUi/QmAuthorName.h>
@@ -577,6 +578,35 @@ public:
 		int m_BlendStrength = 100;
 		char m_aFamilyKey[64] = {0};
 		char m_aSourceAsset[64] = {0};
+
+		bool UsesAssetRect(const char *pName) const
+		{
+			return str_comp(m_aSourceAsset, pName) == 0 && m_SrcX == m_DstX && m_SrcY == m_DstY && m_SrcW == m_DstW && m_SrcH == m_DstH;
+		}
+
+		bool IsResetTo(const char *pName) const
+		{
+			const SAssetsEditorPartSlot Defaults;
+			return UsesAssetRect(pName) && m_SourceSpriteId == m_SpriteId && m_Color == Defaults.m_Color &&
+			       m_ColorBlendMode == Defaults.m_ColorBlendMode && m_BlendStrength == Defaults.m_BlendStrength;
+		}
+
+		bool ResetTo(const char *pName)
+		{
+			if(IsResetTo(pName))
+				return false;
+			str_copy(m_aSourceAsset, pName);
+			m_SourceSpriteId = m_SpriteId;
+			m_SrcX = m_DstX;
+			m_SrcY = m_DstY;
+			m_SrcW = m_DstW;
+			m_SrcH = m_DstH;
+			const SAssetsEditorPartSlot Defaults;
+			m_Color = Defaults.m_Color;
+			m_ColorBlendMode = Defaults.m_ColorBlendMode;
+			m_BlendStrength = Defaults.m_BlendStrength;
+			return true;
+		}
 	};
 
 	using SAudioPackSlot = qm_audio_pack::SSlot;
@@ -944,10 +974,7 @@ public:
 	static bool AssetsEditorSlotNeedsProcessing(const SAssetsEditorPartSlot &Slot, const char *pMainAssetName)
 	{
 		const char *pResolvedMainAssetName = pMainAssetName != nullptr ? pMainAssetName : "";
-		const bool UsesMainSourceRect = str_comp(Slot.m_aSourceAsset, pResolvedMainAssetName) == 0 &&
-						Slot.m_SrcX == Slot.m_DstX && Slot.m_SrcY == Slot.m_DstY &&
-						Slot.m_SrcW == Slot.m_DstW && Slot.m_SrcH == Slot.m_DstH;
-		return !UsesMainSourceRect || AssetsEditorHasColorOverride(AssetsEditorSlotTint(Slot), Slot.m_ColorBlendMode);
+		return !Slot.UsesAssetRect(pResolvedMainAssetName) || AssetsEditorHasColorOverride(AssetsEditorSlotTint(Slot), Slot.m_ColorBlendMode);
 	}
 
 	static void AssetsEditorApplyColorOverrideToImageRect(CImageInfo &Image, int X, int Y, int W, int H, const ColorRGBA &Tint, int BlendMode)
@@ -1439,6 +1466,19 @@ private:
 		int m_PreviewSampleId = -1;
 	};
 
+	enum class EAssetsEditorAction
+	{
+		CLOSE,
+		SWITCH_TYPE,
+		SWITCH_MAIN_ASSET
+	};
+	struct SAssetsEditorAction
+	{
+		EAssetsEditorAction m_Kind;
+		int m_Type = -1;
+		std::string m_MainAssetName{};
+	};
+
 	struct SAssetsEditorState
 	{
 		bool m_Open = false;
@@ -1450,25 +1490,18 @@ private:
 		bool m_ShowGrid = true;
 		bool m_ApplySameSize = false;
 		int m_SelectedTargetSlotIndex = -1;
-		bool m_DragActive = false;
-		int m_ActiveDraggedSlotIndex = -1;
-		char m_aDraggedSourceAsset[64] = {0};
-		bool m_TargetPressPending = false;
-		int m_PendingTargetSlotIndex = -1;
-		vec2 m_PendingTargetPressPos = vec2(0.0f, 0.0f);
-		int64_t m_PendingTargetPressTime = 0;
+		qmclient::assets_editor::CCanvasGesture m_Gesture;
+		int m_DragSourceIndex = -1;
+		char m_aDraggedSourceAsset[64] = {};
 		int m_ColorPickerSlotIndex = -1;
 		unsigned int m_ColorPickerValue = 0;
-		unsigned int m_LastColorPickerValue = 0;
-		int m_HoveredDonorSlotIndex = -1;
-		int m_HoveredTargetSlotIndex = -1;
 		bool m_DirtyPreview = true;
 		char m_aExportName[64] = {0};
 		char m_aaExportNameByType[ASSETS_EDITOR_TYPE_COUNT][64] = {};
 		char m_aStatusMessage[256] = {0};
 		bool m_StatusIsError = false;
 		bool m_HasUnsavedChanges = false;
-		bool m_ShowExitConfirm = false;
+		std::optional<SAssetsEditorAction> m_PendingAction;
 		bool m_FullscreenOpen = false;
 		int m_HoverCycleSlotIndex = -1;
 		int m_HoverCyclePositionX = -1;
@@ -1501,6 +1534,14 @@ private:
 	void RenderAudioPackEditorScreen(CUIRect MainView);
 	void RenderAudioPackEditorContent(CUIRect MainView, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics, bool Initialize);
 	void RenderAssetsEditorScreen(CUIRect MainView);
+	static const char *AssetsEditorTypeName(int Type);
+	void AssetsEditorRenderToolbar(CUIRect Tools, CUIRect Export, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics);
+	void AssetsEditorRenderSelector(CUIRect Search, CUIRect Selector, bool Target, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics);
+	void AssetsEditorRenderInspector(CUIRect Rect, bool Wrap, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics);
+	void AssetsEditorRenderCanvases(CUIRect Left, CUIRect Right, CUIRect Viewport, bool Blocked, const SSettingsContentMetrics &Metrics);
+	void AssetsEditorOpenColorPicker(int Index);
+	void AssetsEditorResetSlot(int Index);
+	bool AssetsEditorHasSlotChanges() const;
 	void AssetsEditorClearAssets();
 	void AssetsEditorEnsureAssetsLoadedForType(int Type);
 	void AssetsEditorEnsurePreviewLoaded(SAssetsEditorAssetEntry &Asset);
@@ -1514,13 +1555,14 @@ private:
 	void AssetsEditorValidateRequiredSlotsForType(int Type);
 	std::optional<int> AssetsEditorComposeImage(CImageInfo &OutputImage);
 	bool AssetsEditorExport();
-	void AssetsEditorRenderCanvas(const CUIRect &Rect, IGraphics::CTextureHandle Texture, int W, int H, int Type, bool ShowGrid, int HighlightSlot, bool ShowTintFeedback, int PersistentHighlightSlot);
+	void AssetsEditorRenderCanvas(const CUIRect &Rect, IGraphics::CTextureHandle Texture, int W, int H, int Type, bool ShowGrid, int HighlightSlot, bool ShowTintFeedback, int PersistentHighlightSlot, const SSettingsContentMetrics &Metrics);
 	void AssetsEditorCollectHoveredCandidates(const CUIRect &Rect, int Type, const std::vector<SAssetsEditorPartSlot> &vSlots, vec2 Mouse, std::vector<int> &vOutCandidates) const;
 	int AssetsEditorResolveHoveredSlotWithCycle(const CUIRect &Rect, int Type, const std::vector<SAssetsEditorPartSlot> &vSlots, vec2 Mouse, bool ClickedLmb, int PreferredSlotIndex);
 	void AssetsEditorCancelDrag();
 	void AssetsEditorApplyDrop(int TargetSlotIndex, const char *pDonorName, int SourceSlotIndex, bool ApplyAllSameSize);
 	void AssetsEditorUpdatePreviewIfDirty();
-	void AssetsEditorRequestClose();
+	void AssetsEditorRequestAction(SAssetsEditorAction Action);
+	void AssetsEditorExecutePendingAction();
 	void AssetsEditorCloseNow();
 	void AssetsEditorRenderExitConfirm(const CUIRect &Rect);
 	void AssetsEditorBuildFamilyKey(int Type, const CDataSprite *pSprite, char *pOut, int OutSize);

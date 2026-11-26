@@ -2573,9 +2573,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Listeden bir dile tıklayınca hemen uygulanır; soldaki bayrak seçili olanı gösterir.
 
-Click a part on the right to edit its color, blend mode and strength.
-== Rengini, karıştırma modunu ve gücünü ayarlamak için sağdaki bir parçaya tıklayın.
-
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == HDF veya Sola zıplama gibi bir satıra tıkla ve istediğin tuşa bas; yanındaki çöp kutusu simgesi atamayı siler.
 
@@ -2635,6 +2632,9 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == Sunucuyu seçmek için tıklayın. Arkadaşınıza katılmak için çift tıklayın.
+
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
+== Seçmek için tıklayın, renklendirmek için çift tıklayın. Parçayı değiştirmek için sürükleyin, sıfırlamak için sağ tıklayın.
 
 Client
 == İstemci
@@ -4490,9 +4490,6 @@ Drift intensity
 Drift smoothness
 == Sürüklenme pürüzsüzlüğü
 
-Drop on right canvas to replace one part.
-== Bir parçayı değiştirmek için sağ tuvalin üzerine bırakın.
-
 Droplet
 == Damla
 
@@ -5628,7 +5625,7 @@ Export failed
 == Dışa aktarma başarısız
 
 Export failed. Could not compose %d edited slot(s).
-== Export failed. Could not compose %d edited slot(s).
+== Dışa aktarma başarısız. Düzenlenen %d parça birleştirilemedi.
 
 Export name contains invalid characters.
 == Dışa aktarma adı geçersiz karakterler içeriyor.
@@ -6163,9 +6160,6 @@ Frames buffered between capture and encoding. Deeper queues absorb slow encoder 
 
 Frames drawn per second when V-Sync is off; 0 = unlimited
 == V-Sync kapalıyken saniyedeki kare sayısı üst sınırı; 0 = sınırsız
-
-Frankenstein (drop parts on right)
-== Frankenstein (parçaları sağa bırakın)
 
 Free move
 == Serbest hareket
@@ -8126,9 +8120,6 @@ Leave the pose session
 Left jump
 == Sol zıplama
 
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
-== Bir Frankenstein parçasını renklendirmek için sol tıklayın. Değiştirmek için parçaları sürükleyin. Sağ tıklama sıfırlar.
-
 Left/right channel width
 == Sol/sağ kanal genişliği
 
@@ -9619,9 +9610,6 @@ No assets
 
 No assets available for composition.
 == Birleştirme için uygun varlık yok.
-
-No assets found.
-== Varlık bulunamadı.
 
 No audio issues detected
 == Ses anormalliği tespit edilmedi
@@ -12323,6 +12311,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == Arkadaş olmayan derileri varsayılanla değiştir
 
+Replace same-size parts in the target family.
+== Hedef gruptaki aynı boyutlu parçaları birlikte değiştirir.
+
 Replace selected variant
 == Seçili varyantı değiştir
 
@@ -12752,6 +12743,9 @@ Same clan color in scoreboard
 Same group full map listening
 == Aynı Gruptaki Herkesi Haritada Duy
 
+Same-size family
+== Aynı boyut grubu
+
 Sans-serif
 == Serifsiz
 
@@ -13159,9 +13153,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == İmleç altında seçilen aday %d/%d.
-
-Selected part: %d
-== Seçili parça: %d
 
 Selected text color
 == Seçili metin rengi
@@ -16178,9 +16169,6 @@ The selected button is not visible. Do you want to deselect it or edit its visib
 The selected button is overlapping with other buttons.
 == Seçili düğme diğer düğmelerle örtüşüyor.
 
-The selected part stays highlighted while you adjust its color.
-== Rengini ayarlarken seçilen parça vurgulu kalır.
-
 The server is running a non-standard tuning on a pure game type.
 == Sunucu, saf bir oyun türünde standart olmayan bir ayar çalıştırıyor.
 
@@ -16402,9 +16390,6 @@ Ticks after freeze before applying max prediction reduction
 
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 == Her segmentin öncesinde kayıt yapmadan oynatılan tick sayısı; efektler ve sohbet segment başına uysun diye. 50 tick bir saniyedir.
-
-tile
-== döşeme
 
 Tile outlines
 == Karo ana hatları
