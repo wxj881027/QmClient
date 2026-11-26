@@ -10678,7 +10678,7 @@ Pie menu
 == Menu kołowe
 
 Pie menu effects
-== Efekty otwierania i zamykania menu kołowego
+== Efekty menu kołowego
 
 Pie menu highlight tint
 == Odcień zaznaczenia menu kołowego

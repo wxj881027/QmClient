@@ -10678,7 +10678,7 @@ Pie menu
 == Kreis-Menü
 
 Pie menu effects
-== Effekte beim Öffnen und Schließen des Kreismenüs
+== Kreismenü-Effekte
 
 Pie menu highlight tint
 == Auswahlfarbton des Kreismenüs

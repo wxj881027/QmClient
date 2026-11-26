@@ -10678,7 +10678,7 @@ Pie menu
 == Menu circulaire
 
 Pie menu effects
-== Effets d’ouverture et de fermeture du menu radial
+== Effets du menu radial
 
 Pie menu highlight tint
 == Teinte de sélection du menu radial
@@ -14410,7 +14410,7 @@ Show server settings
 == Afficher les paramètres du serveur
 
 Show server uptime
-== Afficher la durée de fonctionnement du serveur
+== Afficher la durée d’activité du serveur
 
 Show server-side tees as ghosts during fast practice
 == Affiche les Tee côté serveur comme des fantômes pendant l'entraînement rapide

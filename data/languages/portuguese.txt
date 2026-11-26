@@ -10678,7 +10678,7 @@ Pie menu
 == Menu circular
 
 Pie menu effects
-== Efeitos de abertura e fecho do menu radial
+== Efeitos do menu radial
 
 Pie menu highlight tint
 == Tonalidade de seleção do menu radial
