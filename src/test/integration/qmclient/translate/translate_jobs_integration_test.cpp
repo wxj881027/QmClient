@@ -6,6 +6,7 @@
 #include <test/support/translate_completion_test_memory.h>
 #include <test/support/translate_http_test_support.h>
 
+#include <iterator>
 #include <memory>
 
 namespace
@@ -514,7 +515,7 @@ TEST_F(CTranslateQueueTest, AddressedChatTranslatesOnlyTheBodyAndRestoresThePref
 		Job.m_OriginalText = pOriginal;
 		str_copy(Job.m_aTarget, "en");
 		const size_t NumSubmissions = m_Http.m_vSubmissions.size();
-		Job.StartChatTranslation(m_Http, pOriginal, pBody, "auto", CreateTranslateTestRequest);
+		Job.StartChatTranslation(m_Http, pOriginal, pBody, "auto", aPlayers, std::size(aPlayers), CreateTranslateTestRequest);
 		CTranslateJobQueue Queue;
 		ASSERT_TRUE(Queue.Submit(std::move(Job), 1));
 
@@ -540,6 +541,95 @@ TEST_F(CTranslateQueueTest, AddressedChatTranslatesOnlyTheBodyAndRestoresThePref
 				EXPECT_STREQ(pLocalOriginal, pOriginal);
 				return true;
 			}));
+	}
+}
+
+TEST_F(CTranslateQueueTest, LlmRequestsHideOpeningAndInlinePlayerNames)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"LongEnglishName", 7}, {"Player Two", 9}, {"help", 10}};
+	const char *pOriginal = "LongEnglishName 请 @Player Two help";
+	for(const bool Responses : {false, true})
+	{
+		SCOPED_TRACE(Responses);
+		str_copy(g_Config.m_QmTranslateLlmEndpointCustom, Responses ? "https://translate.test/v1/responses" : "https://translate.test/v1/chat/completions");
+		STranslateJob Job;
+		Job.m_Outgoing = Responses;
+		Job.m_OriginalText = pOriginal;
+		str_copy(Job.m_aTarget, "en");
+		const char *pBody = qm_translate::ChatAddressBody(pOriginal, aPlayers, std::size(aPlayers));
+		const size_t Submissions = m_Http.m_vSubmissions.size();
+		Job.StartChatTranslation(m_Http, pOriginal, pBody, "auto", aPlayers, std::size(aPlayers), CreateTranslateTestRequest);
+		CTranslateJobQueue Queue;
+		ASSERT_TRUE(Queue.Submit(std::move(Job), 1));
+		ASSERT_EQ(m_Http.m_vSubmissions.size(), Submissions + 1);
+
+		const auto &Submission = m_Http.m_vSubmissions.back();
+		EXPECT_EQ(Submission.m_Body.find("LongEnglishName"), std::string::npos);
+		EXPECT_EQ(Submission.m_Body.find("Player Two"), std::string::npos);
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(JsonParse(Submission.m_Body.c_str(), Submission.m_Body.size()), json_value_free);
+		ASSERT_NE(pJson, nullptr);
+		const json_value *pMessages = json_object_get(pJson.get(), "messages");
+		const json_value *pPrompt = Responses ? json_object_get(pJson.get(), "input") : json_object_get(json_array_get(pMessages, 1), "content");
+		EXPECT_STREQ(json_string_get(pPrompt), "请 [[QM_PLAYER_0]] help");
+
+		const char *pMock = Responses ?
+					    R"({"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Please help, [[QM_PLAYER_0]]."}]}]})" :
+					    R"({"choices":[{"message":{"content":"Please help, [[QM_PLAYER_0]]."}}]})";
+		Submission.m_pRequest->Finish(pMock);
+		const auto Done = Queue.Update([](const auto &) { return true; });
+		ASSERT_EQ(Done.size(), 1u);
+		ASSERT_TRUE(Done[0].m_Success);
+		EXPECT_STREQ(Done[0].m_Job.m_pTranslateResponse->m_Text, "LongEnglishName Please help, @Player Two.");
+		if(Responses)
+			EXPECT_EQ(Done[0].m_SendText, "LongEnglishName Please help, @Player Two.");
+	}
+}
+
+TEST_F(CTranslateQueueTest, AutomaticServiceDoesNotReceiveInlinePlayerName)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "auto");
+	const qm_translate::SPlayerReference aPlayers[] = {{"Player", 7}};
+	const char *pOriginal = "Help @Player";
+	STranslateJob Job;
+	str_copy(Job.m_aTarget, "zh");
+	Job.StartChatTranslation(m_Http, pOriginal, pOriginal, "auto", aPlayers, std::size(aPlayers), CreateTranslateTestRequest);
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(std::move(Job), 1));
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+
+	const auto &Submission = m_Http.m_vSubmissions.back();
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(JsonParse(Submission.m_Body.c_str(), Submission.m_Body.size()), json_value_free);
+	ASSERT_NE(pJson, nullptr);
+	EXPECT_STREQ(json_string_get(json_object_get(pJson.get(), "text")), "Help [[QM_PLAYER_0]]");
+	Submission.m_pRequest->Finish(R"({"ok":true,"text":"帮忙 [[QM_PLAYER_0]]"})");
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	ASSERT_TRUE(Done[0].m_Success);
+	EXPECT_STREQ(Done[0].m_Job.m_pTranslateResponse->m_Text, "帮忙 @Player");
+}
+
+TEST_F(CTranslateQueueTest, MissingOrRepeatedPlayerTokenFailsInsteadOfSendingDamagedTranslation)
+{
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://translate.test/v1/chat/completions");
+	const qm_translate::SPlayerReference aPlayers[] = {{"Player", 7}};
+	const char *pOriginal = "Help @Player";
+	for(const char *pMock : {
+		    R"({"choices":[{"message":{"content":"帮忙"}}]})",
+		    R"({"choices":[{"message":{"content":"帮忙 [[QM_PLAYER_0]] [[QM_PLAYER_0]]"}}]})",
+	    })
+	{
+		STranslateJob Job;
+		Job.m_Outgoing = true;
+		str_copy(Job.m_aTarget, "zh");
+		Job.StartChatTranslation(m_Http, pOriginal, pOriginal, "auto", aPlayers, std::size(aPlayers), CreateTranslateTestRequest);
+		CTranslateJobQueue Queue;
+		ASSERT_TRUE(Queue.Submit(std::move(Job), 1));
+		m_Http.m_vSubmissions.back().m_pRequest->Finish(pMock);
+		const auto Done = Queue.Update([](const auto &) { return true; });
+		ASSERT_EQ(Done.size(), 1u);
+		EXPECT_FALSE(Done[0].m_Success);
+		EXPECT_EQ(Done[0].m_Job.m_pTranslateResponse->m_Notice, ETranslateNotice::INVALID_RESPONSE);
+		EXPECT_TRUE(Done[0].m_SendText.empty());
 	}
 }
 

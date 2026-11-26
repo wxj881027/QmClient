@@ -13,6 +13,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/monitoring/monitoring.h>
 #include <game/client/components/qmclient/streamer_word_filter.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
@@ -482,16 +483,17 @@ void CInfoMessages::OnRender()
 	Graphics()->MapScreen(0, 0, Width, Height);
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-	int Showfps = g_Config.m_ClShowPerf;
-#if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current())
-		Showfps = 0;
-#endif
 	const float StartX = Width - 10.0f;
-	const bool HasTopRightTextInfo = (g_Config.m_ClShowPerf || g_Config.m_ClShowPacketLoss) && Client()->State() != IClient::STATE_DEMOPLAYBACK;
-	float StartY = 30.0f + (Showfps ? 100.0f : 0.0f) + (HasTopRightTextInfo ? 100.0f : 0.0f);
+	float y = 30.0f;
+	const float ScreenHeight = Graphics()->ScreenHeight();
+	if(g_Config.m_ClShowPerf && ScreenHeight > 0.0f)
+	{
+		const CUIRect Panel = QmComputeMonitoringHudLayout(Graphics()->ScreenWidth(), ScreenHeight).m_PanelRect;
+		y += (Panel.y + Panel.h) * Height / ScreenHeight;
+	}
+	if(g_Config.m_ClShowPacketLoss && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		y += 100.0f;
 
-	float y = StartY;
 	for(int i = 1; i <= MAX_INFOMSGS; i++)
 	{
 		CInfoMsg &InfoMsg = m_aInfoMsgs[(m_InfoMsgCurrent + i) % MAX_INFOMSGS];

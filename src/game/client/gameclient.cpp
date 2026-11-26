@@ -2698,16 +2698,14 @@ void CGameClient::FormatStreamerName(int ClientId, char *pBuf, int BufSize) cons
 	QmStreamerWordFilter::Filter(pBuf, g_Config.m_QmStreamerFilterWords != 0);
 }
 
-void CGameClient::RenderQmMonitoringHud(float GraphX, float GraphSpacing)
+void CGameClient::RenderQmMonitoringHud()
 {
 	if(!g_Config.m_ClShowPerf)
 		return;
 
 	const SQmMonitoringHudLayout Layout = QmComputeMonitoringHudLayout(
 		Graphics()->ScreenWidth(),
-		Graphics()->ScreenHeight(),
-		GraphX,
-		GraphSpacing);
+		Graphics()->ScreenHeight());
 	m_QmMonitoring.RenderHud(Layout);
 }
 

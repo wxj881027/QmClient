@@ -35,30 +35,26 @@ namespace
 		return qm_translate::AnalyzeLanguage(pText);
 	}
 
-	int CollectChatPlayers(const CGameClient *pClient, std::array<qm_translate::SPlayerReference, MAX_CLIENTS> &aPlayers)
+	struct SChatPlayerRoster
 	{
-		int NumPlayers = 0;
-		for(int Id = 0; Id < MAX_CLIENTS; ++Id)
+		std::array<qm_translate::SPlayerReference, MAX_CLIENTS> m_aPlayers = {};
+		int m_Count = 0;
+
+		explicit SChatPlayerRoster(const CGameClient &Client)
 		{
-			const auto &Player = pClient->m_aClients[Id];
-			if(Player.m_Active)
-				aPlayers[NumPlayers++] = {Player.m_aName, Id};
+			for(int Id = 0; Id < MAX_CLIENTS; ++Id)
+			{
+				const auto &Player = Client.m_aClients[Id];
+				if(Player.m_Active)
+					m_aPlayers[m_Count++] = {Player.m_aName, Id};
+			}
 		}
-		return NumPlayers;
-	}
+	};
 
 	SLocalLanguageStats AnalyzeChatLanguage(const char *pText, const CGameClient *pClient)
 	{
-		std::array<qm_translate::SPlayerReference, MAX_CLIENTS> aPlayers;
-		const int NumPlayers = CollectChatPlayers(pClient, aPlayers);
-		return qm_translate::AnalyzeLanguage(pText, aPlayers.data(), NumPlayers);
-	}
-
-	const char *FindChatAddressBody(const char *pText, const CGameClient *pClient)
-	{
-		std::array<qm_translate::SPlayerReference, MAX_CLIENTS> aPlayers;
-		const int NumPlayers = CollectChatPlayers(pClient, aPlayers);
-		return qm_translate::ChatAddressBody(pText, aPlayers.data(), NumPlayers);
+		const SChatPlayerRoster Roster(*pClient);
+		return qm_translate::AnalyzeLanguage(pText, Roster.m_aPlayers.data(), Roster.m_Count);
 	}
 
 	const char *GetEffectiveTranslateTarget(const char *pTarget)
@@ -208,7 +204,8 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 	const int LineIndex = GameClient()->m_Chat.GetLineIndex(&Line);
 	if(LineIndex < 0)
 		return;
-	const char *pBody = FindChatAddressBody(Line.m_aText, GameClient());
+	const SChatPlayerRoster Roster(*GameClient());
+	const char *pBody = qm_translate::ChatAddressBody(Line.m_aText, Roster.m_aPlayers.data(), Roster.m_Count);
 	if(*pBody == '\0')
 		return;
 
@@ -226,7 +223,7 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 		const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
 		if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
 			pSource = "auto";
-		Job.StartChatTranslation(*Http(), Line.m_aText, pBody, pSource);
+		Job.StartChatTranslation(*Http(), Line.m_aText, pBody, pSource, Roster.m_aPlayers.data(), Roster.m_Count);
 		if(!Job.m_pBackend)
 		{
 			InvalidBackend = true;
@@ -267,7 +264,8 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText, bool Tran
 		dbg_msg("translate", "could not prepare outgoing translation request");
 		return true;
 	}
-	const char *pBody = FindChatAddressBody(Text.c_str(), GameClient());
+	const SChatPlayerRoster Roster(*GameClient());
+	const char *pBody = qm_translate::ChatAddressBody(Text.c_str(), Roster.m_aPlayers.data(), Roster.m_Count);
 	if(*pBody == '\0')
 	{
 		GameClient()->m_Chat.Echo(Localize("No chat message to translate"));
@@ -291,7 +289,7 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText, bool Tran
 		const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
 		if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
 			pSource = "auto";
-		Job.StartChatTranslation(*Http(), Text.c_str(), pBody, pSource);
+		Job.StartChatTranslation(*Http(), Text.c_str(), pBody, pSource, Roster.m_aPlayers.data(), Roster.m_Count);
 		if(!Job.m_pBackend)
 		{
 			InvalidBackend = true;
@@ -449,7 +447,8 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 		GameClient()->m_Chat.Echo(Localize("Too many translation tasks"));
 		return;
 	}
-	const char *pBody = FindChatAddressBody(pText, GameClient());
+	const SChatPlayerRoster Roster(*GameClient());
+	const char *pBody = qm_translate::ChatAddressBody(pText, Roster.m_aPlayers.data(), Roster.m_Count);
 	char aProgress[128];
 	bool InvalidBackend = false;
 	const bool Accepted = m_Jobs.CreateAndSubmit([&] {
@@ -468,7 +467,7 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 		const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
 		if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
 			pSource = "auto";
-		Job.StartChatTranslation(*Http(), pText, pBody, pSource);
+		Job.StartChatTranslation(*Http(), pText, pBody, pSource, Roster.m_aPlayers.data(), Roster.m_Count);
 		if(!Job.m_pBackend)
 		{
 			InvalidBackend = true;

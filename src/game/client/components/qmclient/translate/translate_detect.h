@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_TRANSLATE_TRANSLATE_DETECT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_TRANSLATE_TRANSLATE_DETECT_H
 
+#include <string_view>
+
 namespace qm_translate
 {
 	struct SPlayerReference
@@ -9,8 +11,11 @@ namespace qm_translate
 		int m_ClientId;
 	};
 
-	// 返回行首点名后的正文。没有匹配的在线玩家时返回原指针。
+	// 返回行首称呼后的正文。没有匹配的在线玩家时返回原指针。
 	const char *ChatAddressBody(const char *pText, const SPlayerReference *pPlayers, int NumPlayers);
+
+	inline constexpr const char *CHAT_MENTION_TOKEN_PREFIX = "[[QM_PLAYER_";
+	std::string_view NextChatMention(const char *pText, const SPlayerReference *pPlayers, int NumPlayers);
 
 	struct SLanguageStats
 	{

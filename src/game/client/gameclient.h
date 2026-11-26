@@ -1010,7 +1010,7 @@ public:
 	void HandleLanguageChanged();
 
 	void ForceUpdateConsoleRemoteCompletionSuggestions() override;
-	void RenderQmMonitoringHud(float GraphX, float GraphSpacing) override;
+	void RenderQmMonitoringHud() override;
 
 	void RefreshSkin(const std::shared_ptr<CManagedTeeRenderInfo> &pManagedTeeRenderInfo);
 	void RefreshSkins(int SkinDescriptorFlags);

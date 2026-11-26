@@ -273,7 +273,7 @@ TEST(QmMonitoringLayoutContract, CompactOverlayStaysInUpperRightAtDesktopResolut
 	{
 		const float Height = Width * 9.0f / 16.0f;
 		const float Spacing = std::round(Width / 100.0f);
-		const CUIRect Panel = QmComputeMonitoringHudLayout(Width, Height, Width - Spacing, Spacing).m_PanelRect;
+		const CUIRect Panel = QmComputeMonitoringHudLayout(Width, Height).m_PanelRect;
 		EXPECT_FLOAT_EQ(Panel.x + Panel.w, Width - 2.0f * Spacing);
 		EXPECT_FLOAT_EQ(Panel.y, 2.0f * Spacing);
 		EXPECT_GT(Panel.w, 0.0f);
@@ -285,7 +285,7 @@ TEST(QmMonitoringLayoutContract, CompactOverlayStaysInUpperRightAtDesktopResolut
 
 TEST(QmMonitoringLayoutContract, TinyViewportFitsWholeOverlayWithoutCropping)
 {
-	const auto Layout = QmComputeMonitoringHudLayout(100.0f, 30.0f, 98.0f, 2.0f);
+	const auto Layout = QmComputeMonitoringHudLayout(100.0f, 30.0f);
 	EXPECT_GT(Layout.m_Scale, 0.0f);
 	EXPECT_GE(Layout.m_PanelRect.x, 0.0f);
 	EXPECT_GE(Layout.m_PanelRect.y, 0.0f);
