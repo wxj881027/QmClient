@@ -271,15 +271,26 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				CSettingsContentLayoutFlow Flow(LeftView);
 				CPerfTimer HudCoreTimer;
 				DeclaredCheckbox(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhud, "appearance-show-ingame-hud", Localize("Show ingame HUD"), &g_Config.m_ClShowhud, &LeftView, LineSize, RowSpacing, AppearanceBodySize);
-				DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, LeftView,
-					{
-						{&g_Config.m_ClShowhudHealthAmmo, "appearance-show-health-shields-ammo", Localize("Show health, shields and ammo")},
-						{&g_Config.m_ClShowhudScore, "appearance-show-score", Localize("Show score")},
-						{&g_Config.m_ClShowLocalTimeAlways, "appearance-show-local-time-always", Localize("Show local time always")},
-						{&g_Config.m_ClSpecCursor, "appearance-show-spectator-cursor", Localize("Show spectator cursor")},
-						{&g_Config.m_ClShowVotesAfterVoting, "appearance-show-votes-after-voting", Localize("Show votes window after voting")},
-					},
-					AppearanceMetrics, !RenderOnly);
+				// 主 HUD 卡逐行声明：本地时间秒是“始终显示本地时间”的从属行，
+				// 必须紧跟父行插入，不能再塞进 DDRace HUD 卡或整组之后。
+				const int MotionLevel = g_Config.m_QmUiMotionLevel;
+				const float FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+				const auto ToggleRow = [&](const char *pTextId, const char *pText, int *pValue) {
+					CUIRect Row;
+					if(Flow.Control(pTextId, LineSize, Row, RowSpacing))
+						DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, pValue, pTextId, pText, pValue, &Row, LineSize, 0.0f, AppearanceBodySize);
+				};
+				ToggleRow("appearance-show-health-shields-ammo", Localize("Show health, shields and ammo"), &g_Config.m_ClShowhudHealthAmmo);
+				ToggleRow("appearance-show-score", Localize("Show score"), &g_Config.m_ClShowhudScore);
+				ToggleRow("appearance-show-local-time-always", Localize("Show local time always"), &g_Config.m_ClShowLocalTimeAlways);
+				static CSettingsConditionalRows s_LocalTimeSecondsRows;
+				if(s_LocalTimeSecondsRows.Update(g_Config.m_ClShowLocalTimeAlways != 0, FrameDt, MotionLevel))
+				{
+					const CSettingsContentRevealScope SecondsScope(Ui(), Flow, s_LocalTimeSecondsRows.Fade(MotionLevel));
+					ToggleRow("appearance-show-local-time-seconds", Localize("Show seconds in local time"), &g_Config.m_QmShowLocalTimeSeconds);
+				}
+				ToggleRow("appearance-show-spectator-cursor", Localize("Show spectator cursor"), &g_Config.m_ClSpecCursor);
+				ToggleRow("appearance-show-votes-after-voting", Localize("Show votes window after voting"), &g_Config.m_ClShowVotesAfterVoting);
 				LogPerfStage(Client(), "appearance_hud_core_section", HudCoreTimer.ElapsedMs(), false, "page=appearance tab=hud section=core");
 			});
 			AddCard(1, 0.0f, [=, this](CUIRect ContentRect) mutable {
@@ -331,7 +342,6 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					const CSettingsContentRevealScope DummyAngleScope(Ui(), Flow, s_DummyAngleRows.Fade(MotionLevel));
 					CheckboxRow(&g_Config.m_QmShowhudDummyAngle, "appearance-show-dummy-target-angle", Localize("Show dummy angle in movement info HUD"), &g_Config.m_QmShowhudDummyAngle);
 				}
-				CheckboxRow(&g_Config.m_QmShowLocalTimeSeconds, "appearance-show-local-time-seconds", Localize("Show seconds in local time"), &g_Config.m_QmShowLocalTimeSeconds);
 				LogPerfStage(Client(), "appearance_hud_ddrace_section", HudDdraceTimer.ElapsedMs(), false, "page=appearance tab=hud section=ddrace");
 				CPerfTimer HudFreezeBarsTimer;
 				CheckboxRow(&g_Config.m_ClShowFreezeBars, "appearance-show-freeze-bars", Localize("Show freeze bars"), &g_Config.m_ClShowFreezeBars);
