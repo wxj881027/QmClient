@@ -1989,12 +1989,6 @@ Build the status text shown above Tees
 Built-in
 == 내장
 
-Button - Disabled
-== 버튼 - 비활성화
-
-Button - Enabled
-== 버튼 - 활성화
-
 Button browser
 == 버튼 브라우저
 
@@ -3662,9 +3656,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
-
-Customize translate button and menu colors
-== 번역 버튼 및 메뉴 색상 사용자 정의
 
 Customize vote display and interaction
 == Customize vote display and interaction
@@ -5717,9 +5708,6 @@ Exported to %s
 
 Exporting chat images: %d
 == 채팅 이미지 내보내는 중: %d
-
-Expose playback controls to the operating system
-== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == 외부 콘솔 비밀번호. 경제를 활성화하려면 설정해야 함
@@ -8976,9 +8964,6 @@ Mention option color
 Menu accent panel opacity
 == 메뉴 강조 패널 불투명도
 
-Menu background
-== 메뉴 배경
-
 Menu button hover
 == 메뉴 버튼 호버
 
@@ -9002,12 +8987,6 @@ Menu music
 
 Menu opacity (0-100)
 == 메뉴 불투명도 (Menu opacity 0-100)
-
-Menu option - normal
-== 메뉴 옵션 - 일반
-
-Menu option - selected
-== 메뉴 옵션 - 선택됨
 
 Menu panel color
 == 메뉴 패널 색상
@@ -12540,9 +12519,6 @@ Reset tooltip appearance
 Reset tooltip appearance to restore the default font size and bounce animation.
 == 툴팁 외관을 초기화하면 기본 글자 크기와 튕김 애니메이션이 복원됩니다.
 
-Reset translation colors
-== 번역 색상 초기화
-
 Reset tuning after each map change
 == 각 맵 변경 후 튜닝 초기화
 
@@ -14439,9 +14415,6 @@ Show skin names in nameplate
 Show skin release date and author
 == 스킨 출시일과 제작자 표시
 
-Show song info in top-left corner
-== 왼쪽 상단에 노래 정보 표시
-
 Show spectate option
 == 관전 항목 표시
 
@@ -15675,9 +15648,6 @@ System default
 System graphics settings
 == 시스템 그래픽 설정
 
-System media controls
-== 시스템 미디어 컨트롤
-
 System message
 == 시스템 메시지
 
@@ -16793,9 +16763,6 @@ Translate outgoing messages to
 
 Translate received messages to
 == 받은 메시지 번역 언어
-
-Translate UI
-== UI 번역
 
 Translate:
 == 번역：

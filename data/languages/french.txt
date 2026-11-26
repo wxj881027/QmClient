@@ -1989,12 +1989,6 @@ Build the status text shown above Tees
 Built-in
 == Intégré
 
-Button - Disabled
-== Bouton - Désactivé
-
-Button - Enabled
-== Bouton - Activé
-
 Button browser
 == Navigateur de boutons
 
@@ -3662,9 +3656,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
-
-Customize translate button and menu colors
-== Personnaliser les couleurs du bouton de traduction et du menu
 
 Customize vote display and interaction
 == Customize vote display and interaction
@@ -5717,9 +5708,6 @@ Exported to %s
 
 Exporting chat images: %d
 == Exportation des images du chat : %d
-
-Expose playback controls to the operating system
-== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == Mot de passe de la console externe. Doit être défini pour activer l'économie.
@@ -8976,9 +8964,6 @@ Mention option color
 Menu accent panel opacity
 == Opacité du panneau d'accentuation du menu
 
-Menu background
-== Fond du menu
-
 Menu button hover
 == Survol du bouton de menu
 
@@ -9002,12 +8987,6 @@ Menu music
 
 Menu opacity (0-100)
 == Opacité du menu (Menu opacity 0-100)
-
-Menu option - normal
-== Option de menu - normal
-
-Menu option - selected
-== Option de menu - sélectionné
 
 Menu panel color
 == Couleur du panneau de menu
@@ -12540,9 +12519,6 @@ Reset tooltip appearance
 Reset tooltip appearance to restore the default font size and bounce animation.
 == Réinitialiser l’apparence des infobulles rétablit la taille de police et l’animation de rebond par défaut.
 
-Reset translation colors
-== Réinitialiser les couleurs de traduction
-
 Reset tuning after each map change
 == Réinitialiser les réglages après chaque changement de carte
 
@@ -14439,9 +14415,6 @@ Show skin names in nameplate
 Show skin release date and author
 == Afficher la date de publication et l’auteur du skin
 
-Show song info in top-left corner
-== Afficher les informations sur la chanson dans le coin supérieur gauche
-
 Show spectate option
 == Afficher l'option de spectateur
 
@@ -15675,9 +15648,6 @@ System default
 System graphics settings
 == Paramètres graphiques du système
 
-System media controls
-== Contrôles média système
-
 System message
 == Message système
 
@@ -16793,9 +16763,6 @@ Translate outgoing messages to
 
 Translate received messages to
 == Traduire les messages reçus en
-
-Translate UI
-== Traduire l'interface
 
 Translate:
 == Traduire :

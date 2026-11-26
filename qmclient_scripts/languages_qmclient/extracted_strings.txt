@@ -1257,7 +1257,6 @@ Customize interface appearance and previews
 Customize laser shape and effects
 Customize QmClient visuals and effects
 Customize the position jump hint
-Customize translate button and menu colors
 Customize vote display and interaction
 Custom…
 Cut interval
@@ -1967,7 +1966,6 @@ Exported
 Exported %d chat messages
 Exported to %s
 Exporting chat images: %d
-Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 External links open in the browser.
 External sites are not controlled by the client.
@@ -5400,7 +5398,6 @@ Syncing remote stats
 System
 System default
 System graphics settings
-System media controls
 System message
 System message color
 System message text gradient color
@@ -5789,7 +5786,6 @@ Translate only when needed
 Translate only when not in target language
 Translate outgoing messages to
 Translate received messages to
-Translate UI
 Translate:
 Translated chat text size as a percentage of the original text (50-100)
 Translated message could not be queued; original was not sent

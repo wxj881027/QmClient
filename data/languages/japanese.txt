@@ -1989,12 +1989,6 @@ Build the status text shown above Tees
 Built-in
 == 内蔵
 
-Button - Disabled
-== ボタン - 無効
-
-Button - Enabled
-== ボタン - 有効
-
 Button browser
 == ボタンブラウザ
 
@@ -3662,9 +3656,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
-
-Customize translate button and menu colors
-== 翻訳ボタンとメニューの色をカスタマイズ
 
 Customize vote display and interaction
 == Customize vote display and interaction
@@ -5717,9 +5708,6 @@ Exported to %s
 
 Exporting chat images: %d
 == チャット画像をエクスポート中：%d
-
-Expose playback controls to the operating system
-== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == 外部コンソールパスワード。エコノミーを有効にするには設定が必要
@@ -8976,9 +8964,6 @@ Mention option color
 Menu accent panel opacity
 == メニューアクセントパネルの不透明度
 
-Menu background
-== メニュー背景
-
 Menu button hover
 == メニューボタンのホバー
 
@@ -9002,12 +8987,6 @@ Menu music
 
 Menu opacity (0-100)
 == メニュー不透明度（Menu opacity 0-100）
-
-Menu option - normal
-== メニューオプション - 通常
-
-Menu option - selected
-== メニューオプション - 選択中
 
 Menu panel color
 == メニューパネルの色
@@ -12540,9 +12519,6 @@ Reset tooltip appearance
 Reset tooltip appearance to restore the default font size and bounce animation.
 == ツールチップの外観をリセットすると、既定の文字サイズとバウンスアニメーションに戻ります。
 
-Reset translation colors
-== 翻訳の配色を初期化
-
 Reset tuning after each map change
 == マップ変更ごとにチューニングをリセット
 
@@ -14439,9 +14415,6 @@ Show skin names in nameplate
 Show skin release date and author
 == スキンの公開日と作者を表示
 
-Show song info in top-left corner
-== 左上に曲情報を表示
-
 Show spectate option
 == 観戦項目を表示
 
@@ -15675,9 +15648,6 @@ System default
 System graphics settings
 == システムのグラフィックス設定
 
-System media controls
-== システムメディアコントロール
-
 System message
 == システムメッセージ
 
@@ -16793,9 +16763,6 @@ Translate outgoing messages to
 
 Translate received messages to
 == 受信メッセージの翻訳先
-
-Translate UI
-== UI を翻訳
 
 Translate:
 == 翻訳：

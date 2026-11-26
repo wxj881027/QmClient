@@ -1989,12 +1989,6 @@ Build the status text shown above Tees
 Built-in
 == 內置
 
-Button - Disabled
-== 按鈕 - 未啟用
-
-Button - Enabled
-== 按鈕 - 已啟用
-
 Button browser
 == 按鈕瀏覽器
 
@@ -3662,9 +3656,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
-
-Customize translate button and menu colors
-== 自定義翻譯按鈕和菜單顏色
 
 Customize vote display and interaction
 == Customize vote display and interaction
@@ -5717,9 +5708,6 @@ Exported to %s
 
 Exporting chat images: %d
 == 正在匯出聊天圖片：%d
-
-Expose playback controls to the operating system
-== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == 外部控制台密碼。需要設置此選項才能啟用經濟。
@@ -8976,9 +8964,6 @@ Mention option color
 Menu accent panel opacity
 == 菜單強調面板透明度
 
-Menu background
-== 菜單背景
-
 Menu button hover
 == 選單按鈕懸停
 
@@ -9002,12 +8987,6 @@ Menu music
 
 Menu opacity (0-100)
 == 菜單不透明度 (Menu opacity 0-100)
-
-Menu option - normal
-== 菜單選項 - 普通
-
-Menu option - selected
-== 菜單選項 - 選中
 
 Menu panel color
 == 選單面板顏色
@@ -12540,9 +12519,6 @@ Reset tooltip appearance
 Reset tooltip appearance to restore the default font size and bounce animation.
 == 重設氣泡外觀可恢復預設字號和彈跳動畫。
 
-Reset translation colors
-== 還原翻譯預設顏色
-
 Reset tuning after each map change
 == 每次地圖更改後是否重置調整
 
@@ -14439,9 +14415,6 @@ Show skin names in nameplate
 Show skin release date and author
 == 顯示造型發布日期與作者
 
-Show song info in top-left corner
-== 在左上角顯示歌曲信息
-
 Show spectate option
 == 顯示旁觀選項
 
@@ -15675,9 +15648,6 @@ System default
 System graphics settings
 == 系統圖形設定
 
-System media controls
-== 系統媒體控制
-
 System message
 == 系統消息
 
@@ -16793,9 +16763,6 @@ Translate outgoing messages to
 
 Translate received messages to
 == 收到訊息譯為
-
-Translate UI
-== 翻譯 UI
 
 Translate:
 == 翻譯：

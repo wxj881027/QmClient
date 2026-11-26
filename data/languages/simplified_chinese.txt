@@ -2058,12 +2058,6 @@ Built-in
 Built-in cfg is empty - nothing was installed
 == 内置 cfg 为空，没有写入任何内容。
 
-Button - Disabled
-== 按钮 - 未启用
-
-Button - Enabled
-== 按钮 - 已启用
-
 Button browser
 == 按键浏览器
 
@@ -3782,9 +3776,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == 自定义位置跳跃提示
-
-Customize translate button and menu colors
-== 自定义翻译按钮和菜单颜色
 
 Customize vote display and interaction
 == 自定义投票显示和交互
@@ -5912,9 +5903,6 @@ Exported to %s
 
 Exporting chat images: %d
 == 正在导出聊天图片：%d
-
-Expose playback controls to the operating system
-== 向操作系统提供播放控制
 
 External console password. Must be set to enable economy.
 == 外部控制台密码。需要设置此选项才能启用经济。
@@ -9309,9 +9297,6 @@ Mention option color
 Menu accent panel opacity
 == 菜单强调面板透明度
 
-Menu background
-== 菜单背景
-
 Menu button hover
 == 菜单按钮悬停
 
@@ -9335,12 +9320,6 @@ Menu music
 
 Menu opacity (0-100)
 == 菜单不透明度（0-100）
-
-Menu option - normal
-== 菜单选项 - 普通
-
-Menu option - selected
-== 菜单选项 - 选中
 
 Menu panel color
 == 菜单面板颜色
@@ -13017,9 +12996,6 @@ Reset tooltip appearance
 Reset tooltip appearance to restore the default font size and bounce animation.
 == 重置气泡外观可恢复默认字号和弹跳动画。
 
-Reset translation colors
-== 恢复翻译默认颜色
-
 Reset tuning after each map change
 == 每次地图更改后是否重置调整
 
@@ -14958,9 +14934,6 @@ Show skin names in nameplate
 Show skin release date and author
 == 显示皮肤发布日期和作者
 
-Show song info in top-left corner
-== 在左上角显示歌曲信息
-
 Show spectate option
 == 显示旁观选项
 
@@ -16227,9 +16200,6 @@ System default
 System graphics settings
 == 系统图形设置
 
-System media controls
-== 系统媒体控制
-
 System message
 == 系统消息
 
@@ -17393,9 +17363,6 @@ Translate outgoing messages to
 
 Translate received messages to
 == 收到消息译为
-
-Translate UI
-== 翻译 UI
 
 Translate:
 == 翻译：

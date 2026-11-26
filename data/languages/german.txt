@@ -1989,12 +1989,6 @@ Build the status text shown above Tees
 Built-in
 == Integriert
 
-Button - Disabled
-== Schaltfläche - Deaktiviert
-
-Button - Enabled
-== Schaltfläche - Aktiviert
-
 Button browser
 == Button-Browser
 
@@ -3662,9 +3656,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
-
-Customize translate button and menu colors
-== Übersetzungs-Button- und Menüfarben anpassen
 
 Customize vote display and interaction
 == Customize vote display and interaction
@@ -5717,9 +5708,6 @@ Exported to %s
 
 Exporting chat images: %d
 == Chat-Bilder werden exportiert: %d
-
-Expose playback controls to the operating system
-== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == Externes Konsolenpasswort. Muss gesetzt sein, um die Wirtschaft zu aktivieren.
@@ -8976,9 +8964,6 @@ Mention option color
 Menu accent panel opacity
 == Deckkraft des Menü-Akzent-Panels
 
-Menu background
-== Menühintergrund
-
 Menu button hover
 == Hover für Menüschaltfläche
 
@@ -9002,12 +8987,6 @@ Menu music
 
 Menu opacity (0-100)
 == Menüdeckkraft (Menu opacity 0-100)
-
-Menu option - normal
-== Menüoption - normal
-
-Menu option - selected
-== Menüoption - ausgewählt
 
 Menu panel color
 == Farbe der Menüfläche
@@ -12540,9 +12519,6 @@ Reset tooltip appearance
 Reset tooltip appearance to restore the default font size and bounce animation.
 == Das Zurücksetzen der Tooltip-Darstellung stellt die Standardschriftgröße und die Federn-Animation wieder her.
 
-Reset translation colors
-== Übersetzungsfarben zurücksetzen
-
 Reset tuning after each map change
 == Tuning nach jedem Kartenwechsel zurücksetzen
 
@@ -14439,9 +14415,6 @@ Show skin names in nameplate
 Show skin release date and author
 == Veröffentlichungsdatum und Autor des Skins anzeigen
 
-Show song info in top-left corner
-== Songinfo in der oberen linken Ecke anzeigen
-
 Show spectate option
 == Zuschaueroption anzeigen
 
@@ -15675,9 +15648,6 @@ System default
 System graphics settings
 == Systemgrafikeinstellungen
 
-System media controls
-== System-Mediensteuerung
-
 System message
 == Systemnachricht
 
@@ -16793,9 +16763,6 @@ Translate outgoing messages to
 
 Translate received messages to
 == Empfangene Nachrichten übersetzen in
-
-Translate UI
-== UI übersetzen
 
 Translate:
 == Übersetzen:
