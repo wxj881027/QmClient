@@ -1586,6 +1586,9 @@ namespace ui_token::vote_hud
 	inline constexpr float BUTTON_TEXT_INSET = 3.0f;
 	// 与计分板主面板同一档圆角。
 	inline constexpr float RADIUS = radius::CARD;
+	// 紧凑面板只有 35 高，沿用 14 会读成胶囊；按同一「圆角 / 面板高 ≈ 23%」
+	// 比例取 BASE，和完整面板的视觉圆角一致。
+	inline constexpr float MINI_RADIUS = radius::BASE;
 } // namespace ui_token::vote_hud
 
 // 输入法（IME）候选面板：跟随系统输入法浮在光标下方的小面板。

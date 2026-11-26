@@ -1516,7 +1516,10 @@ void CHud::RenderScoreHud()
 	// render small score hud
 	if(!(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
 	{
-		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::ScoreHud, {m_Width - 150.0f, 229.0f, 150.0f, 56.0f});
+		// 选框宽度跟随内容：分数位数、名次位数和旗帜/人物占位变化时都从左缘伸缩，
+		// 不再用固定 150 宽的框把左侧空出来。
+		const float EditorWidth = m_ScoreHudEditorWidth > 0.0f ? m_ScoreHudEditorWidth : 150.0f;
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::ScoreHud, {m_Width - EditorWidth, 229.0f, EditorWidth, 56.0f});
 		const int ScoreHudCorners = HudEditorScope.m_Corners;
 		float StartY = 229.0f; // the height of this display is 56, so EndY is 285
 
@@ -1556,8 +1559,10 @@ void CHud::RenderScoreHud()
 			float ScoreWidthMax = maximum(maximum(m_aScoreInfo[0].m_ScoreTextWidth, m_aScoreInfo[1].m_ScoreTextWidth), s_TextWidth100);
 			float Split = 3.0f;
 			float ImageSize = (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) ? 16.0f : Split;
+			m_ScoreHudEditorWidth = QmScoreHudTeamBoxRect(m_Width, 229.0f, ScoreWidthMax, ImageSize, 56.0f).w;
 			for(int t = 0; t < 2; t++)
 			{
+				const CUIRect TeamBox = QmScoreHudTeamBoxRect(m_Width, StartY + t * 20, ScoreWidthMax, ImageSize, ScoreSingleBoxHeight);
 				// draw box
 				if(RecreateRect)
 				{
@@ -1567,12 +1572,12 @@ void CHud::RenderScoreHud()
 						Graphics()->SetColor(0.975f, 0.17f, 0.17f, 0.3f);
 					else
 						Graphics()->SetColor(0.17f, 0.46f, 0.975f, 0.3f);
-					m_aScoreInfo[t].m_RoundRectQuadContainerIndex = Graphics()->CreateRectQuadContainer(m_Width - ScoreWidthMax - ImageSize - 2 * Split, StartY + t * 20, ScoreWidthMax + ImageSize + 2 * Split, ScoreSingleBoxHeight, 5.0f, ScoreHudCorners);
+					m_aScoreInfo[t].m_RoundRectQuadContainerIndex = Graphics()->CreateRectQuadContainer(TeamBox.x, TeamBox.y, TeamBox.w, TeamBox.h, 5.0f, ScoreHudCorners);
 					m_aScoreInfo[t].m_RoundRectCorners = ScoreHudCorners;
 				}
 				if(m_aScoreInfo[t].m_RoundRectQuadContainerIndex != -1)
 				{
-					Ui()->RenderGaussianBlur({m_Width - ScoreWidthMax - ImageSize - 2 * Split, StartY + t * 20, ScoreWidthMax + ImageSize + 2 * Split, ScoreSingleBoxHeight}, 1.0f, ScoreHudCorners, 5.0f);
+					Ui()->RenderGaussianBlur({TeamBox.x, TeamBox.y, TeamBox.w, TeamBox.h}, 1.0f, ScoreHudCorners, 5.0f);
 					Graphics()->TextureClear();
 					Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 					Graphics()->RenderQuadContainer(m_aScoreInfo[t].m_RoundRectQuadContainerIndex, -1);
@@ -1621,7 +1626,7 @@ void CHud::RenderScoreHud()
 							float w = TextRender()->TextWidth(8.0f, pName, -1, -1.0f);
 
 							CTextCursor Cursor;
-							Cursor.SetPosition(vec2(minimum(m_Width - w - 1.0f, m_Width - ScoreWidthMax - ImageSize - 2 * Split), StartY + (t + 1) * 20.0f - 2.0f));
+							Cursor.SetPosition(vec2(minimum(m_Width - w - 1.0f, TeamBox.x), StartY + (t + 1) * 20.0f - 2.0f));
 							Cursor.m_FontSize = 8.0f;
 							TextRender()->RecreateTextContainer(m_aScoreInfo[t].m_OptionalNameTextContainerIndex, &Cursor, pName);
 						}
@@ -1756,6 +1761,7 @@ void CHud::RenderScoreHud()
 			float ScoreWidthMax = maximum(maximum(m_aScoreInfo[0].m_ScoreTextWidth, m_aScoreInfo[1].m_ScoreTextWidth), s_TextWidth10);
 			float Split = 3.0f;
 			const auto ScoreLayout = QmScoreHudLayout(m_Width, ScoreWidthMax, maximum(m_aScoreInfo[0].m_RankTextWidth, m_aScoreInfo[1].m_RankTextWidth), ScoreSingleBoxHeight);
+			m_ScoreHudEditorWidth = ScoreLayout.m_BoxWidth;
 
 			for(int t = 0; t < 2; t++)
 			{

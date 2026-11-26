@@ -3603,14 +3603,16 @@ void CChat::OnRender()
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
 	const bool FocusHideSystemPromptMessages = Focus.m_HideSystemPromptMessages;
 	const bool FocusHideEcho = Focus.m_HideEchoMessages;
+	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
 	const bool HasForceVisibleLine = std::any_of(std::begin(m_aLines), std::end(m_aLines), [](const CLine &Line) { return Line.m_Initialized && Line.m_ForceVisible; });
-	if(!ShouldRenderAnyFocusFilteredChat(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, HasForceVisibleLine))
+	// HUD 编辑器要给聊天元素一份稳定的占位内容：专注模式把所有行都过滤掉时，
+	// 不能连元素一起提前返回，否则选框里永远空白。
+	if(!HudEditorPreview && !ShouldRenderAnyFocusFilteredChat(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, HasForceVisibleLine))
 	{
 		m_CommandHud.Hide();
 		return;
 	}
 
-	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
 	const bool InputActive = m_Mode != MODE_NONE;
 	const bool ShowLargeArea = ShouldShowLargeArea(m_Show, InputActive, g_Config.m_ClShowChat);
 	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
@@ -3925,7 +3927,8 @@ void CChat::OnRender()
 #endif
 	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
 	const bool DisplayChat = qm_demo_display::Resolve(g_Config, DemoPlayback, VideoRendering).m_Chat;
-	if(!ShouldRenderHistory(DisplayChat, InputActive, DemoPlayback, VideoRendering))
+	// 编辑器预览同样不能被“当前这一局隐藏聊天/录像不录聊天”挡掉，否则选框里没有占位。
+	if(!HudEditorPreview && !ShouldRenderHistory(DisplayChat, InputActive, DemoPlayback, VideoRendering))
 	{
 		QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos(), &GameClient()->m_QmChatEmoji);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
@@ -4299,7 +4302,10 @@ void CChat::OnRender()
 		}
 		if(Line.m_TextContainerIndex.Valid() || RenderChatEmoji)
 		{
-			RenderedAnyLines = true;
+			// 完全透明的行（聊天淡出后进入 HUD 编辑器时状态会被冻结）不算“已经画了内容”，
+			// 否则占位预览会被这些看不见的行压掉，选框里一片空白。
+			if(AnimAlpha > 0.001f)
+				RenderedAnyLines = true;
 			// 横向入场动画不改变 HUD 锚点，避免贴边时边界反馈推动整个聊天区域。
 			ExtendBounds(x, RenderY, ChatRect.w - x, LineHeight);
 			if(Line.m_vMergedAuthors.size() <= 1 && !g_Config.m_ClChatOld && Line.m_pManagedTeeRenderInfo != nullptr)

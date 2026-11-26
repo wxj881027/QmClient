@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SCORE_HUD_LAYOUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SCORE_HUD_LAYOUT_H
 
+#include <game/client/ui_rect.h>
+
 #include <algorithm>
 
 struct SQmScoreHudLayout
@@ -10,6 +12,15 @@ struct SQmScoreHudLayout
 	float m_RankX;
 	float m_TeeX;
 };
+
+// 团队比分条与 HUD 编辑器选框共用同一份矩形：分数 + 旗帜/图标占位 + 两侧间距，
+// 右缘固定贴住传入的 Right，内容变宽只向左伸缩。
+inline CUIRect QmScoreHudTeamBoxRect(float Right, float Top, float ScoreWidth, float ImageSize, float Height)
+{
+	constexpr float Split = 3.0f;
+	const float BoxWidth = ScoreWidth + ImageSize + 2.0f * Split;
+	return {Right - BoxWidth, Top, BoxWidth, Height};
+}
 
 inline SQmScoreHudLayout QmScoreHudLayout(float Right, float ScoreWidth, float RankTextWidth, float TeeSize)
 {
