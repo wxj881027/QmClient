@@ -2,22 +2,6 @@
 
 #include <gtest/gtest.h>
 
-#include <limits>
-
-TEST(QmScoreboardPresentation, LegacyRaceScoreCanFormatMostNegativeScore)
-{
-	char aTime[32];
-	ScoreboardFormatLegacyTimeScore(std::numeric_limits<int>::min(), aTime, sizeof(aTime));
-	EXPECT_STREQ("596523:14:08", aTime);
-}
-
-TEST(QmScoreboardPresentation, LegacyRaceScoreKeepsUnfinishedTimeBlank)
-{
-	char aTime[32] = "00:12";
-	ScoreboardFormatLegacyTimeScore(FinishTime::NOT_FINISHED_TIMESCORE, aTime, sizeof(aTime));
-	EXPECT_STREQ("", aTime);
-}
-
 TEST(QmScoreboardPresentation, SoundInfoStaysHiddenWhenWindowIsTooNarrow)
 {
 	const CUIRect Screen{0.0f, 0.0f, 133.33334f, 400.0f};

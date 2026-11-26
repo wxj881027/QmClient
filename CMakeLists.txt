@@ -3820,6 +3820,7 @@ if(CLIENT)
     components/qmclient/player_volume.h
     components/qmclient/scoreboard_media_controls.cpp
     components/qmclient/scoreboard_media_controls.h
+    components/qmclient/scoreboard_score_format.h
     components/qmclient/voting_hud.h
     components/qmclient/video_preset_labels.h
     components/qmclient/menus_qmclient.cpp
@@ -5995,6 +5996,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_scoreboard_media_test.cpp
     src/test/unit/qmclient/client/qm_voting_hud_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_scoreboard_score_format_test.cpp
     src/test/unit/qmclient/client/recent_tee_skins_test.cpp
     src/test/unit/qmclient/client/tee_skin_collection_cache_test.cpp
     src/test/unit/qmclient/client/tee_skin_apply_test.cpp
