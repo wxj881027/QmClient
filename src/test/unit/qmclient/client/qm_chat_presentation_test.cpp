@@ -158,14 +158,14 @@ TEST(QmChatPresentation, ReenablingExtraAnimationsDoesNotReplayExpandedHistory)
 	EXPECT_FLOAT_EQ(Presentation.m_RenderAlpha, 1.0f);
 }
 
-TEST(QmChatPresentation, ShortRecallKeepsOriginalTiming)
+TEST(QmChatPresentation, ShortRecallUsesSlowerBaseTiming)
 {
 	for(const int Count : {-1, 0, 1, 2, 3, 4})
 	{
 		SCOPED_TRACE(Count);
 		const auto Timing = CChat::ResolveRecallTiming(Count);
-		EXPECT_FLOAT_EQ(Timing.m_StaggerSeconds, 0.022f);
-		EXPECT_FLOAT_EQ(Timing.m_DurationSeconds, 0.12f);
+		EXPECT_FLOAT_EQ(Timing.m_StaggerSeconds, 0.055f);
+		EXPECT_FLOAT_EQ(Timing.m_DurationSeconds, 0.30f);
 	}
 }
 
@@ -178,15 +178,15 @@ TEST(QmChatPresentation, LongerRecallReducesStaggerDurationAndTotalTime)
 		SCOPED_TRACE(Count);
 		const auto Timing = CChat::ResolveRecallTiming(Count);
 		const float Total = (Count - 1) * Timing.m_StaggerSeconds + Timing.m_DurationSeconds;
-		EXPECT_GE(Timing.m_StaggerSeconds, 0.002f);
-		EXPECT_GE(Timing.m_DurationSeconds, 0.045f);
 		EXPECT_LT(Timing.m_StaggerSeconds, Previous.m_StaggerSeconds);
 		EXPECT_LT(Timing.m_DurationSeconds, Previous.m_DurationSeconds);
 		EXPECT_LT(Total, PreviousTotal);
-		EXPECT_LT(Total, 0.25f);
 		Previous = Timing;
 		PreviousTotal = Total;
 	}
+	EXPECT_NEAR(Previous.m_StaggerSeconds, 0.005f, 0.0001f);
+	EXPECT_NEAR(Previous.m_DurationSeconds, 0.1125f, 0.0001f);
+	EXPECT_NEAR(PreviousTotal, 0.4275f, 0.0001f);
 }
 
 TEST(QmChatPresentation, MoreHistoryAdvancesTheSameRecallRowFaster)
@@ -202,15 +202,15 @@ TEST(QmChatPresentation, MoreHistoryAdvancesTheSameRecallRowFaster)
 
 	CChat::SPresentationState ShorterHistory;
 	CChat::SPresentationState LongerHistory;
-	UpdateRow(ShorterHistory, 15, 0.105f);
-	UpdateRow(LongerHistory, 30, 0.105f);
+	UpdateRow(ShorterHistory, 15, 0.27f);
+	UpdateRow(LongerHistory, 30, 0.27f);
 	ASSERT_EQ(ShorterHistory.m_State, CChat::EPresentationState::ENTERING);
 	ASSERT_EQ(LongerHistory.m_State, CChat::EPresentationState::ENTERING);
 	EXPECT_GT(ShorterHistory.m_RenderAlpha, 0.0f);
 	EXPECT_GT(LongerHistory.m_RenderAlpha, ShorterHistory.m_RenderAlpha);
 	EXPECT_LT(std::abs(LongerHistory.m_RenderOffsetX), std::abs(ShorterHistory.m_RenderOffsetX));
 
-	UpdateRow(LongerHistory, 30, 0.13f);
+	UpdateRow(LongerHistory, 30, 0.34f);
 	EXPECT_EQ(LongerHistory.m_State, CChat::EPresentationState::VISIBLE);
 	EXPECT_EQ(LongerHistory.m_RenderAlpha, 1.0f);
 	EXPECT_EQ(LongerHistory.m_RenderOffsetX, 0.0f);
@@ -395,11 +395,11 @@ TEST(QmChatPresentation, ExpiredClientEchoReturnsInHistoryAndHidesWhenHistoryClo
 	CChat::UpdateLinePresentation(Presentation, Start, Start + TestTicks(30.0f), 0.10f, false, true, 0, 0.0f, true, CChat::CLIENT_MSG);
 	ASSERT_EQ(Presentation.m_State, CChat::EPresentationState::COLLAPSED);
 
-	CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(0.30f), 0.10f, true, true, OpenTick, 0.0f, true, CChat::CLIENT_MSG);
+	CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(0.31f), 0.10f, true, true, OpenTick, 0.0f, true, CChat::CLIENT_MSG);
 	EXPECT_EQ(Presentation.m_State, CChat::EPresentationState::VISIBLE);
 	EXPECT_FLOAT_EQ(Presentation.m_RenderAlpha, 1.0f);
 
-	CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(0.31f), 0.01f, false, true, 0, 0.0f, true, CChat::CLIENT_MSG);
+	CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(0.32f), 0.01f, false, true, 0, 0.0f, true, CChat::CLIENT_MSG);
 	EXPECT_EQ(Presentation.m_State, CChat::EPresentationState::COLLAPSED);
 	EXPECT_FLOAT_EQ(Presentation.m_LayoutVisibility, 0.0f);
 }

@@ -187,16 +187,6 @@ inline float ResolveScoreboardPopStartScale(EScoreboardEntranceAction Action, fl
 	return CurrentScale;
 }
 
-inline void ScoreboardFormatLegacyTimeScore(int Score, char *pBuffer, int BufferSize)
-{
-	if(BufferSize <= 0)
-		return;
-	if(Score == FinishTime::NOT_FINISHED_TIMESCORE)
-		pBuffer[0] = '\0';
-	else
-		str_time(absolute(static_cast<int64_t>(Score)) * 100, TIME_HOURS, pBuffer, BufferSize);
-}
-
 inline CUIRect ScoreboardSoundInfoRect(const CUIRect &Screen, const CUIRect &Anchor, float Width, float Height, float OffsetX)
 {
 	constexpr float ScreenMargin = 5.0f;

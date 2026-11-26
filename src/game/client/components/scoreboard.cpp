@@ -645,12 +645,11 @@ void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, 
 
 void CScoreboard::RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFontSize)
 {
-	// map best
 	char aScore[128] = "";
-	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
-	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
-	const bool Race7 = Client()->IsSixup() && pGameInfoObj && pGameInfoObj->m_GameFlags & protocol7::GAMEFLAG_RACE;
-	if(TimeScore || Race7)
+	const auto Title = scoreboard_score::ResolveTitleScore(GameClient()->m_Snap.m_ScoreColumn, GameClient()->IsTeamPlay(), GameClient()->m_Snap.m_pGameDataObj, Team);
+	if(Title.m_Source == scoreboard_score::ETitleSource::TEAM_SCORE)
+		str_format(aScore, sizeof(aScore), "%d", Title.m_TeamScore);
+	else if(Title.m_Source == scoreboard_score::ETitleSource::MAP_BEST)
 	{
 		if(GameClient()->m_MapBestTimeSeconds != FinishTime::UNSET)
 		{
@@ -664,25 +663,17 @@ void CScoreboard::RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFont
 			return;
 		}
 	}
-	else if(GameClient()->IsTeamPlay()) // normal score
-	{
-		const CNetObj_GameData *pGameDataObj = GameClient()->m_Snap.m_pGameDataObj;
-		if(pGameDataObj)
-		{
-			str_format(aScore, sizeof(aScore), "%d", Team == TEAM_RED ? pGameDataObj->m_TeamscoreRed : pGameDataObj->m_TeamscoreBlue);
-		}
-	}
-	else
+	else if(Title.m_Source == scoreboard_score::ETitleSource::PLAYER_SCORE)
 	{
 		if(GameClient()->m_Snap.m_SpecInfo.m_Active &&
 			GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW &&
 			GameClient()->m_Snap.m_apPlayerInfos[GameClient()->m_Snap.m_SpecInfo.m_SpectatorId])
 		{
-			str_format(aScore, sizeof(aScore), "%d", GameClient()->m_Snap.m_apPlayerInfos[GameClient()->m_Snap.m_SpecInfo.m_SpectatorId]->m_Score);
+			GameClient()->m_Snap.m_aPlayerScores[GameClient()->m_Snap.m_SpecInfo.m_SpectatorId].Format(aScore, sizeof(aScore));
 		}
 		else if(GameClient()->m_Snap.m_pLocalInfo)
 		{
-			str_format(aScore, sizeof(aScore), "%d", GameClient()->m_Snap.m_pLocalInfo->m_Score);
+			GameClient()->m_Snap.m_aPlayerScores[GameClient()->m_Snap.m_pLocalInfo->m_ClientId].Format(aScore, sizeof(aScore));
 		}
 	}
 
@@ -1415,7 +1406,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const CNetObj_GameData *pGameDataObj = GameClient()->m_Snap.m_pGameDataObj;
-	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
+	const auto ScoreColumn = GameClient()->m_Snap.m_ScoreColumn;
 	const int NumPlayers = Scroll ? 16 : (NumPlayersForSize >= 0 ? NumPlayersForSize : CountEnd - CountStart);
 	const bool LowScoreboardWidth = Scoreboard.w < 350.0f;
 	const bool ShowPlaytime = g_Config.m_QmScoreboardPlaytime != 0;
@@ -1428,7 +1419,6 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	TextRender()->TextColor(BaseTextColor);
 	TextRender()->TextOutlineColor(BaseOutlineColor);
 
-	bool Race7 = Client()->IsSixup() && pGameInfoObj && pGameInfoObj->m_GameFlags & protocol7::GAMEFLAG_RACE;
 	const int FirstRow = std::clamp(CountStart, 0, Plan.m_Count);
 	const int EndRow = std::clamp(CountEnd, FirstRow, Plan.m_Count);
 	auto &&TeamHasModeIcons = [&](int DDTeam) {
@@ -1480,7 +1470,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		Ui()->RegisterWheelOwner(&m_ScrollRegion, EUiWheelOwnerPriority::PAGE, ScrollViewport,
 			m_MouseUnlocked && m_RenderInteractions && !Ui()->UnderlyingScrollBlocked());
 		const float ContentHeight = ScoreboardRowsHeight(EndRow - FirstRow, NumTeamLabels, NumTeamModeLabels,
-			LineHeight, Spacing, FontSize / 1.5f, TeamModeIconSize) + TeamBottomPadding;
+						    LineHeight, Spacing, FontSize / 1.5f, TeamModeIconSize) +
+					    TeamBottomPadding;
 		// 在获取本帧偏移前收紧范围，人数减少时不会先绘制一帧空白。
 		m_ScrollRegion.State().Advance(0.0f, {ScrollViewport.h, ContentHeight}, QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f));
 		m_ScrollRegion.SetContentHeightForNextFrame(ContentHeight);
@@ -1496,15 +1487,24 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float ScoreOffset = Scoreboard.x + 20.0f + ClientBrandLength;
 	// 0.6 服务器带毫秒完赛数据时，时间列要为「.000」留出宽度；
 	// 小数按 0.7 倍字号绘制，与 RenderTime 的排版一致。
-	const bool MillisecondScore = GameClient()->m_ReceivedDDNetPlayerFinishTimes;
+	const bool MillisecondScore = GameClient()->m_Snap.m_ScoreMode.UseFinishFields(GameClient()->m_ReceivedDDNetPlayer, GameClient()->m_ReceivedDDNetPlayerFinishTimes);
 	const bool TrueMilliseconds = GameClient()->m_ReceivedDDNetPlayerFinishTimesMillis;
-	float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? TIME_WIDTH_TEXT : "99999");
-	if(TimeScore && MillisecondScore)
+	const bool ShowTimes = ScoreColumn != scoreboard_score::EColumn::SCORE;
+	const char *pScore = ShowTimes ? Localize("Time") : Localize("Score");
+	char aMixedLabel[128];
+	if(ScoreColumn == scoreboard_score::EColumn::TIME_AND_SCORE)
+	{
+		str_format(aMixedLabel, sizeof(aMixedLabel), "%s / %s", Localize("Time"), Localize("Score"));
+		pScore = aMixedLabel;
+	}
+	float ScoreLength = TextRender()->TextWidth(FontSize, ShowTimes ? TIME_WIDTH_TEXT : "99999");
+	if(ShowTimes && MillisecondScore && !GameClient()->m_Snap.m_ScoreMode.m_Race7)
 	{
 		const float MillisLength = TextRender()->TextWidth(FontSize * 0.7f, TrueMilliseconds ? ".000" : ".00");
 		// 小数块与秒数有意少量重叠，避免视觉断裂（见 CUi::RenderTime 的 FractionKern）。
 		ScoreLength += MillisLength * 0.65f;
 	}
+	ScoreLength = maximum(ScoreLength, TextRender()->TextWidth(HeadlineFontsize, pScore));
 	// 统计列复用积分位置，并为带单位的表头预留宽度。
 	const char *pStatsLabel = ShowPlaytime ? Localize("Playtime (h)") : (AxiomScoreColumn ? QmAxiomModeName(m_QmAxiomScoreModeFrame) : Localize("Points"));
 	const float StatsLength = ShowStatistics ? maximum(TextRender()->TextWidth(FontSize, LowScoreboardWidth ? "99999" : "999999"), TextRender()->TextWidth(HeadlineFontsize, pStatsLabel)) : 0.0f;
@@ -1533,7 +1533,6 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	CUIRect Headline;
 	Scoreboard.HSplitTop(HeadlineFontsize * 2.0f, &Headline, nullptr);
 	const float HeadlineY = Headline.y + Headline.h / 2.0f - HeadlineFontsize / 2.0f;
-	const char *pScore = TimeScore ? Localize("Time") : Localize("Score");
 	TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(HeadlineFontsize, pScore), HeadlineY, HeadlineFontsize, pScore);
 	if(ShowStatistics)
 	{
@@ -1580,7 +1579,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			if(DDTeam != TEAM_FLOCK && (LastRow || NextTeam != DDTeam))
 			{
 				const int PreviousTeam = BandStart == FirstRow ? TEAM_FLOCK : Plan.m_aRows[BandStart - 1].m_DDTeam;
-				const auto Surface = QmScoreboardTeamBandSurface(PreviousTeam, NextTeam, RoundRadius);
+				const auto Surface = QmScoreboardTeamBandSurface(PreviousTeam, NextTeam, LineHeight);
 				const ColorRGBA Color = ScoreboardDecorationColor(GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ContentAlpha));
 				DrawRoundedSurface(Ui(), CUIRect{Scoreboard.x, BandTop, Scoreboard.w, Bottom - BandTop}, Color, ColorRGBA(), Surface);
 			}
@@ -1669,7 +1668,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			(GameClient()->m_Snap.m_SpecInfo.m_Active && pInfo->m_ClientId == GameClient()->m_Snap.m_SpecInfo.m_SpectatorId))
 		{
 			CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-			Row.Draw(ScoreboardDecorationColor(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(ItemAlpha * 1.45f)), IGraphics::CORNER_ALL, RoundRadius);
+			Row.Draw(ScoreboardDecorationColor(Ui()->QmControlTheme().m_Selected.WithMultipliedAlpha(ItemAlpha)), IGraphics::CORNER_ALL, RoundRadius);
 		}
 
 		const int ClientId = pInfo->m_ClientId;
@@ -1728,47 +1727,28 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		}
 
 		// score
-		if(Race7)
+		const auto &Score = GameClient()->m_Snap.m_aPlayerScores[ClientId];
+		if(Score.m_Kind == scoreboard_score::EKind::DDNET_TIME)
 		{
-			if(pInfo->m_Score == -1)
-			{
-				aBuf[0] = '\0';
-			}
-			else
-			{
-				// 0.7 uses milliseconds and ddnets str_time wants centiseconds
-				// 0.7 servers can also send the amount of precision the client should use
-				// we ignore that and always show 3 digit precision
-				str_time((int64_t)absolute(pInfo->m_Score / 10), TIME_MINS_CENTISECS, aBuf, sizeof(aBuf));
-			}
-		}
-		else if(TimeScore && MillisecondScore)
-		{
-			// 0.6 服务器若上报了 DDNet 完赛时间，优先显示「秒 + 小数」，
-			// 不再退回只有整秒的 m_Score；未完赛或时间未知时留空。
-			const int FinishSeconds = ClientData.m_FinishTimeSeconds;
-			const bool NotFinished = FinishSeconds == FinishTime::NOT_FINISHED_MILLIS;
+			const int FinishSeconds = static_cast<int>(Score.m_Value / 1000);
+			const int FinishMillis = static_cast<int>(Score.m_Value % 1000);
 			CUIRect ScoreRect = {ScoreOffset, Row.y, ScoreLength, Row.h};
-			Ui()->RenderTime(ScoreRect, FontSize, FinishSeconds, NotFinished, ClientData.m_FinishTimeMillis,
+			Ui()->RenderTime(ScoreRect, FontSize, FinishSeconds, false, FinishMillis,
 				TrueMilliseconds, m_aScoreSecondsText[ClientId], m_aScoreMillisText[ClientId], TextColor);
-			// 超过一小时后 RenderTime 只显示到秒，悬停补一条带百分秒的完整时间。
-			if(!NotFinished && FinishSeconds >= 60 * 60 && m_MouseUnlocked && m_RenderInteractions)
+			if(FinishSeconds >= 60 * 60 && m_MouseUnlocked && m_RenderInteractions)
 			{
 				char aTimeTooltip[32];
-				str_time((int64_t)FinishSeconds * 100 + ClientData.m_FinishTimeMillis / 10, TIME_HOURS_CENTISECS, aTimeTooltip, sizeof(aTimeTooltip));
+				str_time(Score.m_Value / 10, TIME_HOURS_CENTISECS, aTimeTooltip, sizeof(aTimeTooltip));
 				GameClient()->m_Tooltips.DoToolTipForRect(&m_aScoreTooltipIds[ClientId], &ScoreRect, aTimeTooltip, ScoreLength * 1.5f);
 			}
 		}
-		else if(TimeScore)
+		else if(Score.m_Kind != scoreboard_score::EKind::NONE)
 		{
-			ScoreboardFormatLegacyTimeScore(pInfo->m_Score, aBuf, sizeof(aBuf));
+			Score.Format(aBuf, sizeof(aBuf));
+			const float Width = TextRender()->TextWidth(FontSize, aBuf);
+			const float Scale = Score.m_Kind == scoreboard_score::EKind::POINTS && Width > ScoreLength ? ScoreLength / Width : 1.0f;
+			TextRender()->Text(ScoreOffset + ScoreLength - Width * Scale, TextY, FontSize * Scale, aBuf);
 		}
-		else
-		{
-			str_format(aBuf, sizeof(aBuf), "%d", std::clamp(pInfo->m_Score, -999, 99999));
-		}
-		if(Race7 || !(TimeScore && MillisecondScore))
-			TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), TextY, FontSize, aBuf);
 		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 		char aNameBuf[MAX_NAME_LENGTH];
 		char aClanBuf[MAX_CLAN_LENGTH];
@@ -1813,7 +1793,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 					{
 						const CUIRect StatsRect{StatsOffset, Row.y, StatsLength, Row.h};
 						const char *pTip = Playtime.m_Status == EPointsStatus::READY ? Localize("Total playtime from DDStats. The last result stays visible while refreshing.") :
-							(Playtime.m_Status == EPointsStatus::FAILED ? Localize("Playtime query failed. Retrying shortly.") : Localize("Querying playtime from DDStats..."));
+													       (Playtime.m_Status == EPointsStatus::FAILED ? Localize("Playtime query failed. Retrying shortly.") : Localize("Querying playtime from DDStats..."));
 						GameClient()->m_Tooltips.DoToolTipForRect(&m_aPlaytimeTooltipIds[ClientId], &StatsRect, pTip, 240.0f);
 					}
 				}
@@ -2147,7 +2127,7 @@ void CScoreboard::OnRender()
 	{
 		GameClient()->m_QmAxiomScores.SetMode(EQmAxiomMode::NONE);
 	}
-	const bool NeedDdnetPoints = !HasQmAxiomScoreMode() && (g_Config.m_QmScoreboardPoints || g_Config.m_QmScoreboardSortMode);
+	const bool NeedDdnetPoints = !HasQmAxiomScoreMode() && (g_Config.m_QmScoreboardPoints || (GameClient()->m_Snap.m_ScoreMode.AllowsRankSort() && g_Config.m_QmScoreboardSortMode));
 	if(g_Config.m_QmScoreboardPlaytime || NeedDdnetPoints)
 	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
@@ -2324,7 +2304,7 @@ void CScoreboard::OnRender()
 	const bool ScrollMode = ScoreboardScrollModeEnabled(Teams, g_Config.m_QmScoreboardScroll, NumPlayers);
 	if(!ScrollMode)
 		m_ScrollRegion.Reset();
-	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
+	const auto ScoreColumn = GameClient()->m_Snap.m_ScoreColumn;
 
 	// Scoreboard width: clamp to screen width for narrow aspect ratios
 	const float ScreenMargin = 10.0f;
@@ -2375,12 +2355,20 @@ void CScoreboard::OnRender()
 	static CButtonContainer s_ScoreboardSortButton;
 	const float SortButtonFontSize = QmScoreboardHeaderFontSize;
 	const char *pSortLabel = nullptr;
-	if(g_Config.m_QmScoreboardSortMode)
+	const bool AllowRanks = GameClient()->m_Snap.m_ScoreMode.AllowsRankSort();
+	const bool SortByRanks = AllowRanks && g_Config.m_QmScoreboardSortMode;
+	char aMixedSortLabel[128];
+	if(SortByRanks)
 		pSortLabel = Localize("Current: Ranks");
+	else if(ScoreColumn == scoreboard_score::EColumn::TIME_AND_SCORE)
+	{
+		str_format(aMixedSortLabel, sizeof(aMixedSortLabel), "%s / %s", Localize("Current: Time"), Localize("Score"));
+		pSortLabel = aMixedSortLabel;
+	}
 	else
-		pSortLabel = TimeScore ? Localize("Current: Time") : Localize("Current: Score");
+		pSortLabel = ScoreColumn == scoreboard_score::EColumn::TIME ? Localize("Current: Time") : Localize("Current: Score");
 	const float SortButtonWidth = QmScoreboardHeaderButtonWidth(TextRender()->TextWidth(SortButtonFontSize, pSortLabel));
-	const ColorRGBA SortButtonColor = g_Config.m_QmScoreboardSortMode ? ScoreboardWithUiAlpha(ColorRGBA(0.25f, 0.55f, 0.8f, 0.6f), 1.0f) : ScoreboardUiColorSurface(1.0f, 0.18f);
+	const ColorRGBA SortButtonColor = SortByRanks ? ScoreboardWithUiAlpha(ColorRGBA(0.25f, 0.55f, 0.8f, 0.6f), 1.0f) : ScoreboardUiColorSurface(1.0f, 0.18f);
 	auto &&DoHeaderButton = [&](CButtonContainer *pButton, const char *pLabel, CUIRect Rect, const ColorRGBA &Color, const void *pConfigValue) {
 		CUiScopedControlAlphaScale ControlAlpha(Ui(), m_AnimContentAlpha);
 		Rect = QmScoreboardHeaderButtonRect(Rect);
@@ -2389,7 +2377,9 @@ void CScoreboard::OnRender()
 		return Ui()->DoButton_PopupMenu(pButton, pLabel, &Rect, SortButtonFontSize, TEXTALIGN_MC, 0.0f, false, m_RenderInteractions, Color, SortButtonFontSize, 0.0f, true);
 	};
 	auto &&DoSortButton = [&](CUIRect Rect) {
-		if(DoHeaderButton(&s_ScoreboardSortButton, pSortLabel, Rect, SortButtonColor, &g_Config.m_QmScoreboardSortMode))
+		if(!AllowRanks)
+			Ui()->DoLabel(&Rect, pSortLabel, SortButtonFontSize, TEXTALIGN_MC);
+		else if(DoHeaderButton(&s_ScoreboardSortButton, pSortLabel, Rect, SortButtonColor, &g_Config.m_QmScoreboardSortMode))
 			g_Config.m_QmScoreboardSortMode ^= 1;
 	};
 	static CButtonContainer s_ScoreboardStatisticsButton;

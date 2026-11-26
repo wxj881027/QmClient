@@ -28,6 +28,7 @@
 #include <game/client/components/qmclient/auto_team_lock.h>
 #include <game/client/components/qmclient/connection_resource_preparation.h>
 #include <game/client/components/qmclient/local_world.h>
+#include <game/client/components/qmclient/scoreboard_score_format.h>
 #include <game/client/components/qmclient/self_kill_protection.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/prediction/gameworld.h>
@@ -77,11 +78,11 @@
 #include "components/player_points.h"
 #include "components/players.h"
 #include "components/qmclient/axiom_auto_login.h"
-#include "components/qmclient/cross_server_follow.h"
 #include "components/qmclient/axiom_scores.h"
 #include "components/qmclient/chat_emoji.h"
 #include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
+#include "components/qmclient/cross_server_follow.h"
 #include "components/qmclient/data_version.h"
 #include "components/qmclient/demo_camera.h"
 #include "components/qmclient/dummy_distance_link.h"
@@ -188,6 +189,7 @@ public:
 	bool m_EntitiesFDDrace;
 
 	bool m_Race;
+	bool m_Fng;
 	bool m_Pvp;
 
 	bool m_DontMaskEntities;
@@ -209,6 +211,11 @@ public:
 	int m_MinTeamSize;
 	int m_MaxTeamSize;
 	int m_NumDDRaceTeams;
+
+	scoreboard_score::SMode ScoreboardMode(bool Race7, const char *pGameType) const
+	{
+		return {Race7, m_TimeScore, m_Fng || m_PredictFNG || m_EntitiesFNG || str_find_nocase(pGameType, "fng") != nullptr};
+	}
 };
 
 // CSnapEntities 及其关联逻辑已提取到 qmclient/snapshot_entities.h（本次吸收）。
@@ -647,6 +654,9 @@ public:
 		const CNetObj_PlayerInfo *m_apPlayerInfos[MAX_CLIENTS];
 		const CNetObj_PlayerInfo *m_apPrevPlayerInfos[MAX_CLIENTS];
 
+		scoreboard_score::SMode m_ScoreMode;
+		scoreboard_score::EColumn m_ScoreColumn;
+		scoreboard_score::SValue m_aPlayerScores[MAX_CLIENTS];
 		const CNetObj_PlayerInfo *m_apInfoByScore[MAX_CLIENTS];
 		const CNetObj_PlayerInfo *m_apInfoByName[MAX_CLIENTS];
 		const CNetObj_PlayerInfo *m_apInfoByDDTeamScore[MAX_CLIENTS];
@@ -1000,7 +1010,7 @@ public:
 	void HandleLanguageChanged();
 
 	void ForceUpdateConsoleRemoteCompletionSuggestions() override;
-	void RenderQmMonitoringHud(float GraphX, float GraphSpacing) override;
+	void RenderQmMonitoringHud() override;
 
 	void RefreshSkin(const std::shared_ptr<CManagedTeeRenderInfo> &pManagedTeeRenderInfo);
 	void RefreshSkins(int SkinDescriptorFlags);

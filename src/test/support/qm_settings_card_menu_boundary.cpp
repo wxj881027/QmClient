@@ -13,12 +13,17 @@ namespace
 	}
 }
 
-void CMenus::DoSettingsMenuLabel(int, int, int, const char *, const CUIRect *, const char *, float, int, const SLabelProperties &, int, bool, bool)
+const char *CMenus::DoSettingsMenuLabel(int, int, int, const char *, const CUIRect *, const char *, float, int, const SLabelProperties &, int, bool, bool, bool)
 {
 	UnexpectedMenuBoundary();
 }
 
-int CMenus::DoSettingsButton_CheckBox(int, int, int, const void *, const char *, const char *, int, const CUIRect *)
+int CMenus::DoSettingsButton_CheckBox(int, int, int, const void *, const char *, const char *, int, const CUIRect *, const SLabelProperties &, bool, float, bool, const void *)
+{
+	UnexpectedMenuBoundary();
+}
+
+bool CMenus::IsSettingsPageActive() const
 {
 	UnexpectedMenuBoundary();
 }

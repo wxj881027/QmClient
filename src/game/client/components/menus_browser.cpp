@@ -39,6 +39,7 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
+#include <game/client/components/qmclient/browser_friend_actions.h>
 #include <game/client/components/qmclient/browser_friend_ui_id.h>
 #include <game/client/components/qmclient/browser_map_preview.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
@@ -332,17 +333,6 @@ static const char *LocalizeFriendsCategory(const char *pCategory)
 	if(IsOfflineFriendsCategory(pCategory))
 		return Localize("Offline");
 	return pCategory;
-}
-
-// 好友行动作图标只有 12 左右的字形，横向相邻很紧；只加高到 20，
-// 避免 20 方形热区互相重叠后把点击误判成相邻动作。
-static CUIRect FriendActionHitRect(const CUIRect &IconRect)
-{
-	CUIRect Hit = IconRect;
-	const float Height = std::max(Hit.h, 20.0f);
-	Hit.y -= (Height - Hit.h) * 0.5f;
-	Hit.h = Height;
-	return Hit;
 }
 
 // 沿圆角卡片边缘取点；距离按实际周长回绕，圆弧段用半径参数化，避免折角处颜色跳变。
@@ -3369,8 +3359,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	constexpr float FollowTagGap = 4.0f;
 	const float FollowTagWidth = ui_tag::MeasureWidth(TextRender(), Localize("Follow"));
 	const float FollowTagSlotWidth = FollowTagWidth + FollowTagRightInset;
-	constexpr float ActionFadeInSec = 0.08f;
-	constexpr float ActionFadeOutDelaySec = 0.15f;
 
 	CUIRect List, ServerFriends;
 	View.HSplitBottom(92.0f, &List, &ServerFriends);
@@ -3680,9 +3668,9 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				++VisibleFriendItems;
 
 				const SQmFriendLastSeenEntry *pLastSeen = ShowLastSeen ? GameClient()->m_QmFriendLastSeen.Get(Friend.Name()) : nullptr;
+				const CUIRect RowHit = Rect;
 				CUIRect FriendRow = Rect;
-				const bool Inside = Ui()->MouseHovered(&Rect);
-				int ButtonResult = Ui()->DoButtonLogic(pListItemId, 0, &Rect, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
+				const bool Inside = Ui()->MouseHovered(&RowHit);
 
 				if(Friend.ServerInfo() || HasNote || IsPlayerFriend)
 				{
@@ -3747,7 +3735,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				DrawRoundedSurface(Ui(), Rect, CardFill, ColorRGBA(), ui_token::radius::SMALL_MENU);
 				Rect.Margin(2.0f, &Rect);
 				const uint64_t FollowTagKey = BuildUiAnimNodeKey(MakeUiScopeHash("browser_friend_follow_tag"), FriendUiIdBase);
-				const uint64_t ActionFadeKey = BuildUiAnimNodeKey(MakeUiScopeHash("browser_friend_action_fade"), FriendUiIdBase);
 				const float FollowTagTargetWidth = FollowingThisFriend ? FollowTagSlotWidth : 0.0f;
 				const float FollowTagTargetAlpha = FollowingThisFriend ? 1.0f : 0.0f;
 				float FollowTagCurrentWidth = FollowTagTargetWidth;
@@ -3785,36 +3772,11 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					}
 				}
 
-				CUIRect ButtonsRow, PinButton{}, FollowButton, CopyButton, RemoveButton, NameLabel, ClanLabel, InfoLabel;
-				Rect.HSplitTop(16.0f, &ButtonsRow, nullptr);
-				ButtonsRow.VSplitRight(13.0f, &ButtonsRow, &RemoveButton);
-				ButtonsRow.VSplitRight(15.0f, &ButtonsRow, &CopyButton);
-				ButtonsRow.VSplitRight(15.0f, &ButtonsRow, &FollowButton);
-				if(IsPlayerFriend)
-				{
-					ButtonsRow.VSplitRight(15.0f, nullptr, &PinButton);
-					PinButton.VSplitLeft(2.0f, nullptr, &PinButton);
-					PinButton.HMargin((PinButton.h - PinButton.w) / 2.0f, &PinButton);
-				}
-				FollowButton.VSplitLeft(2.0f, nullptr, &FollowButton);
-				CopyButton.VSplitLeft(2.0f, nullptr, &CopyButton);
-				FollowButton.HMargin((FollowButton.h - FollowButton.w) / 2.0f, &FollowButton);
-				CopyButton.HMargin((CopyButton.h - CopyButton.w) / 2.0f, &CopyButton);
-				RemoveButton.HMargin((RemoveButton.h - RemoveButton.w) / 2.0f, &RemoveButton);
+				const auto Actions = QmBrowserFriendActions(Rect, Inside, IsPlayerFriend, CanFollow, Friend.IsPinned());
+				const unsigned RowFlags = Actions.RowButtonFlags(Ui()->MousePos());
+				int ButtonResult = Ui()->DoButtonLogic(pListItemId, 0, &RowHit, RowFlags);
+				CUIRect NameLabel, ClanLabel, InfoLabel;
 				Rect.VSplitLeft(2.0f, nullptr, &Rect);
-
-				float ActionAlpha = Inside ? 1.0f : 0.0f;
-				if(FeedbackMotion && pAnimRuntime != nullptr)
-				{
-					SUiAnimTransition ActionTransition = ui_token::motion::HOVER_FADE;
-					ActionTransition.m_DurationSec = ActionFadeInSec;
-					ActionTransition.m_DelaySec = Inside ? 0.0f : ActionFadeOutDelaySec;
-					ActionTransition.m_Priority = 1;
-					ActionTransition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-					ActionAlpha = pAnimRuntime->ResolveTargetValue(ActionFadeKey, EUiAnimProperty::ALPHA, Inside ? 1.0f : 0.0f, ActionTransition);
-				}
-				ActionAlpha = std::clamp(ActionAlpha, 0.0f, 1.0f);
-				const bool ActionVisible = Inside || ActionAlpha > 0.01f;
 
 				if(Friend.ServerInfo() || ShowLastSeen)
 					Rect.HSplitBottom(10.0f, &Rect, &InfoLabel);
@@ -3839,16 +3801,14 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				Rect.HSplitTop(11.0f, &NameLabel, &ClanLabel);
 
 				SLabelProperties FriendLabelProps;
-				// 名字截断到动作区左缘；跟随标签出现时布局随动画槽位收窄，退场后恢复整行宽度。
-				FriendLabelProps.m_MaxWidth = maximum(0.0f, (IsPlayerFriend ? PinButton.x : FollowButton.x) - NameLabel.x - 2.0f);
+				FriendLabelProps.m_MaxWidth = Actions.LabelMaxWidth(NameLabel.x);
 				FriendLabelProps.m_DisallowNewline = true;
 				FriendLabelProps.m_EllipsisAtEnd = true;
-
-				// name
-				Ui()->DoLabel(&NameLabel, Friend.Name(), FontSize - 1.0f, TEXTALIGN_ML, FriendLabelProps);
-
-				// clan
-				Ui()->DoLabel(&ClanLabel, Friend.Clan(), FontSize - 2.0f, TEXTALIGN_ML, FriendLabelProps);
+				if(FriendLabelProps.m_MaxWidth > 0.0f)
+				{
+					Ui()->DoLabel(&NameLabel, Friend.Name(), FontSize - 1.0f, TEXTALIGN_ML, FriendLabelProps);
+					Ui()->DoLabel(&ClanLabel, Friend.Clan(), FontSize - 2.0f, TEXTALIGN_ML, FriendLabelProps);
+				}
 
 				// server info
 				if(Friend.ServerInfo())
@@ -3898,78 +3858,41 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					Ui()->DoLabel(&InfoLabel, aBuf, FontSize - 2.0f, TEXTALIGN_ML, LastSeenProps);
 				}
 
-				// 置顶入口：已置顶时常显，否则和右侧三个动作图标一样只在悬停时出现，
-				// 避免每行都顶一个常驻箭头。重排在下一次列表刷新时生效。
-				// 图标用 Phosphor arrow-line-up（箭头 + 上方一横），不是 bookmark 或普通上箭头。
-				const bool PinVisible = IsPlayerFriend && (Friend.IsPinned() || ActionVisible);
-				if(PinVisible)
-				{
-					const IUiContext Context = ui_widget::ControlContext(Ui());
-					CUiScopedControlAlphaScale PinFade(Ui(), Friend.IsPinned() ? 1.0f : ActionAlpha);
-					const CUIRect PinHit = FriendActionHitRect(PinButton);
-					if(ui_widget::DoIconButton(Context, pPinButtonId, EQmIcon::ARROW_LINE_UP, FONT_ICON_ARROW_LINE_UP, Friend.IsPinned() ? 1 : 0, PinButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside || Friend.IsPinned(), std::nullopt, false, true, &PinHit) != 0)
-					{
-						GameClient()->Friends()->SetFriendPinned(Friend.Name(), Friend.Clan(), !Friend.IsPinned());
+				const IUiContext Context = ui_widget::ControlContext(Ui());
+				const auto DoAction = [&](const CUIRect &IconRect, const void *pId, EQmIcon Icon, const char *pGlyph, int Checked, const char *pTooltip, const ui_widget::SIconButtonIconDraw *pDraw = nullptr) {
+					const CUIRect Hit = Actions.HitRect(IconRect);
+					const bool Pressed = ui_widget::DoIconButton(Context, pId, Icon, pGlyph, Checked, IconRect, Actions.ACTION_BUTTON_FLAGS, IGraphics::CORNER_ALL, true, std::nullopt, false, true, &Hit, pDraw) != 0;
+					GameClient()->m_Tooltips.DoToolTip(pId, &IconRect, pTooltip);
+					if(Pressed)
 						ButtonResult = 0;
-					}
-					if(Inside || Friend.IsPinned())
-						GameClient()->m_Tooltips.DoToolTip(pPinButtonId, &PinButton, Friend.IsPinned() ? Localize("Unpin friend") : Localize("Pin friend"));
-				}
+					return Pressed;
+				};
 
-				// remove button：动作图标常驻绘制但只有悬停时接收输入；离开行后
-				// 先保留 150ms 再淡出，斜穿列表时不会一闪一闪。
-				if(ActionVisible)
+				if(Actions.m_Pin && DoAction(*Actions.m_Pin, pPinButtonId, EQmIcon::ARROW_LINE_UP, FONT_ICON_ARROW_LINE_UP, Friend.IsPinned(), Friend.IsPinned() ? Localize("Unpin friend") : Localize("Pin friend")))
+					GameClient()->Friends()->SetFriendPinned(Friend.Name(), Friend.Clan(), !Friend.IsPinned());
+
+				if(Actions.m_Follow)
 				{
-					const IUiContext Context = ui_widget::ControlContext(Ui());
-					CUiScopedControlAlphaScale ActionFade(Ui(), ActionAlpha);
-					const CUIRect FollowHit = FriendActionHitRect(FollowButton);
-					const CUIRect CopyHit = FriendActionHitRect(CopyButton);
-					const CUIRect RemoveHit = FriendActionHitRect(RemoveButton);
-					// 关注 ⇄ 取消关注是同位置双态：play ↔ stop 形变帧条，Fill 字重回交叉淡化。
-					IUiContext FollowCtx = ui_widget::ControlContext(Ui());
 					ui_widget::SIconSwapBinding FollowBinding = ui_widget::ResolveIconSwapBinding(
-						FollowCtx, EQmIconSwapPair::PLAY_STOP,
+						Context, EQmIconSwapPair::PLAY_STOP,
 						EQmIcon::PLAY, FONT_ICON_PLAY,
 						EQmIcon::STOP, FONT_ICON_STOP,
 						FollowingThisFriend ? 1.0f : 0.0f, str_quickhash("friend-follow-icon"), pFollowButtonId, 0.24f, true);
 					ui_widget::SIconButtonIconDraw FollowDraw{&ui_widget::DrawIconSwapBinding, &FollowBinding};
-					const bool FollowPressed = CanFollow && ui_widget::DoIconButton(Context, pFollowButtonId, EQmIcon::COUNT, nullptr, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit, &FollowDraw) != 0;
-					const bool CopyPressed = ui_widget::DoIconButton(Context, pCopyButtonId, EQmIcon::COPY, FONT_ICON_COPY, 0, CopyButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &CopyHit) != 0;
-					const bool RemovePressed = ui_widget::DoIconButton(Context, pRemoveButtonId, EQmIcon::TRASH, FONT_ICON_TRASH, 0, RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &RemoveHit) != 0;
-					if(Inside)
-					{
-						if(CopyPressed)
-						{
-							Input()->SetClipboardText(Friend.Name()[0] != '\0' ? Friend.Name() : Friend.Clan());
-							ButtonResult = 0;
-						}
-						GameClient()->m_Tooltips.DoToolTip(pCopyButtonId, &CopyButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to copy this player's name to clipboard") : Localize("Click to copy this clan's name to clipboard"));
-						if(FollowPressed)
-						{
-							GameClient()->m_CrossServerFollow.Toggle(Friend.Name(), Friend.Clan(), Friend.ServerInfo());
-							ButtonResult = 0;
-						}
-						if(CanFollow)
-							GameClient()->m_Tooltips.DoToolTip(pFollowButtonId, &FollowButton, FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
-						if(RemovePressed)
-						{
-							str_copy(m_aRemoveFriendName, Friend.Name(), sizeof(m_aRemoveFriendName));
-							str_copy(m_aRemoveFriendClan, Friend.Clan(), sizeof(m_aRemoveFriendClan));
-							m_RemoveFriendState = Friend.FriendState();
-							m_HasRemoveFriend = true;
-							OpenRemovePopup = true;
-							ButtonResult = 0;
-						}
-						GameClient()->m_Tooltips.DoToolTip(pRemoveButtonId, &RemoveButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to remove this player from your friends list.") : Localize("Click to remove this clan from your friends list."));
-					}
+					if(DoAction(*Actions.m_Follow, pFollowButtonId, EQmIcon::COUNT, nullptr, FollowingThisFriend, FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"), &FollowDraw))
+						GameClient()->m_CrossServerFollow.Toggle(Friend.Name(), Friend.Clan(), Friend.ServerInfo());
 				}
-
-				const auto HoverFriendAction = [&](const CUIRect &Icon) {
-					const CUIRect Hit = FriendActionHitRect(Icon);
-					return Ui()->MouseHovered(&Hit);
-				};
-				const bool InsideFriendAction = (IsPlayerFriend && Ui()->MouseHovered(&PinButton)) || HoverFriendAction(CopyButton) || HoverFriendAction(RemoveButton) || (CanFollow && HoverFriendAction(FollowButton));
-				if(IsPlayerFriend && Ui()->MouseButtonClicked(0) && Inside && !InsideFriendAction && !Ui()->IsPopupOpen() && (Ui()->IsActiveItem(pListItemId) || Ui()->ActiveItem() == nullptr))
+				if(Actions.m_Copy && DoAction(*Actions.m_Copy, pCopyButtonId, EQmIcon::COPY, FONT_ICON_COPY, 0, IsPlayerFriend ? Localize("Click to copy this player's name to clipboard") : Localize("Click to copy this clan's name to clipboard")))
+					Input()->SetClipboardText(CanFollow ? Friend.Name() : Friend.Clan());
+				if(Actions.m_Remove && DoAction(*Actions.m_Remove, pRemoveButtonId, EQmIcon::TRASH, FONT_ICON_TRASH, 0, IsPlayerFriend ? Localize("Click to remove this player from your friends list.") : Localize("Click to remove this clan from your friends list.")))
+				{
+					str_copy(m_aRemoveFriendName, Friend.Name(), sizeof(m_aRemoveFriendName));
+					str_copy(m_aRemoveFriendClan, Friend.Clan(), sizeof(m_aRemoveFriendClan));
+					m_RemoveFriendState = Friend.FriendState();
+					m_HasRemoveFriend = true;
+					OpenRemovePopup = true;
+				}
+				if(IsPlayerFriend && Ui()->MouseButtonClicked(0) && Inside && (RowFlags & BUTTONFLAG_LEFT) && !Ui()->IsPopupOpen() && (Ui()->IsActiveItem(pListItemId) || Ui()->ActiveItem() == nullptr))
 				{
 					s_FriendDragState.Begin(pListItemId, Friend.FriendState(), Friend.Name(), Friend.Clan(), GameClient()->Friends()->GetFriendCategory(Friend.Name(), Friend.Clan()), FriendRow, vec2(Ui()->MouseX(), Ui()->MouseY()));
 					if(Ui()->ActiveItem() == nullptr)

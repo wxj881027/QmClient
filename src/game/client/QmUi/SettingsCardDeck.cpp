@@ -702,6 +702,12 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			// ActiveItem 可能在前一张卡片的释放阶段被清除。逐卡读取，避免
 			// 已经完成的点击继续驱动后续被裁剪卡片的预布局回调。
 			const bool HasActiveHeaderContinuation = SettingsCardDeckHasActiveItemContinuation(HasPointerInput, Ctx.m_pUi != nullptr && Ctx.m_pUi->ActiveItem() != nullptr);
+			if(!m_Drag.Active() && (ControllerVisible || HasActiveHeaderContinuation) && Card.m_pDefinition->m_LeadingHeaderInput)
+			{
+				m_FrameRuntime.CountPreLayoutInput();
+				const bool Changed = Card.m_pDefinition->m_LeadingHeaderInput(PreLayoutFrame, CollapsedBeforeHeader);
+				CardGeometryChanged = CardGeometryChanged || Changed;
+			}
 			if((ControllerVisible || HasActiveHeaderContinuation) && Card.m_pDefinition->m_PreLayoutHeaderInput)
 			{
 				m_FrameRuntime.CountPreLayoutInput();

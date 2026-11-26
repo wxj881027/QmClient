@@ -260,6 +260,7 @@ Adjust status bar position and text style
 Adjust system console verbosity (-3=None, -2=Errors only, -1=Warning, 0=Info, 1=Debug, 2=Trace)
 Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
+Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
 Adjust trails rendered behind Tees
 Adjust verbosity in external console (-3 = none, -2 = errors only, -1 = warnings, 0 = info, 1 = debug, 2 = trace).
 Adjusts DDRace-specific HUD parts such as team state, freeze bars and race time.
@@ -272,7 +273,6 @@ After hammer fly, whether dummy switches back to previous weapon
 After Load
 After uploading again, use: reload or hot_reload
 Afterimage pop
-AGC, experimental
 Agree
 Aim
 Aim bind
@@ -302,11 +302,12 @@ All typefaces
 Allow /map.
 Allow /rescue command to teleport out of freeze (only applies in initial config)
 Allow arbitrary game resolution when scaling (may cause issues on Windows)
+Allow direct pings by default for new favorites in the server browser info panel. Pinging reveals your IP to the server. LAN favorites always allow pings; in-game favorites ignore this setting.
 Allow downloading community-created skins. Use cl_skin_community_download_url instead of cl_skin_download_url for download
 Allow duplicate enemy entries
 Allow Duplicate Entries
 Allow firing non-auto weapons while deep frozen
-Allow FTAPI auto-translate (may cause overload)
+Allow FTAPI to auto-translate received chat messages. Busy chats can overload the free service. Outgoing auto-translation is controlled separately.
 Allow insecure HTTP protocol in addition to secure HTTPS. Primarily for testing.
 Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
@@ -372,7 +373,6 @@ Apply a saved profile by 1-based index to the current tee
 Apply a writable preset and edit first
 Apply bind
 Apply Changes
-Apply input early before next tick for prediction
 Apply Qm recommended appearance
 Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
@@ -413,6 +413,7 @@ Assets editor
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 Assigned group
 Assigns commands and labels to the slots of the radial bind wheel.
+At full entity overlay, draw supported moving blocks and freeze zones so they remain visible without map artwork.
 Attempt to change your name when near finish
 Audio
 Audio backend init failed
@@ -432,7 +433,6 @@ Authentication
 Authorized player forced vote '%s'
 Auto
 auto
-Auto adjust prediction margin (fixed base margin when off)
 Auto agree vote
 Auto chat in water
 Auto chat when dying in water
@@ -492,7 +492,6 @@ Auto-save chat log
 Auto-save history count (0=disable)
 Auto-screenshot on game end
 Auto-send emote and chat message when entering freeze
-Auto-switch to first unfrozen when both frozen
 Auto-sync player camera
 Auto-sync with spectated player's camera (0=Off, 1=On when resetting zoom)
 Auto-toggle fast input
@@ -500,14 +499,12 @@ Auto-toggle fast input others
 Auto-translate incoming messages
 Auto-translate outgoing messages
 Auto-translation mode (0=Trigger on common source languages only, 1=Always translate)
-Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 Automates what happens right after a hammer wakes your frozen tee: unspec, tee switch, chat close and a hint.
 Automatic (Qm service)
 Automatic chat replies when someone else writes a keyword you set, optionally sent by your dummy.
 Automatic demos, game-end screenshots and CSV exports, their file limits and save folders, plus screenshot watermarks.
 Automatic effect LOD when crowded
-Automatic gain control (0=off 1=on)
 Automatic game-end scoreboard screenshot
 Automatic updates require Windows x64
 Automatically add a watermark to screenshots
@@ -524,12 +521,12 @@ Automatically record demos
 Automatically record replays
 Automatically reply to muted players
 Automatically reply while the window is unfocused
-Automatically switch hammer/gun in Gores mode
 Automatically take game over screenshot
 Automatically take statboard screenshot
 Available practice commands: 
 Available rescue modes: auto, manual
 Available resolutions
+Average payload
 Avg %.*f   ↓ %.*f   ↑ %.*f
 Axiom API returned an error
 Axiom auto login failed
@@ -643,8 +640,8 @@ Blend mode
 Blend strength
 Blink the active local tee
 Block
-Block client-initiated self-kill (K key / kill command)
 Block enemy chat
+Block the K key and kill command in normal play. In fast practice, the practice reset takes priority.
 Block votes from blacklisted addresses
 Block words
 Block: fills the character cell behind the next character
@@ -683,6 +680,7 @@ Browse font store…
 Browser
 Brutal
 Bubble opacity
+Buffer memory
 Build the status text shown above Tees
 Built-in
 Built-in cfg is empty - nothing was installed
@@ -698,6 +696,7 @@ By player
 By player name
 By row
 Bytes in the generated bind line; over the limit the server rejects it.
+Bytes per update
 c = Player position
 Calculate unfinished maps for player in certain mode
 Call vote
@@ -826,6 +825,8 @@ Check for updates
 Check if voice server address is reachable
 Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
+Check to cap the client update rate at 480 Hz to save power, which may increase input latency. Uncheck to restore unlimited updates (0).
+Check to set the background map name to %current%. Uncheck to clear the name.
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 Checking for existing player with your name
 Checking for updates...
@@ -898,7 +899,6 @@ Clears the voting options
 Click "QmClient Settings", "Profiles", "War List" or "Chat Binds" to open that file, then use "Configuration packages" to export or import a whole set.
 Click a key on the keyboard picture or under "Mouse", then add a command with "Add function" or use the capture button to move an existing bind.
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
-Click a part on the right to edit its color, blend mode and strength.
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
 Click a slice to set color
@@ -920,6 +920,7 @@ Click to remove this clan from your friends list.
 Click to remove this community from favorites
 Click to remove this player from your friends list.
 Click to select server. Double click to join your friend.
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
 Client
 Client CPU usage is high
 Client frame time is abnormal
@@ -1256,6 +1257,7 @@ Customize interface appearance and previews
 Customize laser shape and effects
 Customize QmClient visuals and effects
 Customize the position jump hint
+Customize translate button and menu colors
 Customize vote display and interaction
 Custom…
 Cut interval
@@ -1429,7 +1431,6 @@ Disable after picking up other weapons
 Disable client-initiated self-kill (K key / kill command)
 Disable clipping
 Disable fast practice mode
-Disable Gores auto-switch when picking up extra weapon
 Disabled
 Disabling system messages also hides server warnings.
 Disagree
@@ -1535,6 +1536,7 @@ Dragger Inner Color
 Dragger laser inner color
 Dragger laser outline color
 Dragger Outline Color
+Draw a ghost at the server position of other tees so you can compare it with their predicted position.
 Draw a glow around tees colored by their race team
 Draw lines showing screen/clickbox center
 Draw on the in game background
@@ -1557,7 +1559,6 @@ Drift direction
 Drift intensity
 Drift smoothness
 Drop on an input port to link
-Drop on right canvas to replace one part.
 Droplet
 Drown deaths
 Dual Kawase
@@ -1754,7 +1755,6 @@ Enable FTAPI auto-translate (may overload the service)
 Enable game sounds
 Enable ghost
 Enable Gores mode
-Enable Gores mode (King of Gores helper tools)
 Enable gun sound
 Enable highlighted chat sound
 Enable hook countdown
@@ -1831,6 +1831,7 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 Enable the message types you want and choose their colors.
 Enable the outlines, choose color and thickness, then test on a map with many different tiles.
 Enable the pet, pick its skin and size, then move around to watch how it follows.
+Enable the selected Gores helpers, such as hammer switching and fast input, while this mode is active.
 Enable the war list to change this setting
 Enable thinking mode
 Enable thinking mode (slower)
@@ -1841,7 +1842,6 @@ Enable UI runtime v2 debug logging
 Enable UPnP support (requires -DCONF_UPNP=ON at compile time).
 Enable visual markers for enemy list
 Enable voice
-Enable voice activation (VAD)
 Enable voice chat
 Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
@@ -1942,8 +1942,7 @@ Exit spectating on both tees when either is hammered awake by another player
 Expand
 Expand console
 Expanded personalization sections (format: stableId=1;stableId2=0;)
-Experimental
-Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+Experimental: without KCP and with PingEx support, use main connection probe reply statistics to add copies to subsequent outgoing UDP packets. Upload traffic may triple; download loss and late duplicates can still cause problems.
 Export
 Export all
 Export cfg
@@ -1968,7 +1967,7 @@ Exported
 Exported %d chat messages
 Exported to %s
 Exporting chat images: %d
-Expose IP to servers by default when adding a favorite (last choice on the server info page)
+Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 External links open in the browser.
 External sites are not controlled by the client.
@@ -2126,7 +2125,6 @@ Font store
 Font store:
 Font weight:
 Fonts without CJK glyphs show fallback squares for Chinese text.
-For Gores
 for Gores
 For more info: /cmdlist
 Force a vote to yes/no
@@ -2142,10 +2140,10 @@ FPM
 FPS
 Fraction of players needed to pass a vote
 Frags
+Frame rate
 Frame time
 Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
 Frames drawn per second when V-Sync is off; 0 = unlimited
-Frankenstein (drop parts on right)
 Free move
 Free view
 Free-View
@@ -2208,6 +2206,7 @@ Fully block enemy players
 Fun
 Functions
 Game
+Game / predicted tick
 Game assets
 Game graphics assets not from Teeworlds
 Game info
@@ -2345,12 +2344,13 @@ Has people playing
 Has save
 Has unread news
 HDF
+Hear members of your voice group at any distance on the map. Other players keep their usual distance limit.
+Hear players who transmit by voice activation. With this off, only speakers on your VAD allowlist can use it to reach you.
 Heart
 Heavy glow costs fill rate; disable it if frame time rises in big fights.
 Height
 Hello from ui_widget::Modal
 Help: %s
-Helpful for Gores: allow negative internal certainty for more conservative prediction
 Hi!
 Hide AFK
 Hide all
@@ -2404,7 +2404,6 @@ Hide system message prefix
 Hide the *** prefix before server chat messages
 Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works.
 Hide toast
-Hide typing emoji during input
 Hide UI for focused gameplay
 Hide weapon fire effects in Zen Mode
 Hide weapon muzzle flashes
@@ -2413,14 +2412,15 @@ High (recommended)
 High Detail
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
 High quality, slow
-Higher input latency
 Highlight Color
 Highlight console commands
+Highlight frozen tees holding hammer or hook. For other players, this requires a teammate whose pre-input has been received. Enable the matching icons to see which input is held.
 Highlight game type
 Highlight held hammer and hook inputs while frozen
 Highlight message text gradient color
 Highlight ping value
 Highlight selected players in the game world
+Highlight the X coordinate when a teammate stays horizontally aligned with you or your dummy for the configured time.
 Highlighted message
 Highlighted message color
 Hint
@@ -2462,9 +2462,11 @@ Hookable tiles
 Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 Horizontal speed × ramp
+Horizontal speed × ramp (%d to %d blocks/s)
 Hostname of DNSBL provider for IP verification
 Hover feedback style: 0 = scale, 1 = border highlight
 Hover for tooltip
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 How far the plasma gun tracks a tee
 How far the tractor tracks a tee
@@ -2505,9 +2507,11 @@ Identity
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 If 1, current driver is in blocking error state.
 If a device disappears after unplugging headphones, reselect it or restart the client.
+If both tees are frozen and another player hammers the inactive tee awake first, switch control to it.
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IME appearance" brings back the defaults.
+If the server allows event prediction, play predicted sounds and particles before its reply. A hammer hit can sound twice.
 If the wheel feels crowded, remove unused slots in the editor card.
 Ignis: Ember Spirit
 Ignore clan tag when searching friends
@@ -2537,6 +2541,7 @@ Import merges friends and keeps local duplicates by default. Codes contain priva
 Imported
 Improved -%s
 Improved anti ping
+In Always Show mode, holding the hook collision line key uses four custom colors when enabled. When disabled, only the main line is inverted; the end segment keeps its color.
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 In DDNet, played when weapons are removed. Other modes may use it for armor pickups.
 In memory of me
@@ -2704,7 +2709,6 @@ Keep messages short so they fit in one chat line.
 Keep square inside game window
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
 Keep the feeling of the maximum cursor distance independent of resolution
-Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 Keep unsent message on chat close
 Keep vote window open after voting
@@ -2786,7 +2790,6 @@ Last viewed announcement content revision
 Last viewed announcement version
 Last viewed client release notes
 Latency
-Latency compensation
 Latency Jitter
 Latin font
 Latin font weight
@@ -2808,11 +2811,11 @@ Leave empty to use the default directory. Relative paths use the config director
 Leave it off on normal servers: the auto switch overrides your weapon keys, so your pick can change before you shoot.
 Leave preview
 Leave solo split mode
+Leave spectating when another player hammers your active tee awake. A thawing timer alone does not trigger this.
 Leave the path empty to auto-detect; fill it in only when the status says "Steam not found".
 Leave the pose session
 Left
 Left jump
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
 Left-drag empty space to box-select, middle-drag to pan, wheel to zoom.
 Left/right channel width
 Legacy bind script
@@ -2987,6 +2990,7 @@ Manual source file
 Manual Steam path is invalid; using automatic detection
 Manual target
 Map
+Map and environment
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 Map browser difficulty star filter bitmask (bits 1-5)
 Map browser: show empty servers only
@@ -3090,7 +3094,6 @@ Maximum rows
 Maximum team size.
 Maximum undo steps in editor history (editor, envelope editor, and server settings editor are independent)
 may cause delay
-May overload the service
 Measure a fixed cold glyph batch with performance diagnostics enabled
 Medium
 Mention
@@ -3124,7 +3127,6 @@ Microphone volume (percent)
 Middle-drag to pan
 Milliseconds to apply quick input early
 Min size
-Mini debug
 Mini features
 Mini voting UI
 Minimize the client
@@ -3275,8 +3277,6 @@ Nameplate title size
 Nameplate weak hook icon color
 Nameplate X alignment hint duration window (ms)
 Nameplate X alignment hint highlight color
-Nameplate X alignment hint strict mode
-Nameplate X alignment hint with local player
 Nameplates
 Names are sent to the server and shown to other players.
 Native scale (1.0)
@@ -3331,7 +3331,6 @@ No animation
 No answer from server yet.
 No assets
 No assets available for composition.
-No assets found.
 No audio issues detected
 No buttons match your filter criteria
 No callable peer found
@@ -3489,6 +3488,7 @@ Old chat style: no tee icons, no background
 Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
 Old single-segment hook collision line
 Oldschool
+Omit the typing flag from both tees' outgoing input so other players do not see your typing bubble.
 On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 Online
@@ -3617,6 +3617,7 @@ Own hook line width
 Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
 p = Ping latency
 Pack name
+packets
 Panel
 Panel opacity
 Parent Folder
@@ -3662,6 +3663,7 @@ Pause the current demo
 Pause video rendering when demo playback is paused
 Pause voice when window unfocused
 Pause/unpause game
+Peak speed: %.2f blocks/s
 Penalty in seconds for saving or swapping positions
 Per-name volume (name=percent)
 Performance mode
@@ -3682,7 +3684,6 @@ Pet skin
 Pet Skin:
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 Phrase
-Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 Pick a color preset or a custom color, then choose regular or bold weight.
 Pick a country for each player.
 Pick a family; if it offers several weights, choose one that stays readable at small sizes.
@@ -3859,7 +3860,6 @@ Practice mode enabled for your team, happy practicing!
 Practice mode is disabled
 Practice: teleport the other tee to your cursor
 Practice: teleport yourself to your cursor
-Pre-warm settings page on startup and menu idle
 Precision Jump
 Predict client movement
 Predict dummy movement
@@ -3872,6 +3872,7 @@ Predict grenade trajectory (only with cl_antiping 1)
 Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
 Predict ninja path
 Predict other player's movement (only enabled if cl_antiping is set to 1) (1 = always on, 2 = interaction only, 3 = 2 and frozen tees always)
+Predict other tees and projectiles locally to show movement sooner. Their positions may shift when server updates arrive.
 Predict weapon projectiles (only with cl_antiping 1)
 Predicted ghost opacity
 Prediction
@@ -3885,7 +3886,9 @@ Prediction lead
 Prediction lead is high, check prediction settings and server timing
 Prediction margin
 Prediction margin when frozen
+Prediction time
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 Preparing chat export: %d%%
 Preparing demo playback
 Preset %d
@@ -3955,7 +3958,9 @@ Prioritize outgoing game traffic on Windows (best effort)
 Privately messages someone's current time in this current running race (your time by default)
 Privately shows you your current time in this current running race in the broadcast message
 Probability of sending freeze chat message (0-100%)
+Process UDP receive (estimated)
 Process UDP RX (est.)
+Process UDP send (estimated)
 Process UDP TX (est.)
 Profiles
 Profiles file
@@ -4117,7 +4122,6 @@ Reason:
 Rebinds the client's listening address and port
 Receive Rate
 Receive translation method
-Receive VAD speakers
 Receive voice from spectators/inactive players
 Receiving
 Recent
@@ -4136,9 +4140,7 @@ Redeem your code and customize your title
 Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
 Redeems a sponsor code, sets the custom title it unlocks and picks how that title looks in chat.
 Redo
-Reduce antiping and player prediction when frozen
 Reduce prediction while frozen
-Reduce visual latency
 Reduced
 Reduced: uses shorter transitions everywhere
 Reflected gradient
@@ -4258,12 +4260,13 @@ Renders the demo that is currently playing into a video file. It runs as fast as
 Renders your frame rate in the top right
 Repeat message
 Repeat the latest chat message
+Repeat the replacement character per UTF-8 byte in custom word lists or per character in the public list. When off, use it once per match.
 Replace all friends
-Replace censored words with length-based chars
 Replace mode
 Replace mode 0=Regex 1=Full 2=Both
 Replace non-friend names with ID
 Replace non-friend skins with default
+Replace same-size parts in the target family.
 Replace selected variant
 Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
 Replace skin with one having this prefix (e.g. cats, santa)
@@ -4291,6 +4294,7 @@ Request to swap positions with %s
 Request to swap your tee with another team member
 Requesting to join the game
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
+Require matching X coordinates rounded to hundredths of a tile for the whole interval. Normal mode allows a difference of 0.03 tiles.
 Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
 Rescue
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
@@ -4327,6 +4331,7 @@ Reset stats on server join (0=persistent, 1=reset on join)
 Reset stats when joining a server
 Reset to defaults
 Reset tooltip appearance
+Reset tooltip appearance to restore the default font size and bounce animation.
 Reset tuning after each map change
 Reset variant
 Reset weapons when passing start tile
@@ -4413,7 +4418,7 @@ Runs your own copy of the map while the server keeps your real Tee where you ent
 Same as "vote no"
 Same clan color in scoreboard
 Same function
-Same group full map listening
+Same-size family
 Sans-serif
 Sat.
 Save
@@ -4464,6 +4469,7 @@ Scale cursor distance with resolution
 Scale down other Tees as well
 Scale down Tee
 Scale max mouse distance to 1000 for better aim
+Scale the existing faded opacity of paused tees and their nameplates in water or freeze zones by this percentage. At 100% their usual fading is unchanged.
 Scale uncertainty duration by ping (100=1.0x)
 Scanning the map folders...
 Score
@@ -4551,12 +4557,10 @@ Select button by touch
 Select export
 Select map
 Select map for the pose file
-Select several name plate blocks in the preview and move them together
 Select the country flag for each player
 Selected %d
 Selected candidate %d/%d under cursor.
 Selected node
-Selected part: %d
 Selected text color
 Selected timertype is not supported by your client
 Selecting download source...
@@ -4662,7 +4666,6 @@ Sets laser colors for weapons and entities.
 Sets master, music and game volume separately.
 Sets one of the two rescue modes (auto or manual). Prints current mode if no arguments provided
 Sets player and dummy name, clan and identity information.
-Sets the client update rate to 480 Hz (0 = unlimited)
 Sets the position, size and text style of the status bar.
 Sets the scale of the in-game cursor.
 Sets the size of the finished video; "Follow window" uses the current render resolution.
@@ -4702,6 +4705,7 @@ Shotgun Laser Outline Color
 Shotgun laser outline color
 Show %s group
 Show a distance link between main tee and dummy
+Show a fixed HUD reference with fractional coordinates for takeoff and double jumps near tile edges.
 Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 Show a per-character wave on text titles locally
@@ -4795,7 +4799,6 @@ Show finish messages
 Show finish summary
 Show finish summary in Dynamic Island
 Show flag on name plate
-Show FPS, prediction time, and performance graphs
 Show freeze bar under frozen players indicating thaw time
 Show freeze bars
 Show freeze tile outlines
@@ -4811,7 +4814,6 @@ Show frozen tee particles
 Show generated skin outline for local tees
 Show generated skin outline for other tees
 Show ghost
-Show ghost at unpredictable position of other players
 Show ghost direction
 Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
 Show Gores drown board
@@ -4822,7 +4824,6 @@ Show hammer icon
 Show hammer status
 Show hazard borders, character check points and weapon ranges
 Show health, shields and ammo
-Show hint at random top-left/right of player when main or dummy is hammered awake
 Show hitboxes for
 Show Hook Collision
 Show hook collision line and drop mouse sensitivity to 66 while held.
@@ -4864,7 +4865,6 @@ Show input overlay
 Show inputs
 Show IP addresses in rcon commands (1 = on, 0 = off)
 Show join team option
-Show jump hint based on fractional part of position
 Show jumps indicator
 Show katana on frozen players
 Show katana on frozen players (restores old behavior)
@@ -4889,7 +4889,6 @@ Show map progress bar (beta)
 Show map progress test point route
 Show mention option
 Show moving tiles in entities
-Show moving tiles in entity layer
 Show my titles locally
 Show name
 Show name in team color
@@ -4936,6 +4935,7 @@ Show pause/play indicator when changing
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 Show pending crash reports on startup
 Show per-character title waves locally
+Show performance graphs.
 Show pet
 Show ping colored circle in nameplates
 Show ping ring on name plate
@@ -4953,9 +4953,7 @@ Show playtime
 Show points
 Show position and angle
 Show position and angle (mini debug)
-Show position and angle debug info
 Show practice timer
-Show predicted position as ghost, original as unpredictable player
 Show pressed keys
 Show Qm badge
 Show Qm badge: identify via central server and mark QmClient users on nameplate/scoreboard
@@ -5043,6 +5041,7 @@ Show whisper option
 Show Workshop Assets
 Show X
 Show Y
+Show your coordinates and aim angle on the HUD, or those of the tee you are watching. Free view shows coordinates only.
 Show your current team
 Show zzz emoji next to afk players
 Showing players from other teams is disabled
@@ -5142,7 +5141,6 @@ Skip Tutorial
 Slide left
 Slightly fast encode
 Slow down the demo
-Slower
 Slower +%s
 Slower export playback
 Slower than personal best
@@ -5159,7 +5157,6 @@ Smooth other players' predicted movement
 Smooth prediction margin
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 Smooth scroll animation duration in menu/editor (ms, 0=off)
-Smooth sudden prediction margin corrections caused by ping spikes
 Smooth the mouse-driven camera in live and demo free spectating
 Smooth zoom animation time in editor (in ms, 0=off)
 Smoothness of multi-view zoom (in ms, higher = slower)
@@ -5228,7 +5225,6 @@ Spectate the previous player
 Spectated player
 Spectated player and friends
 Spectator opacity
-Spectator opacity (percent)
 Spectators
 Speech trigger threshold
 Speed
@@ -5261,6 +5257,7 @@ Spring settle time; lower is snappier, higher feels heavier
 SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
+Staging memory
 Standalone
 Standard
 Star
@@ -5332,6 +5329,7 @@ Stop server
 Stop the current demo
 Store the current practice tee state as the respawn point
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+Streamed memory
 Streamer mode
 Streamer word list file
 Strength icons assets
@@ -5402,6 +5400,7 @@ Syncing remote stats
 System
 System default
 System graphics settings
+System media controls
 System message
 System message color
 System message text gradient color
@@ -5480,7 +5479,6 @@ Tee freeze probe
 Tee icon size in frozen Tee HUD (default 15)
 Tee size
 Tee status bar
-Tee to Freeze
 Tee to Tee
 Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
@@ -5544,6 +5542,7 @@ Text color mode
 Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
 Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
 Text is too long for the selected translation service.
+Texture memory
 Thank you for your company and trust. This is what gives me the courage to keep going.
 Thanks for supporting QmClient
 That link would close a loop
@@ -5576,7 +5575,6 @@ The replay list is empty or malformed
 The scale name depends on the encoder (CRF, CQ, QP, ICQ) but the direction is the same. ProRes fixes quality by profile, so the field is disabled.
 The selected button is not visible. Do you want to deselect it or edit its visibility?
 The selected button is overlapping with other buttons.
-The selected part stays highlighted while you adjust its color.
 The server is running a non-standard tuning on a pure game type.
 The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
@@ -5610,6 +5608,7 @@ This connection cannot change names while connected. Reconnect with the saved na
 This friend has no player name. Switch to By clan to add them.
 This ID is not connected
 This is the master switch for all interface animations
+This legacy switch is saved, but microphone capture currently uses only the manual mic volume.
 This map path cannot be used.
 This name cannot be used for files and folders
 This only affects your own screen; votes still follow the server rules.
@@ -5653,7 +5652,6 @@ Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"
 Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
 Ticks after freeze before applying max prediction reduction
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
-tile
 Tile outlines
 Tile watermark
 Time
@@ -5761,15 +5759,14 @@ Too many configuration files.
 Too many nested binds
 Too many translation tasks
 Toolbox page
-Tooltip background color
 Tooltip bounce animation
 Tooltip font size
 Tooltip preview
-Tooltip text color
 Tooltips
 Top left
 Top right
 Total
+Total bytes
 Total fonts:
 Total friends
 Total hours
@@ -5792,6 +5789,7 @@ Translate only when needed
 Translate only when not in target language
 Translate outgoing messages to
 Translate received messages to
+Translate UI
 Translate:
 Translated chat text size as a percentage of the original text (50-100)
 Translated message could not be queued; original was not sent
@@ -5812,6 +5810,7 @@ Translation service refused this content. Please edit it and try again.
 Translation service returned a notice instead of a translation
 Translation service returned an invalid or incomplete translation.
 Translation Settings
+Transmit without holding the talk key when the microphone level reaches or exceeds the voice activation threshold.
 transmits your player name to info.ddnet.org
 Trigger key
 Trigger limits
@@ -5820,7 +5819,6 @@ Try again
 Try reselecting input device, confirm default mic or headset mic is online
 Try reselecting output device, confirm headphones/speakers are online
 Try to change name near finish
-Try to predict other entities to reduce lag feeling at high latency
 Try toggling voice or reconnecting to server
 Trying Axiom auto login
 Trying Axiom dummy auto login
@@ -5830,6 +5828,7 @@ Tune in zone a variable to value
 Tune variable to value
 Tune variable to value or show current value
 Tune zone (map / override)
+Tuning parameter
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
@@ -5860,6 +5859,7 @@ Turn on "Weapon switch animation" or "Play a flip animation while reloading weap
 Turn on LX Music open API
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
+Turning point (%d to %d blocks/s)
 Turning this off only changes your display.
 Turns controller input on and maps stick axes to aiming, with speed settings for play and for menus.
 Turns important server prompts and Echo messages into short popups instead of plain lines in the chat box.
@@ -5873,6 +5873,7 @@ Type
 Type a map name or choose one from the list.
 Type a map name or pick one below
 Type a word; results filter as you type across cards and config names.
+Type ID
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 Type in the search field to filter, switch between "Sort by key" and "Sort by command", and press "Copy all" to copy the rows.
 Type something...
@@ -5954,6 +5955,7 @@ Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 Unknown sponsor chat style
 Unknown status
 Unknown title style
+Unknown UUID
 Unlimited
 Unload the rank ghost
 Unlock a team
@@ -5990,6 +5992,7 @@ Update ready to install
 Update sources are temporarily unavailable
 Updated this configuration.
 Updated this phrase.
+Updates
 Updates per second while the window is inactive; 0 = unlimited
 Updating preview…
 Updating public word list...
@@ -6022,7 +6025,6 @@ Use current name
 Use current settings
 Use custom chat bubble colors
 Use custom colors
-Use custom colors for the pressed hook collision line (0 = always invert)
 Use custom skins instead of the ninja tee
 Use custom UI icon color
 Use default flags on scoreboard
@@ -6059,7 +6061,6 @@ Use sounds
 Use style colors
 Use team colors for name plates
 Use Tee icons instead of circles
-Use the custom colors below while the hook key is held
 Use the mouse wheel on a hovered module to scale it by 5%
 Use the scoreboard cursor mode to scroll the list
 Use the selected tee trail style palette
@@ -6067,6 +6068,7 @@ Use this after `add_favorite` to group favorites. Start with `begin_favorite_gro
 Use this before `add_favorite` to group favorites. End with `end_favorite_group`
 Use warlist colors instead of regular colors
 Use warlist groups for indicator
+Use your latest input in local prediction before the next tick so movement appears sooner.
 User
 Uses the active action with the current aiming position.
 UTF-8 text, one word per line (max 2 MiB).
@@ -6075,7 +6077,6 @@ v = Velocity
 V-Sync
 VAD allow list (comma-separated)
 VAD release delay (ms)
-VAD threshold (percent)
 Valid
 Validate
 Validation
@@ -6233,6 +6234,8 @@ Wheel down
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 Wheel to zoom - drag empty space to pan
 Wheel up
+When another player hammers your main tee or dummy awake, show a hint above the other local tee, randomly on the left or right, only if it is connected and alive.
+When other players' ghosts are visible, draw the solid tee at the server position and the ghost at the predicted position.
 When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
 When TClient rainbow Tee is enabled, this feature has no effect.
 Whether a switch is deactivated by default (otherwise activated)
@@ -6260,6 +6263,7 @@ Whether to use ninja jetpack or not. Makes jetpack look more awesome
 Whether unnamed tees have a score
 Which message to display on zone enter; use 0 for normal area
 Which message to display on zone leave; use 0 for normal area
+While your tee is frozen, gradually shorten prediction up to the configured limit so displayed movement stays closer to server updates.
 Whisper
 Whisper option color
 Whisper something to someone (private message)
@@ -6290,7 +6294,12 @@ Window and monitor
 Windowed
 Windowed borderless
 Windowed fullscreen
+With free movement enabled, select multiple nameplate elements in the preview and drag them together.
+With Gores auto-switch on and extra weapons equipped, pressing fire briefly selects the hammer, then restores your weapon.
+With improved smoothing, erratic movement keeps other tees near their server positions for longer. This can help in Gores but makes network jitter more visible.
 With main fire
+With only hammer and pistol in Gores mode, return to the pistol after switching to the hammer.
+With SyncWeaponInput, adjust the prediction margin to network timing. When off, use the larger of the base margin and the enabled fast input lead. Without server support, always use 10 ms.
 Word Filter
 Word filter action: 0=replace matching words, 1=hide entire message
 Word list entries cannot contain control characters.
@@ -6437,7 +6446,6 @@ Zoom increase
 Zoom is allowed on this server.
 Zoom out
 Zoom to current mouse target
-⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 [AntiPing: predict other players]	All
 [AntiPing: predict other players]	Always predict frozen players
 [AntiPing: predict other players]	Interact

@@ -3224,6 +3224,7 @@ if(CLIENT)
     input_tsf.cpp
     input_tsf.h
     input_tsf_sink.h
+    ios_socket_recovery.h
     audio_sdl3.h
     sound_buffer.h
     keynames.cpp
@@ -3416,6 +3417,7 @@ if(CLIENT)
     QmUi/SettingsCardInfo.cpp
     QmUi/SettingsCardInfo.h
     QmUi/SettingsToggleGrid.h
+    QmUi/SettingsToggleInput.h
     QmUi/SettingsIconFeedback.h
     QmUi/SettingsCard.h
     QmUi/SettingsCardSubtitle.h
@@ -3452,6 +3454,7 @@ if(CLIENT)
     QmUi/UiScaledLabel.h
     QmUi/UiSurface.cpp
     QmUi/UiSurface.h
+    QmUi/UiSwitchTipPolicy.h
     QmUi/UiTextRenderState.h
     QmUi/UiTag.cpp
     QmUi/UiTag.h
@@ -3500,6 +3503,9 @@ if(CLIENT)
     QmUi/cards/QmFriendCodeCard.cpp
     QmUi/cards/QmCardCatalogPlayer.cpp
     QmUi/cards/QmCardCatalogGraphics.cpp
+    QmUi/AssetsEditor.cpp
+    QmUi/AssetsEditorInput.h
+    QmUi/AssetsEditorLayout.h
     QmUi/AudioPackEditor.cpp
     QmUi/AudioPackEditorLayout.h
     components/qmclient/audio_pack_catalog.h
@@ -3722,14 +3728,15 @@ if(CLIENT)
     components/qmclient/bind_mouse_diagram.h
     components/qmclient/bind_overview.h
     components/qmclient/bind_settings.cpp
-    components/qmclient/browser_score.h
     components/qmclient/bind_workshop.cpp
     components/qmclient/bind_workshop.h
     components/qmclient/bind_workshop_ui.cpp
     components/qmclient/bind_workshop_layout.cpp
-    components/qmclient/browser_status_layout.h
+    components/qmclient/browser_friend_actions.h
     components/qmclient/browser_map_preview.h
     components/qmclient/browser_map_preview_loader.h
+    components/qmclient/browser_score.h
+    components/qmclient/browser_status_layout.h
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_input_layout.h
     components/qmclient/chat_message_filter.h
@@ -3820,6 +3827,7 @@ if(CLIENT)
     components/qmclient/player_volume.h
     components/qmclient/scoreboard_media_controls.cpp
     components/qmclient/scoreboard_media_controls.h
+    components/qmclient/scoreboard_score_format.h
     components/qmclient/voting_hud.h
     components/qmclient/video_preset_labels.h
     components/qmclient/menus_qmclient.cpp
@@ -5149,6 +5157,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_font_fit_test.cpp
     src/test/unit/qmclient/ui/qm_page_title_group_test.cpp
     src/test/unit/qmclient/ui/qm_browser_bottom_inset_test.cpp
+    src/test/unit/qmclient/ui/qm_browser_friend_actions_test.cpp
     src/test/unit/qmclient/ui/qm_gallery_layout_test.cpp
     src/test/unit/qmclient/ui/qm_ui_tag_test.cpp
     src/test/unit/qmclient/ui/qm_local_map_tags_test.cpp
@@ -5319,6 +5328,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/base/aio_test.cpp
     src/test/integration/base/async_logger_test.cpp
     src/test/integration/base/logger_file_creation_test.cpp
+    src/test/unit/client/assets_editor_gesture_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
     src/test/unit/client/assets_preview_scale_test.cpp
     src/test/unit/client/assets_preview_budget_conversion_test.cpp
@@ -5580,6 +5590,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/mem_test.cpp
     src/test/unit/server/mutes_test.cpp
     src/test/unit/engine/name_ban_test.cpp
+    src/test/unit/engine/ios_socket_recovery_test.cpp
     src/test/unit/engine/net_test.cpp
     src/test/integration/engine/net_dup_upstream_test.cpp
     src/test/contract/base/net_protocol_contract_test.cpp
@@ -5810,6 +5821,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_scroll_content_drag_test.cpp
     src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp
+    src/test/integration/qmclient/settings/settings_switch_tooltip_test.cpp
+    src/test/unit/qmclient/ui/qm_switch_tooltip_test.cpp
     src/test/unit/qmclient/ui/qm_tooltip_ownership_test.cpp
     src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp
     src/test/contract/qmclient/ui/qm_ui_scale_contract_test.cpp
@@ -5998,6 +6011,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_scoreboard_media_test.cpp
     src/test/unit/qmclient/client/qm_voting_hud_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_scoreboard_score_format_test.cpp
     src/test/unit/qmclient/client/recent_tee_skins_test.cpp
     src/test/unit/qmclient/client/tee_skin_collection_cache_test.cpp
     src/test/unit/qmclient/client/tee_skin_apply_test.cpp
@@ -6041,6 +6055,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_catalog_search_test.cpp
     src/test/integration/qmclient/settings/qm_search_answer_cards_test.cpp
+    src/test/integration/qmclient/settings/qm_search_placeholder_results_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_spectator_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
@@ -6384,6 +6399,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/qmclient/friend_code.cpp
     src/game/client/components/qmclient/search_answers.cpp
+    src/game/client/components/qmclient/settings_global_search_cache.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/game/client/render_tee_geometry.cpp
     src/game/client/components/section_loader.cpp
@@ -6977,6 +6993,7 @@ src/game/client/components/settings_runtime_cache.cpp
       src/test/integration/qmclient/ui/qm_popup_callback_lifetime_test.cpp
       src/test/integration/qmclient/ui/qm_measurement_clip_failure_test.cpp
       src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
+      src/test/integration/qmclient/ui/qm_browser_friend_input_test.cpp
       src/test/integration/qmclient/ui/qm_favorite_map_note_input_test.cpp
       src/game/client/components/qmclient/favorite_map_note_input.cpp
       src/test/integration/qmclient/ui/qm_map_preview_draw_scope_test.cpp

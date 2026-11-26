@@ -2,22 +2,6 @@
 
 #include <gtest/gtest.h>
 
-#include <limits>
-
-TEST(QmScoreboardPresentation, LegacyRaceScoreCanFormatMostNegativeScore)
-{
-	char aTime[32];
-	ScoreboardFormatLegacyTimeScore(std::numeric_limits<int>::min(), aTime, sizeof(aTime));
-	EXPECT_STREQ("596523:14:08", aTime);
-}
-
-TEST(QmScoreboardPresentation, LegacyRaceScoreKeepsUnfinishedTimeBlank)
-{
-	char aTime[32] = "00:12";
-	ScoreboardFormatLegacyTimeScore(FinishTime::NOT_FINISHED_TIMESCORE, aTime, sizeof(aTime));
-	EXPECT_STREQ("", aTime);
-}
-
 TEST(QmScoreboardPresentation, SoundInfoStaysHiddenWhenWindowIsTooNarrow)
 {
 	const CUIRect Screen{0.0f, 0.0f, 133.33334f, 400.0f};
@@ -55,12 +39,12 @@ TEST(QmScoreboardPresentation, HeaderButtonsKeepEqualHeightsAndUnshrunkLabelSpac
 TEST(QmScoreboardPresentation, AdjacentTeamsOnlyRoundOuterEnds)
 {
 	const CUIRect Band{0.0f, 0.0f, 200.0f, 60.0f};
-	const auto First = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(TEAM_FLOCK, 50, 5.0f), true);
-	const auto Middle = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(1, 100, 5.0f), true);
-	const auto Last = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(50, TEAM_FLOCK, 5.0f), true);
-	EXPECT_EQ(First.m_CornerRadii, vec4(5.0f, 5.0f, 0.0f, 0.0f));
+	const auto First = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(TEAM_FLOCK, 50, 16.0f), true);
+	const auto Middle = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(1, 100, 16.0f), true);
+	const auto Last = ResolveRoundedSurfacePlan(Band, QmScoreboardTeamBandSurface(50, TEAM_FLOCK, 16.0f), true);
+	EXPECT_EQ(First.m_CornerRadii, vec4(8.0f, 8.0f, 0.0f, 0.0f));
 	EXPECT_EQ(Middle.m_CornerRadii, vec4(0.0f, 0.0f, 0.0f, 0.0f));
-	EXPECT_EQ(Last.m_CornerRadii, vec4(0.0f, 0.0f, 5.0f, 5.0f));
+	EXPECT_EQ(Last.m_CornerRadii, vec4(0.0f, 0.0f, 8.0f, 8.0f));
 }
 
 TEST(QmScoreboardPresentation, BottomPaddingIsReservedOnlyWhenColumnEndsWithATeam)

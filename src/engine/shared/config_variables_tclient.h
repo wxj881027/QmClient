@@ -37,7 +37,7 @@ MACRO_CONFIG_INT(QmHammerRotatesWithCursor, qm_hammer_rotates_with_cursor, 0, 0,
 MACRO_CONFIG_INT(QmMiniVoteHud, qm_mini_vote_hud, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mini voting UI")
 
 // Anti Latency Tools
-MACRO_CONFIG_INT(QmRemoveAnti, qm_remove_anti, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reduce antiping and player prediction when frozen")
+MACRO_CONFIG_INT(QmRemoveAnti, qm_remove_anti, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "While your tee is frozen, gradually shorten prediction up to the configured limit so displayed movement stays closer to server updates.")
 MACRO_CONFIG_INT(QmUnfreezeLagTicks, qm_remove_anti_ticks, 5, 0, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Max prediction ticks reduced")
 MACRO_CONFIG_INT(QmUnfreezeLagDelayTicks, qm_remove_anti_delay_ticks, 25, 5, 150, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Ticks after freeze before applying max prediction reduction")
 
@@ -45,8 +45,8 @@ MACRO_CONFIG_INT(QmUnpredOthersInFreeze, qm_unpred_others_in_freeze, 0, 0, 1, CF
 MACRO_CONFIG_INT(QmPredMarginInFreeze, qm_pred_margin_in_freeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable custom prediction margin when frozen")
 MACRO_CONFIG_INT(QmPredMarginInFreezeAmount, qm_pred_margin_in_freeze_amount, 15, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Prediction margin when frozen")
 
-MACRO_CONFIG_INT(QmShowOthersGhosts, qm_show_others_ghosts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show ghost at unpredictable position of other players")
-MACRO_CONFIG_INT(QmSwapGhosts, qm_swap_ghosts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show predicted position as ghost, original as unpredictable player")
+MACRO_CONFIG_INT(QmShowOthersGhosts, qm_show_others_ghosts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw a ghost at the server position of other tees so you can compare it with their predicted position.")
+MACRO_CONFIG_INT(QmSwapGhosts, qm_swap_ghosts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "When other players' ghosts are visible, draw the solid tee at the server position and the ghost at the predicted position.")
 MACRO_CONFIG_INT(QmHideFrozenGhosts, qm_hide_frozen_ghosts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide other players' ghosts when frozen")
 
 MACRO_CONFIG_INT(QmPredGhostsAlpha, qm_pred_ghosts_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Prediction ghost opacity (0-100)")
@@ -57,12 +57,12 @@ MACRO_CONFIG_INT(QmShowCenter, qm_show_center, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG
 MACRO_CONFIG_INT(QmShowCenterWidth, qm_show_center_width, 0, 0, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Center line width (requires qm_show_center)")
 MACRO_CONFIG_COL(QmShowCenterColor, qm_show_center_color, 1694498688, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Center line color (requires qm_show_center)") // transparent red
 
-MACRO_CONFIG_INT(QmFastInput, qm_fast_input, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Apply input early before next tick for prediction")
+MACRO_CONFIG_INT(QmFastInput, qm_fast_input, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use your latest input in local prediction before the next tick so movement appears sooner.")
 MACRO_CONFIG_INT(QmFastInputAmount, qm_fast_input_amount, 20, 1, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Milliseconds to apply quick input early")
 MACRO_CONFIG_INT(QmFastInputOthers, qm_fast_input_others, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Apply quick input to other Tees as well")
 
 MACRO_CONFIG_INT(QmAntiPingImproved, qm_antiping_improved, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use alternative antiping smoothing, incompatible with cl_antiping_smooth")
-MACRO_CONFIG_INT(QmAntiPingNegativeBuffer, qm_antiping_negative_buffer, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Helpful for Gores: allow negative internal certainty for more conservative prediction")
+MACRO_CONFIG_INT(QmAntiPingNegativeBuffer, qm_antiping_negative_buffer, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "With improved smoothing, erratic movement keeps other tees near their server positions for longer. This can help in Gores but makes network jitter more visible.")
 MACRO_CONFIG_INT(QmAntiPingStableDirection, qm_antiping_stable_direction, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "More optimistic prediction along Tee's stable direction, reduces delay to stabilize")
 MACRO_CONFIG_INT(QmAntiPingUncertaintyScale, qm_antiping_uncertainty_scale, 150, 25, 400, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scale uncertainty duration by ping (100=1.0x)")
 
@@ -144,9 +144,9 @@ MACRO_CONFIG_STR(QmRegexChatIgnore, qm_regex_chat_ignore, 512, "", CFGFLAG_CLIEN
 // Misc visual
 MACRO_CONFIG_INT(QmWhiteFeet, qm_white_feet, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Render all feet as solid white base")
 MACRO_CONFIG_STR(QmWhiteFeetSkin, qm_white_feet_skin, 255, "x_ninja", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin used for white feet base")
-MACRO_CONFIG_INT(QmMovingTilesEntities, qm_moving_tiles_entities, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show moving tiles in entity layer")
+MACRO_CONFIG_INT(QmMovingTilesEntities, qm_moving_tiles_entities, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "At full entity overlay, draw supported moving blocks and freeze zones so they remain visible without map artwork.")
 
-MACRO_CONFIG_INT(QmMiniDebug, qm_mini_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show position and angle debug info")
+MACRO_CONFIG_INT(QmMiniDebug, qm_mini_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show your coordinates and aim angle on the HUD, or those of the tee you are watching. Free view shows coordinates only.")
 
 MACRO_CONFIG_INT(QmShowhudDummyPosition, qm_showhud_dummy_position, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show dummy position in movement info HUD")
 MACRO_CONFIG_INT(QmShowhudDummySpeed, qm_showhud_dummy_speed, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show dummy velocity in movement info HUD")

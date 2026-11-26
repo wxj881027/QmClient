@@ -762,6 +762,9 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == Görünüm seçeneklerini ayarlayın; kalabalık bir sunucuya katılmadan önce bir oylama açıp yerleşimi kontrol edin.
 
+Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
+== Araç ipucu yazı boyutunu ve zıplama animasyonunu burada ayarlayın. Arka plan, açılır katman rengini izler.
+
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -797,9 +800,6 @@ After uploading again, use: reload or hot_reload
 
 Afterimage pop
 == Gölge patlaması
-
-AGC, experimental
-== AGC, deneysel
 
 Agree
 == Kabul Et
@@ -885,6 +885,9 @@ Allow /rescue command to teleport out of freeze (only applies in initial config)
 Allow arbitrary game resolution when scaling (may cause issues on Windows)
 == Ölçekleme sırasında keyfi oyun çözünürlüğüne izin ver (Windows'ta sorunlara neden olabilir)
 
+Allow direct pings by default for new favorites in the server browser info panel. Pinging reveals your IP to the server. LAN favorites always allow pings; in-game favorites ignore this setting.
+== Sunucu tarayıcısının bilgi panelinden eklenen favoriler için doğrudan pinge varsayılan olarak izin verir. Ping, IP adresinizi sunucuya gösterir. LAN sekmesinden eklenenlerde pinge daima izin verilir; oyun içinden eklerken bu ayar kullanılmaz.
+
 Allow downloading community-created skins. Use cl_skin_community_download_url instead of cl_skin_download_url for download
 == Topluluk tarafından oluşturulan skin'lerin indirilmesine izin ver. İndirme için cl_skin_download_url yerine cl_skin_community_download_url kullan
 
@@ -897,8 +900,8 @@ Allow Duplicate Entries
 Allow firing non-auto weapons while deep frozen
 == Derin donma sırasında otomatik olmayan silahları ateşlemeye izin ver
 
-Allow FTAPI auto-translate (may cause overload)
-== FTAPI otomatik çeviriye izin ver (aşırı yüklenmeye neden olabilir)
+Allow FTAPI to auto-translate received chat messages. Busy chats can overload the free service. Outgoing auto-translation is controlled separately.
+== Gelen sohbet iletilerinin FTAPI ile otomatik çevrilmesine izin verir. Yoğun sohbet ücretsiz hizmeti aşırı yükleyebilir. Giden iletilerin otomatik çevirisi ayrı ayarlanır.
 
 Allow insecure HTTP protocol in addition to secure HTTPS. Primarily for testing.
 == Güvenli HTTPS protokolüne ek olarak güvenli olmayan HTTP protokolüne izin ver. Öncelikle test amaçlıdır.
@@ -1086,9 +1089,6 @@ Apply a writable preset and edit first
 Apply Changes
 == Değişiklikleri Uygula
 
-Apply input early before next tick for prediction
-== Tahmin için bir sonraki tick'ten önce girdiyi erken uygula
-
 Apply Qm recommended appearance
 == Qm önerilen görünümünü uygula
 
@@ -1206,6 +1206,9 @@ Assigned group
 Assigns commands and labels to the slots of the radial bind wheel.
 == Dairesel komut çarkının dilimlerine komut ve etiket atar.
 
+At full entity overlay, draw supported moving blocks and freeze zones so they remain visible without map artwork.
+== Varlık katmanı tamamen açıkken desteklenen hareketli blokları ve donma bölgelerini görünür tutar.
+
 Attempt to change your name when near finish
 == Bitişe yakınken isminizi değiştirmeyi dene
 
@@ -1262,9 +1265,6 @@ Auto
 
 auto
 == otomatik
-
-Auto adjust prediction margin (fixed base margin when off)
-== Tahmin marjını otomatik ayarla (kapalıyken sabit temel tahmin marjı kullanılır)
 
 Auto agree vote
 == Oylamayı otomatik kabul et
@@ -1440,9 +1440,6 @@ Auto-screenshot on game end
 Auto-send emote and chat message when entering freeze
 == Donma durumuna girildiğinde otomatik olarak ifade ve sohbet mesajı gönder
 
-Auto-switch to first unfrozen when both frozen
-== Ana karakter ve Dummy donduğunda, önce çözülenine otomatik geç
-
 Auto-sync player camera
 == Oyuncu kamerasını otomatik senkronize et
 
@@ -1464,9 +1461,6 @@ Auto-translate outgoing messages
 Auto-translation mode (0=Trigger on common source languages only, 1=Always translate)
 == Otomatik Çeviri Modu (0=Yalnızca yaygın kaynak dil girdisinde tetikle, 1=Her zaman çevir)
 
-Auto-unspec when unfrozen
-== Çözülünce Otomatik Seyirci Modundan Çık
-
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
@@ -1484,9 +1478,6 @@ Automatic demos, game-end screenshots and CSV exports, their file limits and sav
 
 Automatic effect LOD when crowded
 == Kalabalıkta efektleri otomatik basitleştir
-
-Automatic gain control (0=off 1=on)
-== Otomatik Kazanç Kontrolü (0=Kapalı 1=Açık)
 
 Automatic game-end scoreboard screenshot
 == Otomatik oyun sonu skor tablosu ekran görüntüsü
@@ -1536,9 +1527,6 @@ Automatically reply to muted players
 Automatically reply while the window is unfocused
 == Pencere odak dışındayken otomatik yanıt ver
 
-Automatically switch hammer/gun in Gores mode
-== Gores modunda otomatik çekiç/silah değiştirme
-
 Automatically take game over screenshot
 == Oyun bittiğinde otomatik ekran görüntüsü al
 
@@ -1553,6 +1541,9 @@ Available rescue modes: auto, manual
 
 Available resolutions
 == Kullanılabilir çözünürlükler
+
+Average payload
+== Ortalama veri yükü
 
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Ort. %.*f   ↓ %.*f   ↑ %.*f
@@ -1878,11 +1869,11 @@ Blink the active local tee
 Block
 == Blok
 
-Block client-initiated self-kill (K key / kill command)
-== İstemci kaynaklı intiharı engelle (K tuşu / kill komutu)
-
 Block enemy chat
 == Düşman sohbetini engelle
+
+Block the K key and kill command in normal play. In fast practice, the practice reset takes priority.
+== Normal oyunda K tuşuyla veya kill komutuyla kendini öldürmeyi engeller. Hızlı alıştırmada öncelik alıştırmayı sıfırlamaya verilir.
 
 Block votes from blacklisted addresses
 == Kara listedeki adreslerden gelen oylamaları engelle
@@ -1989,11 +1980,20 @@ Brutal
 Bubble opacity
 == Balon opaklığı
 
+Buffer memory
+== Arabellek belleği
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
 Built-in
 == Dahili
+
+Button - Disabled
+== Düğme - Devre Dışı
+
+Button - Enabled
+== Düğme - Etkin
 
 Button browser
 == Düğme tarayıcısı
@@ -2027,6 +2027,9 @@ By player name
 
 By row
 == Satır satır
+
+Bytes per update
+== Güncelleme başına bayt
 
 c = Player position
 == c = Oyuncu konumu
@@ -2394,6 +2397,12 @@ Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
 == Önce çıkış cihazını kontrol edin, kulaklıkların/hoparlörlerin hala çalıştığını onaylayın
 
+Check to cap the client update rate at 480 Hz to save power, which may increase input latency. Uncheck to restore unlimited updates (0).
+== İşaretlerseniz güç tasarrufu için istemci güncelleme hızı 480 Hz ile sınırlanır; girdi gecikmesi artabilir. İşareti kaldırınca sınır kalkar (0).
+
+Check to set the background map name to %current%. Uncheck to clear the name.
+== İşaretlerseniz arka plan haritasının adı %current% olur. İşareti kaldırınca harita adı temizlenir.
+
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == Eşikleri kurcalamadan önce aygıtlarını kontrol et; mikrofonun ses vermemesi çoğunlukla yanlış giriş aygıtından başka bir şey değildir.
 
@@ -2607,9 +2616,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Listeden bir dile tıklayınca hemen uygulanır; soldaki bayrak seçili olanı gösterir.
 
-Click a part on the right to edit its color, blend mode and strength.
-== Rengini, karıştırma modunu ve gücünü ayarlamak için sağdaki bir parçaya tıklayın.
-
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == HDF veya Sola zıplama gibi bir satıra tıkla ve istediğin tuşa bas; yanındaki çöp kutusu simgesi atamayı siler.
 
@@ -2669,6 +2675,9 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == Sunucuyu seçmek için tıklayın. Arkadaşınıza katılmak için çift tıklayın.
+
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
+== Seçmek için tıklayın, renklendirmek için çift tıklayın. Parçayı değiştirmek için sürükleyin, sıfırlamak için sağ tıklayın.
 
 Client
 == İstemci
@@ -3654,6 +3663,9 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
+Customize translate button and menu colors
+== Çevir düğmesi ve menü renklerini özelleştir
+
 Customize vote display and interaction
 == Customize vote display and interaction
 
@@ -4155,9 +4167,6 @@ Disable clipping
 Disable fast practice mode
 == Hızlı pratik modunu kapat
 
-Disable Gores auto-switch when picking up extra weapon
-== Ekstra silah alındığında Gores otomatik değiştirmeyi devre dışı bırak
-
 Disabled
 == Devre dışı
 
@@ -4455,6 +4464,9 @@ Dragger laser outline color
 Dragger Outline Color
 == Sürükleyici Dış Çizgi Rengi
 
+Draw a ghost at the server position of other tees so you can compare it with their predicted position.
+== Diğer teelerin sunucudaki konumunda bir hayalet göstererek tahmin edilen konumla karşılaştırmanızı sağlar.
+
 Draw a glow around tees colored by their race team
 == Tee'lerin etrafına takım renklerinde parlama çiz
 
@@ -4517,9 +4529,6 @@ Drift intensity
 
 Drift smoothness
 == Sürüklenme pürüzsüzlüğü
-
-Drop on right canvas to replace one part.
-== Bir parçayı değiştirmek için sağ tuvalin üzerine bırakın.
 
 Droplet
 == Damla
@@ -5091,9 +5100,6 @@ Enable ghost
 Enable Gores mode
 == Gores modunu etkinleştir
 
-Enable Gores mode (King of Gores helper tools)
-== Gores Modu’nu etkinleştir (King of Gores yardımcı araç seti)
-
 Enable gun sound
 == Tabanca sesini etkinleştir
 
@@ -5322,6 +5328,9 @@ Enable the outlines, choose color and thickness, then test on a map with many di
 Enable the pet, pick its skin and size, then move around to watch how it follows.
 == Evcil hayvanı açın, skinini ve boyutunu seçin, sonra hareket ederek nasıl takip ettiğini izleyin.
 
+Enable the selected Gores helpers, such as hammer switching and fast input, while this mode is active.
+== Gores modu açıkken çekiç değiştirme ve hızlı girdi gibi seçtiğiniz yardımcıları etkinleştirir.
+
 Enable the war list to change this setting
 == Bu ayarı değiştirmek için savaş listesini etkinleştirin
 
@@ -5351,9 +5360,6 @@ Enable visual markers for enemy list
 
 Enable voice
 == Sesi etkinleştir
-
-Enable voice activation (VAD)
-== Ses Aktivasyonu’nu (VAD) etkinleştir
 
 Enable voice chat
 == Sesli sohbeti etkinleştir
@@ -5646,11 +5652,8 @@ Expand console
 Expanded personalization sections (format: stableId=1;stableId2=0;)
 == Genişletilmiş kişiselleştirme bölümleri (biçim: stableId=1;stableId2=0;)
 
-Experimental
-== deneysel
-
-Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
-== Deneysel: gidiş-dönüş yoklamaları yanıtsız kalırsa giden UDP oyun paketlerini tekrar gönderir. Yükleme trafiği üç katına çıkabilir; indirme kayıpları ve geç ulaşan yinelenmiş girdiler sorun çıkarmaya devam edebilir. KCP kullanılırken devre dışıdır.
+Experimental: without KCP and with PingEx support, use main connection probe reply statistics to add copies to subsequent outgoing UDP packets. Upload traffic may triple; download loss and late duplicates can still cause problems.
+== Deneysel: KCP kapalıyken ve PingEx destekleniyorsa ana bağlantının yoklama yanıt istatistiklerine göre sonraki giden UDP paketlerine kopyalar ekler. Gönderim trafiği üç katına çıkabilir; indirmedeki kayıplar ve geciken kopyalar hâlâ sorun yaratabilir.
 
 Export
 == Dışa aktar
@@ -5715,8 +5718,8 @@ Exported to %s
 Exporting chat images: %d
 == Sohbet görselleri dışa aktarılıyor: %d
 
-Expose IP to servers by default when adding a favorite (last choice on the server info page)
-== Favori eklerken IP'yi varsayılan olarak sunuculara gösterir (sunucu bilgi sayfasındaki son seçimi hatırlar)
+Expose playback controls to the operating system
+== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == Harici konsol şifresi. Ekonomiyi etkinleştirmek için ayarlanmalıdır.
@@ -6159,9 +6162,6 @@ Font weight:
 Fonts without CJK glyphs show fallback squares for Chinese text.
 == CJK glifleri olmayan yazı tipleri, Çince metinde yedek kareler gösterir.
 
-For Gores
-== Gores için
-
 for Gores
 == for Gores
 
@@ -6207,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == Öldürme
 
+Frame rate
+== Kare hızı
+
 Frame time
 == Kare süresi
 
@@ -6215,9 +6218,6 @@ Frames buffered between capture and encoding. Deeper queues absorb slow encoder 
 
 Frames drawn per second when V-Sync is off; 0 = unlimited
 == V-Sync kapalıyken saniyedeki kare sayısı üst sınırı; 0 = sınırsız
-
-Frankenstein (drop parts on right)
-== Frankenstein (parçaları sağa bırakın)
 
 Free move
 == Serbest hareket
@@ -6401,6 +6401,9 @@ Functions
 
 Game
 == Oyun
+
+Game / predicted tick
+== Oyun tiki / tahmini tik
 
 Game assets
 == Oyun varlıkları
@@ -6807,6 +6810,12 @@ Has unread news
 HDF
 == HDF
 
+Hear members of your voice group at any distance on the map. Other players keep their usual distance limit.
+== Ses grubunuzdaki oyuncuları haritanın her yerinden duyarsınız. Diğer oyuncular için olağan mesafe sınırı geçerlidir.
+
+Hear players who transmit by voice activation. With this off, only speakers on your VAD allowlist can use it to reach you.
+== Sesle etkinleştirme kullanan oyuncuları duymanızı sağlar. Kapalıyken bu yolla yalnızca VAD izin listenizdekileri duyarsınız.
+
 Heart
 == Kalp
 
@@ -6821,9 +6830,6 @@ Hello from ui_widget::Modal
 
 Help: %s
 == Yardım: %s
-
-Helpful for Gores: allow negative internal certainty for more conservative prediction
-== Gores için faydalı: daha muhafazakar tahmin için negatif iç kesinliğe izin ver
 
 Hi!
 == Merhaba!
@@ -6975,9 +6981,6 @@ Hide the in-game HUD, chat and spectator overlays while recording. Camera switch
 Hide toast
 == Toast'ı gizle
 
-Hide typing emoji during input
-== Yazarken Yazma İfadesini Gösterme
-
 Hide UI for focused gameplay
 == Odaklanmış oyun için arayüzü gizle
 
@@ -7002,14 +7005,14 @@ High particle counts and trails cost frame rate; lower "Particle count" if your 
 High quality, slow
 == Yüksek kalite, yavaş
 
-Higher input latency
-== daha yüksek giriş gecikmesi
-
 Highlight Color
 == Vurgu Rengi
 
 Highlight console commands
 == Konsol komutlarını vurgula
+
+Highlight frozen tees holding hammer or hook. For other players, this requires a teammate whose pre-input has been received. Enable the matching icons to see which input is held.
+== Donmuşken çekiç veya kanca tuşunu basılı tutan tee'leri vurgular. Diğer oyuncularda yalnızca ön girdisi alınan takım arkadaşları için geçerlidir. Hangi tuşun basılı olduğunu görmek için ilgili simgeleri açın.
 
 Highlight game type
 == Oyun türünü vurgula
@@ -7025,6 +7028,9 @@ Highlight ping value
 
 Highlight selected players in the game world
 == Highlight selected players in the game world
+
+Highlight the X coordinate when a teammate stays horizontally aligned with you or your dummy for the configured time.
+== Bir takım arkadaşınız ayarlanan süre boyunca sizinle veya kuklanızla aynı yatay konumda kalırsa X koordinatını vurgular.
 
 Highlighted message
 == Vurgulanan mesaj
@@ -7140,6 +7146,9 @@ Horizontal position
 Horizontal speed × ramp
 == Yatay hız × çarpan
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== Yatay hız × hız çarpanı (%d ile %d blok/sn)
+
 Hostname of DNSBL provider for IP verification
 == IP doğrulaması için DNSBL sağlayıcısının ana bilgisayar adı
 
@@ -7148,6 +7157,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == İpucu için üzerine gel
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== İşaretçinin altında: %p   Sıradaki: %p   Etkin: %p   Son etkin: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == Tekerlek veya sürüklemenin sonu ne kadar aşabileceği, UI pikseli cinsinden; 0 kapatır
@@ -7263,6 +7275,9 @@ If 1, current driver is in blocking error state.
 If a device disappears after unplugging headphones, reselect it or restart the client.
 == Kulaklığı çıkardıktan sonra bir cihaz kaybolursa yeniden seçin veya istemciyi yeniden başlatın.
 
+If both tees are frozen and another player hammers the inactive tee awake first, switch control to it.
+== İki tee de donmuşken başka bir oyuncu etkin olmayan tee'yi önce çekiçle çözerse kontrol ona geçer.
+
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == Sohbet puanı bu değeri aşarsa, oyuncu sv_spam_mute_duration saniye boyunca susturulur
 
@@ -7271,6 +7286,9 @@ If lasers can hit you when shot and pull you to bounce origin (0 for all new map
 
 If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IME appearance" brings back the defaults.
 == Çubuk sohbeti kapatıyorsa önce saydamlığı veya IME yazı tipi boyutunu düşürün; IME görünümünü sıfırla varsayılanlara döndürür.
+
+If the server allows event prediction, play predicted sounds and particles before its reply. A hammer hit can sound twice.
+== Sunucu olay tahminine izin veriyorsa yanıt gelmeden tahmin edilen sesleri ve parçacık efektlerini oynatır. Bir çekiç darbesi iki kez duyulabilir.
 
 If the wheel feels crowded, remove unused slots in the editor card.
 == Çark kalabalık görünüyorsa düzenleyici kartından kullanılmayan dilimleri kaldır.
@@ -7355,6 +7373,9 @@ Improved -%s
 
 Improved anti ping
 == Geliştirilmiş anti ping
+
+In Always Show mode, holding the hook collision line key uses four custom colors when enabled. When disabled, only the main line is inverted; the end segment keeps its color.
+== Kanca çarpışma çizgisi «Her zaman göster» modundayken gösterme tuşunu basılı tutarsanız, seçenek açıksa dört özel renk kullanılır. Kapalıysa yalnızca ana çizginin rengi tersine çevrilir; uç kısmın rengi değişmez.
 
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 == DDNet'te donduran kalp oyuncuyu dondurduğunda çalar. Diğer modlar bunu can alma sesi olarak kullanabilir.
@@ -7845,9 +7866,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 Keep the feeling of the maximum cursor distance independent of resolution
 == Maksimum imleç mesafesi hissini çözünürlükten bağımsız tut
 
-Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
-== Koyu zeminde açık renk yazı daha okunaklıdır; yardım görünümünü sıfırla düğmesi önerilen görünümü geri getirir.
-
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 == Bunları takım renklerinden ayrı tutun; aksi halde aynı klan adları takım paneliyle karışır ve okunması zorlaşır.
 
@@ -8085,9 +8103,6 @@ Last viewed client release notes
 Latency
 == Gecikme
 
-Latency compensation
-== gecikme telafisi
-
 Latency Jitter
 == Gecikme dalgalanması
 
@@ -8151,6 +8166,9 @@ Leave preview
 Leave solo split mode
 == Solo bölme modundan çık
 
+Leave spectating when another player hammers your active tee awake. A thawing timer alone does not trigger this.
+== Başka bir oyuncu etkin tee'nizi çekiçle çözdüğünde izleyici modundan çıkar. Donma süresinin dolması bunu tetiklemez.
+
 Leave the path empty to auto-detect; fill it in only when the status says "Steam not found".
 == Yolu boş bırakırsan otomatik bulunur; yalnızca durum Steam bulunamadı dediğinde doldur.
 
@@ -8159,9 +8177,6 @@ Leave the pose session
 
 Left jump
 == Sol zıplama
-
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
-== Bir Frankenstein parçasını renklendirmek için sol tıklayın. Değiştirmek için parçaları sürükleyin. Sağ tıklama sıfırlar.
 
 Left/right channel width
 == Sol/sağ kanal genişliği
@@ -8637,6 +8652,9 @@ Manual target
 Map
 == Harita
 
+Map and environment
+== Harita ve çevre
+
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 == Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)
 
@@ -8785,7 +8803,7 @@ Mark the end of a demo cut
 == Bir demo kesintisinin sonunu işaretle
 
 Mark the freeze check at the center and the four death checks around each Tee
-== Her Tee'nin merkezindeki donma kontrolünü ve çevresindeki dört ölüm kontrolünü artı işaretiyle işaretle
+== Tee'nin merkezindeki donma kontrol noktasını ve çevresindeki dört ölüm kontrol noktasını işaretler.
 
 Markers
 == İşaretçiler
@@ -8943,9 +8961,6 @@ Maximum undo steps in editor history (editor, envelope editor, and server settin
 may cause delay
 == gecikmeye neden olabilir
 
-May overload the service
-== hizmeti aşırı yükleyebilir
-
 Measure a fixed cold glyph batch with performance diagnostics enabled
 == Performans tanılama açıkken sabit bir soğuk glif partisini ölç
 
@@ -8960,6 +8975,9 @@ Mention option color
 
 Menu accent panel opacity
 == Menü vurgu paneli opaklığı
+
+Menu background
+== Menü arka planı
 
 Menu button hover
 == Menü düğmesi üzerine gelme
@@ -8984,6 +9002,12 @@ Menu music
 
 Menu opacity (0-100)
 == Menü Opaklığı (0-100)
+
+Menu option - normal
+== Menü seçeneği - normal
+
+Menu option - selected
+== Menü seçeneği - seçili
 
 Menu panel color
 == Menü paneli rengi
@@ -9041,9 +9065,6 @@ Milliseconds to apply quick input early
 
 Min size
 == Minimum boyut
-
-Mini debug
-== küçük hata ayıklama
 
 Mini features
 == Mini özellikler
@@ -9486,12 +9507,6 @@ Nameplate X alignment hint duration window (ms)
 Nameplate X alignment hint highlight color
 == İsim Plakası X Hizalama İpucu Vurgu Rengi
 
-Nameplate X alignment hint strict mode
-== İsim Plakası X Hizalama İpucu Katı Modu
-
-Nameplate X alignment hint with local player
-== İsim Plakasında Yerel Oyuncuyla X Hizalamasını Göster
-
 Nameplates
 == İsim plakaları
 
@@ -9632,9 +9647,6 @@ No assets
 
 No assets available for composition.
 == Birleştirme için uygun varlık yok.
-
-No assets found.
-== Varlık bulunamadı.
 
 No audio issues detected
 == Ses anormalliği tespit edilmedi
@@ -10053,6 +10065,9 @@ Old single-segment hook collision line
 Oldschool
 == Eski tarz
 
+Omit the typing flag from both tees' outgoing input so other players do not see your typing bubble.
+== Her iki tee de sunucuya yazma durumunu göndermez, böylece diğer oyuncular yazma balonunuzu görmez.
+
 On
 == Açık
 
@@ -10419,6 +10434,9 @@ p = Ping latency
 Pack name
 == Paket adı
 
+packets
+== paket
+
 Panel
 == Panel
 
@@ -10551,6 +10569,9 @@ Pause voice when window unfocused
 Pause/unpause game
 == Oyunu duraklat/duraklatmayı kaldır
 
+Peak speed: %.2f blocks/s
+== En yüksek hız: %.2f blok/sn
+
 Penalty in seconds for saving or swapping positions
 == Konum kaydetme veya değiştirme için saniye cinsinden ceza
 
@@ -10610,9 +10631,6 @@ Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 
 Phrase
 == İfade
-
-Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
-== Yardım balonunun arka plan ve yazı rengini seç, yazı boyutunu sürükle ve açılırken küçük bir zıplama istiyorsan zıplama animasyonunu açık bırak.
 
 Pick a color preset or a custom color, then choose regular or bold weight.
 == Bir renk ön ayarı veya özel bir renk seçin, ardından normal veya kalın yazı ağırlığını seçin.
@@ -11133,9 +11151,6 @@ Practice: teleport the other tee to your cursor
 Practice: teleport yourself to your cursor
 == Alıştırma: kendinizi imlecinize ışınlayın
 
-Pre-warm settings page on startup and menu idle
-== Başlangıçta ve Menü Boştayken Ayarlar Sayfasını Önceden Yükle
-
 Predict client movement
 == İstemci hareketini tahmin et
 
@@ -11168,6 +11183,9 @@ Predict ninja path
 
 Predict other player's movement (only enabled if cl_antiping is set to 1) (1 = always on, 2 = interaction only, 3 = 2 and frozen tees always)
 == Diğer oyuncuların hareketini tahmin et(cl_antiping yalnızca 1 iken etkin)(1 = her zaman, 2 = yalnızca etkileşimde, 3 = 2 ve donmuş Tee'ler her zaman)
+
+Predict other tees and projectiles locally to show movement sooner. Their positions may shift when server updates arrive.
+== Diğer teelerin ve mermilerin hareketini yerel olarak öngörüp erken gösterir. Sunucudan güncelleme gelince konumları değişebilir.
 
 Predict weapon projectiles (only with cl_antiping 1)
 == Silah mermilerini tahmin et (yalnızca cl_antiping 1 ile)
@@ -11208,8 +11226,14 @@ Prediction margin
 Prediction margin when frozen
 == Donduğunda tahmin marjı
 
+Prediction time
+== Tahmin süresi
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == Tahmin doğruluğu tepki hızıyla takas eder; yukarı yönlü yedeklilik uploadı üç katına çıkarır. "Oyun trafiğini önceliklendir" yalnızca Windows'ta paketleri işaretler ve QoS destekli bir yönlendirici gerektirir.
+
+Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
+== Ayar sayfalarını başlangıçta ve menü boştayken birkaç kareye yayarak hazırlar, böylece ilk açılıştaki takılmalar azalır.
 
 Preparing chat export: %d%%
 == Sohbet dışa aktarımı hazırlanıyor: %d%%
@@ -11409,8 +11433,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == Donma sohbet mesajı gönderme olasılığı (0-100%)
 
+Process UDP receive (estimated)
+== İşlemin aldığı UDP trafiği (tahmini)
+
 Process UDP RX (est.)
 == İşlem UDP RX (tahmini)
+
+Process UDP send (estimated)
+== İşlemin gönderdiği UDP trafiği (tahmini)
 
 Process UDP TX (est.)
 == İşlem UDP TX (tahmini)
@@ -11892,9 +11922,6 @@ Receive Rate
 Receive translation method
 == Alınan mesajlar için çeviri yöntemi
 
-Receive VAD speakers
-== VAD konuşmacılarını al
-
 Receive voice from spectators/inactive players
 == İzleyici/etkin olmayan oyuncuların sesini al
 
@@ -11946,14 +11973,8 @@ Redeem your sponsor code to unlock a custom title, shown in chat and on your nam
 Redeems a sponsor code, sets the custom title it unlocks and picks how that title looks in chat.
 == Destekçi kodunu kullanır, açtığı özel unvanı belirler ve bu unvanın sohbette nasıl görüneceğini seçer.
 
-Reduce antiping and player prediction when frozen
-== Donduğunda antiping ve oyuncu tahminini azalt
-
 Reduce prediction while frozen
 == Donmuşken tahmini azalt
-
-Reduce visual latency
-== görsel gecikmeyi azaltır
 
 Reduced
 == Azaltılmış
@@ -12312,11 +12333,11 @@ Repeat message
 Repeat the latest chat message
 == En son sohbet mesajını tekrarla
 
+Repeat the replacement character per UTF-8 byte in custom word lists or per character in the public list. When off, use it once per match.
+== Özel listelerde eşleşen her UTF-8 baytı, ortak listede ise her karakter için bir değiştirme karakteri gösterir. Kapalıyken eşleşmenin tamamı için tek karakter kullanır.
+
 Replace all friends
 == Tüm arkadaşları değiştir
-
-Replace censored words with length-based chars
-== Engellenen kelime uzunluğuna göre çok karakterli değiştirme
 
 Replace mode
 == Değiştirme modu
@@ -12329,6 +12350,9 @@ Replace non-friend names with ID
 
 Replace non-friend skins with default
 == Arkadaş olmayan derileri varsayılanla değiştir
+
+Replace same-size parts in the target family.
+== Hedef gruptaki aynı boyutlu parçaları birlikte değiştirir.
 
 Replace selected variant
 == Seçili varyantı değiştir
@@ -12410,6 +12434,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == KCP uyumlu istemcinin oturumu yükseltmesini gerektir (geri dönüş için gri tonlama sırasında kapalı tut)
+
+Require matching X coordinates rounded to hundredths of a tile for the whole interval. Normal mode allows a difference of 0.03 tiles.
+== Karenin yüzde birine yuvarlanan X koordinatları süre boyunca eşleşmelidir. Normal modda 0,03 kareye kadar fark kabul edilir.
 
 Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
 == qm_graphics_trace etkinken yazı tiplerini yeniden tara ve çözümlenen Unicode yazı tipi yüzünü ve glifi sorgula
@@ -12509,6 +12536,12 @@ Reset to defaults
 
 Reset tooltip appearance
 == Araç ipucu görünümünü sıfırla
+
+Reset tooltip appearance to restore the default font size and bounce animation.
+== Araç ipucu görünümünü sıfırlamak, varsayılan yazı boyutunu ve zıplama animasyonunu geri getirir.
+
+Reset translation colors
+== Çeviri renklerini sıfırla
 
 Reset tuning after each map change
 == Her harita değişikliğinden sonra ayarı sıfırla
@@ -12753,8 +12786,8 @@ Same as "vote no"
 Same clan color in scoreboard
 == Skor tablosunda aynı klan rengi
 
-Same group full map listening
-== Aynı Gruptaki Herkesi Haritada Duy
+Same-size family
+== Aynı boyut grubu
 
 Sans-serif
 == Serifsiz
@@ -12905,6 +12938,9 @@ Scale down Tee
 
 Scale max mouse distance to 1000 for better aim
 == Daha iyi nişan için maksimum fare mesafesini 1000'e ölçekle
+
+Scale the existing faded opacity of paused tees and their nameplates in water or freeze zones by this percentage. At 100% their usual fading is unchanged.
+== Su veya donma alanında duraklatılmış tee'lerin ve isim etiketlerinin zaten azaltılmış izleyici opaklığını bu yüzdeyle çarpar. %100 normal solukluğu korur.
 
 Scale uncertainty duration by ping (100=1.0x)
 == Belirsizlik süresini ping'e göre ölçekle (100=1.0x)
@@ -13161,9 +13197,6 @@ Select map
 Select map for the pose file
 == Poz dosyası için harita seç
 
-Select several name plate blocks in the preview and move them together
-== Önizlemede birkaç isim plakası bloğu seçip birlikte taşıyın
-
 Select the country flag for each player
 == Select the country flag for each player
 
@@ -13172,9 +13205,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == İmleç altında seçilen aday %d/%d.
-
-Selected part: %d
-== Seçili parça: %d
 
 Selected text color
 == Seçili metin rengi
@@ -13482,9 +13512,6 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 Sets player and dummy name, clan and identity information.
 == Oyuncu ve dummy adını, klan ve kimlik bilgilerini ayarlar.
 
-Sets the client update rate to 480 Hz (0 = unlimited)
-== İstemci güncelleme hızını 480 Hz olarak ayarlar (0 = sınırsız)
-
 Sets the position, size and text style of the status bar.
 == Durum çubuğunun konumunu, boyutunu ve yazı stilini ayarlar.
 
@@ -13601,6 +13628,9 @@ Show %s group
 
 Show a distance link between main tee and dummy
 == Ana tee ile kukla arasındaki mesafeyi bir çizgiyle göster
+
+Show a fixed HUD reference with fractional coordinates for takeoff and double jumps near tile edges.
+== Karo kenarındaki ilk ve çift sıçrama için koordinatların kesirli kısımlarını HUD'da sabit bir başvuru tablosu olarak gösterir.
 
 Show a ghost of your best time after crossing the start line
 == Başlangıç çizgisini geçtikten sonra en iyi sürenin hayaletini göster
@@ -13875,9 +13905,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == İsim plakasında bayrak göster
 
-Show FPS, prediction time, and performance graphs
-== FPS, tahmin süresi ve performans grafiklerini göster
-
 Show freeze bar under frozen players indicating thaw time
 == Donmuş oyuncuların altında çözülme süresini belirten donma çubuğunu göster
 
@@ -13923,9 +13950,6 @@ Show generated skin outline for other tees
 Show ghost
 == Hayaleti göster
 
-Show ghost at unpredictable position of other players
-== Diğer oyuncuların tahmin edilemeyen konumunda hayalet göster
-
 Show ghost direction
 == Hayalet yönünü göster
 
@@ -13955,9 +13979,6 @@ Show hazard borders, character check points and weapon ranges
 
 Show health, shields and ammo
 == Can, kalkan ve mermiyi göster
-
-Show hint at random top-left/right of player when main or dummy is hammered awake
-== Ana karakter veya Dummy çekiçle uyandırıldığında, ilgili oyuncunun rastgele sol üst veya sağ üst köşesinde ipucu göster
 
 Show hitboxes for
 == Hitbox'ları göster
@@ -14079,9 +14100,6 @@ Show IP addresses in rcon commands (1 = on, 0 = off)
 Show join team option
 == Takıma katılmayı göster
 
-Show jump hint based on fractional part of position
-== Konumun ondalık kısmına göre zıplama ipucunu göster
-
 Show jumps indicator
 == Zıplama göstergesini göster
 
@@ -14153,9 +14171,6 @@ Show mention option
 
 Show moving tiles in entities
 == Varlıklarda hareketli karoları göster
-
-Show moving tiles in entity layer
-== Varlık katmanında hareket eden döşemeleri göster
 
 Show my titles locally
 == Bu cihazda kendi unvanlarımı göster
@@ -14295,6 +14310,9 @@ Show pending crash reports on startup
 Show per-character title waves locally
 == Unvan harflerini kendi ekranımda dalgalandır
 
+Show performance graphs.
+== Performans grafiklerini göster.
+
 Show pet
 == Evcil hayvanı göster
 
@@ -14346,14 +14364,8 @@ Show position and angle
 Show position and angle (mini debug)
 == Konum ve açıyı göster (küçük hata ayıklama)
 
-Show position and angle debug info
-== Konum ve açı hata ayıklama bilgisini göster
-
 Show practice timer
 == Pratik zamanlayıcısını göster
-
-Show predicted position as ghost, original as unpredictable player
-== Tahmin edilen konumu hayalet olarak, orijinali tahmin edilemez oyuncu olarak göster
 
 Show pressed keys
 == Basılan tuşları göster
@@ -14426,6 +14438,9 @@ Show skin names in nameplate
 
 Show skin release date and author
 == Skin yayın tarihini ve yapımcısını göster
+
+Show song info in top-left corner
+== Sol üst köşede şarkı bilgisini göster
 
 Show spectate option
 == İzleme seçeneğini göster
@@ -14615,6 +14630,9 @@ Show X
 
 Show Y
 == Y'yi göster
+
+Show your coordinates and aim angle on the HUD, or those of the tee you are watching. Free view shows coordinates only.
+== HUD'da kendi tee'nizin ya da izlediğiniz tee'nin koordinatlarını ve nişan açısını gösterir. Serbest görüşte yalnızca koordinatlar görünür.
 
 Show your current team
 == Geçerli takımını göster
@@ -14910,9 +14928,6 @@ Slightly fast encode
 Slow down the demo
 == Demoyu yavaşlat
 
-Slower
-== daha yavaş
-
 Slower +%s
 == Daha yavaş +%s
 
@@ -14960,9 +14975,6 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == Menü/düzenleyicide yumuşak kaydırma animasyonu süresi (ms, 0=kapalı)
-
-Smooth sudden prediction margin corrections caused by ping spikes
-== Ping sıçramalarının yol açtığı ani tahmin payı düzeltmelerini yumuşatır
 
 Smooth the mouse-driven camera in live and demo free spectating
 == Oyunda ve demolarda serbest izleme sırasında fareyle kontrol edilen kamerayı yumuşat
@@ -15165,9 +15177,6 @@ Spectated player and friends
 Spectator opacity
 == İzleyici opaklığı
 
-Spectator opacity (percent)
-== İzleyici opaklığı (yüzde)
-
 Spectators
 == İzleyiciler
 
@@ -15263,6 +15272,9 @@ Squishy Tee deformation duration
 
 Squishy Tee deformation intensity
 == Zıpzıp Tee deformasyon şiddeti
+
+Staging memory
+== Hazırlama belleği
 
 Standalone
 == Ayrı göster
@@ -15462,6 +15474,9 @@ Store the current practice tee state as the respawn point
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == Mevcut Tee durumunu (konum, silahlar, zıplamalar ve hareket durumu) pratik yeniden doğma noktası olarak kaydeder.
 
+Streamed memory
+== Akış belleği
+
 Streamer mode
 == Yayıncı modu
 
@@ -15659,6 +15674,9 @@ System default
 
 System graphics settings
 == Sistem grafik ayarları
+
+System media controls
+== Sistem medya kontrolleri
 
 System message
 == Sistem mesajı
@@ -15879,9 +15897,6 @@ Tee size
 Tee status bar
 == Tee durum çubuğu
 
-Tee to Freeze
-== Tee ile Freeze
-
 Tee to Tee
 == Tee ile Tee
 
@@ -16068,6 +16083,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 Text is too long for the selected translation service.
 == Metin seçilen çeviri hizmetinin uzunluk sınırını aşıyor.
 
+Texture memory
+== Doku belleği
+
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Arkadaşlığınız ve güveniniz için teşekkür ederim. Devam etme cesaretini bana veren şey budur.
 
@@ -16157,9 +16175,6 @@ The selected button is not visible. Do you want to deselect it or edit its visib
 
 The selected button is overlapping with other buttons.
 == Seçili düğme diğer düğmelerle örtüşüyor.
-
-The selected part stays highlighted while you adjust its color.
-== Rengini ayarlarken seçilen parça vurgulu kalır.
 
 The server is running a non-standard tuning on a pure game type.
 == Sunucu, saf bir oyun türünde standart olmayan bir ayar çalıştırıyor.
@@ -16259,6 +16274,9 @@ This ID is not connected
 
 This is the master switch for all interface animations
 == Tüm arayüz animasyonlarının ana anahtarı
+
+This legacy switch is saved, but microphone capture currently uses only the manual mic volume.
+== Bu eski ayar uyumluluk için kaydedilir. Mikrofon kaydında şu anda yalnızca elle ayarlanan ses düzeyi kullanılır.
 
 This map path cannot be used.
 == Bu harita yolu kullanılamaz.
@@ -16379,9 +16397,6 @@ Ticks after freeze before applying max prediction reduction
 
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 == Her segmentin öncesinde kayıt yapmadan oynatılan tick sayısı; efektler ve sohbet segment başına uysun diye. 50 tick bir saniyedir.
-
-tile
-== döşeme
 
 Tile outlines
 == Karo ana hatları
@@ -16689,9 +16704,6 @@ Too many translation tasks
 Toolbox page
 == Araç kutusu sayfası
 
-Tooltip background color
-== Araç ipucu arka plan rengi
-
 Tooltip bounce animation
 == Araç ipucu sıçrama animasyonu
 
@@ -16700,9 +16712,6 @@ Tooltip font size
 
 Tooltip preview
 == Araç ipucu ön izlemesi
-
-Tooltip text color
-== Araç ipucu metin rengi
 
 Tooltips
 == Araç ipuçları
@@ -16715,6 +16724,9 @@ Top right
 
 Total
 == Toplam
+
+Total bytes
+== Toplam bayt
 
 Total fonts:
 == Toplam yazı tipi:
@@ -16782,6 +16794,9 @@ Translate outgoing messages to
 Translate received messages to
 == Alınan mesajların çeviri dili
 
+Translate UI
+== Arayüzü çevir
+
 Translate:
 == Çevir:
 
@@ -16842,6 +16857,9 @@ Translation service returned an invalid or incomplete translation.
 Translation Settings
 == Çeviri Ayarları
 
+Transmit without holding the talk key when the microphone level reaches or exceeds the voice activation threshold.
+== Mikrofon düzeyi sesle etkinleştirme eşiğine ulaştığında veya eşiği aştığında konuşma tuşunu basılı tutmadan ses gönderir.
+
 transmits your player name to info.ddnet.org
 == oyuncu adınızı info.ddnet.org'a iletir
 
@@ -16865,9 +16883,6 @@ Try reselecting output device, confirm headphones/speakers are online
 
 Try to change name near finish
 == Bitişe yakın isim değiştirmeyi dene
-
-Try to predict other entities to reduce lag feeling at high latency
-== Yüksek gecikmede gecikme hissini azaltmak için diğer varlıkları tahmin etmeyi dene
 
 Try toggling voice or reconnecting to server
 == Sesi açıp kapatmayı veya sunucuya yeniden bağlanmayı deneyin
@@ -16895,6 +16910,9 @@ Tune variable to value or show current value
 
 Tune zone (map / override)
 == Ayar bölgesi (harita / geçersiz kılma)
+
+Tuning parameter
+== Ayar parametresi
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırılır. İmleç biçimi yalnızca görseldir: üç stil de aynı karakter hücresine sığar.
@@ -16986,6 +17004,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == Sesi açın, ardından bir cihaz seçin; liste açılışta ses arka ucundan alınır.
 
+Turning point (%d to %d blocks/s)
+== Dönüm noktası (%d ile %d blok/sn)
+
 Turning this off only changes your display.
 == Kapatmak yalnızca senin ekranını etkiler.
 
@@ -17024,6 +17045,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == Bir sözcük yazın; yazdıkça sonuçlar kartlar ve yapılandırma adları arasında filtrelenir.
+
+Type ID
+== Tür kimliği
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == Arama alanına yaz ya da Tümü, Favoriler ve Son kullanılanlar arasında geçiş yap; bir skine tıklayınca hemen uygulanır, artı simgesiyle sıraya alınır.
@@ -17262,6 +17286,9 @@ Unknown status
 Unknown title style
 == Bilinmeyen unvan stili
 
+Unknown UUID
+== Bilinmeyen UUID
+
 Unlimited
 == Sınırsız
 
@@ -17361,6 +17388,9 @@ Updated this configuration.
 Updated this phrase.
 == İfade güncellendi.
 
+Updates
+== Güncellemeler
+
 Updates per second while the window is inactive; 0 = unlimited
 == Pencere etkin değilken saniyedeki güncelleme sayısı; 0 = sınırsız
 
@@ -17453,9 +17483,6 @@ Use custom chat bubble colors
 
 Use custom colors
 == Özel renkler kullan
-
-Use custom colors for the pressed hook collision line (0 = always invert)
-== Basılı kanca yardımcı çizgisi için özel renkler kullan (0 = her zaman ters çevir)
 
 Use custom skins instead of the ninja tee
 == Ninja tee yerine özel görünümler kullan
@@ -17565,9 +17592,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == Daireler yerine Tee simgeleri kullan
 
-Use the custom colors below while the hook key is held
-== Kanca tuşu basılı tutulurken aşağıdaki özel renkleri kullan
-
 Use the mouse wheel on a hovered module to scale it by 5%
 == Üzerine gelinen bir modülü fare tekerleği ile %5 oranında ölçeklendir
 
@@ -17589,6 +17613,9 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == Gösterge için savaş listesi gruplarını kullan
 
+Use your latest input in local prediction before the next tick so movement appears sooner.
+== Hareketin daha erken görünmesi için son girdiyi bir sonraki oyun adımından önce yerel tahmine katar.
+
 Uses the active action with the current aiming position.
 == Mevcut nişan alma konumuyla etkin eylemi kullanır.
 
@@ -17606,9 +17633,6 @@ VAD allow list (comma-separated)
 
 VAD release delay (ms)
 == VAD serbest bırakma gecikmesi (ms)
-
-VAD threshold (percent)
-== VAD eşiği (yüzde)
 
 Valid
 == Geçerli
@@ -18057,6 +18081,12 @@ Wheel distance per tick; hold Alt for 3x
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == Tekerlek hissi: 0=Orijinal (her adımda yeniden başlar), 1=Yumuşak (hız devam eder), 2=Yay
 
+When another player hammers your main tee or dummy awake, show a hint above the other local tee, randomly on the left or right, only if it is connected and alive.
+== Başka bir oyuncu ana tee'yi veya kuklayı çekiçle çözdüğünde, diğer yerel karakter bağlı ve hayattaysa onun sol veya sağ üstünde rastgele bir ipucu gösterir.
+
+When other players' ghosts are visible, draw the solid tee at the server position and the ghost at the predicted position.
+== Diğer oyuncuların hayaletleri açıkken tee'yi sunucudaki konumda, hayaleti ise tahmin edilen konumda gösterir.
+
 When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
 == Yarışırken ‘Donma mermileri ve lazerleri’ni açık bırakıp ‘Çekiç ve kanca menzili’ ile ‘Mermiler, patlamalar ve normal lazerler’i kapatarak yaklaşan donma tehlikelerini daha net görebilirsiniz.
 
@@ -18137,6 +18167,9 @@ Which message to display on zone enter; use 0 for normal area
 
 Which message to display on zone leave; use 0 for normal area
 == Bölgeden ayrılırken hangi mesajın gösterileceği; normal alan için 0 kullanın
+
+While your tee is frozen, gradually shorten prediction up to the configured limit so displayed movement stays closer to server updates.
+== Tee'niz donmuşken tahmin süresini ayarlanan sınıra kadar kademeli olarak kısaltır, böylece görünen hareket sunucu verilerine daha yakın kalır.
 
 Whisper
 == Fısıltı
@@ -18227,6 +18260,21 @@ Windowed borderless
 
 Windowed fullscreen
 == Pencereli tam ekran
+
+With free movement enabled, select multiple nameplate elements in the preview and drag them together.
+== Serbest taşıma açıkken önizlemede birden fazla isim etiketi öğesini seçip birlikte sürükleyebilirsiniz.
+
+With Gores auto-switch on and extra weapons equipped, pressing fire briefly selects the hammer, then restores your weapon.
+== Gores otomatik silah değişimi açıkken ek silahınız varsa ateşe basınca kısa süreliğine çekice geçilir ve önceki silaha dönülür.
+
+With improved smoothing, erratic movement keeps other tees near their server positions for longer. This can help in Gores but makes network jitter more visible.
+== Yeni yumuşatma açıkken sık yön değiştiren teeler daha uzun süre sunucudaki konumlarına yakın gösterilir. Bu, Gores kurtarmalarında işe yarayabilir ancak ağ dalgalanmaları daha belirgin olabilir.
+
+With only hammer and pistol in Gores mode, return to the pistol after switching to the hammer.
+== Gores modunda yalnızca çekiç ve tabancanız varsa çekici seçtikten sonra tabancaya geri döner.
+
+With SyncWeaponInput, adjust the prediction margin to network timing. When off, use the larger of the base margin and the enabled fast input lead. Without server support, always use 10 ms.
+== Sunucu SyncWeaponInput destekliyorsa tahmin payını ağ zamanlamasına göre ayarlar. Kapalıyken taban pay ile etkin hızlı girişin öne alma süresinden büyük olanı kullanır. Sunucu desteklemiyorsa her zaman 10 ms kullanılır.
 
 Word Filter
 == Kelime Filtresi
@@ -18659,9 +18707,6 @@ Zoom out
 
 Zoom to current mouse target
 == Geçerli fare hedefine yakınlaştır
-
-⚠️ FTAPI is a free service. Excessive use may cause service suspension.
-== ⚠️ FTAPI ücretsiz bir hizmettir. Aşırı kullanım hizmetin askıya alınmasına neden olabilir.
 
 [AntiPing: predict other players]
 All

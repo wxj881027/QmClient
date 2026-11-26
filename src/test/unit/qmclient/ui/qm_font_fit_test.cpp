@@ -111,3 +111,15 @@ TEST(QmFontFit, ActionIconsShareOneInkHeight)
 	// 墨迹占比更大的星形必须用更小的 em 字号，两者才会视觉等高。
 	EXPECT_LT(StarSize, BoxSize);
 }
+
+TEST(QmFontFit, DebugCaptionKeepsItsScreenSizeAcrossCoordinateSystems)
+{
+	using ui_token::hud::font::DebugSize;
+	const float HudSize = DebugSize(480.0f, 300.0f);
+	EXPECT_FLOAT_EQ(ui_token::hud::font::CAPTION, HudSize);
+	EXPECT_FLOAT_EQ(2.0f * HudSize, DebugSize(960.0f, 600.0f));
+	EXPECT_FLOAT_EQ(3.0f * HudSize, DebugSize(1440.0f, 900.0f));
+	const float NarrowSize = DebugSize(280.0f, 300.0f);
+	EXPECT_LT(NarrowSize, HudSize);
+	EXPECT_FLOAT_EQ(2.0f * NarrowSize, DebugSize(560.0f, 600.0f));
+}

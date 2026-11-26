@@ -200,7 +200,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 			if(pStatusBarOverrideTooltip == nullptr && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBar, "tclient-statusbar-show", Localize("Show status bar"), g_Config.m_QmStatusBar, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmStatusBar ^= 1;
 			else if(pStatusBarOverrideTooltip != nullptr)
-				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show", &CheckBoxRect, Localize("Show status bar"), FontSize, TEXTALIGN_ML, StatusBarLabelProps);
+				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show", &CheckBoxRect, Localize("Show status bar"), FontSize, TEXTALIGN_ML, StatusBarLabelProps, true, true, false);
 		}
 		{
 			if(Flow.Control("tclient-statusbar-show-labels", LineSize, CheckBoxRect, RowSpacing))

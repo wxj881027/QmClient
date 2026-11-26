@@ -2387,7 +2387,6 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 	{
 		QueueEnabled ^= 1;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&QueueEnabled, &QueueHeader, Localize("Enable skin queue rotation"));
 	char aCurrentQueueLabel[128];
 	if(AppliedPresetIndex >= 0 && (size_t)AppliedPresetIndex < vQueuePresets.size())
 	{

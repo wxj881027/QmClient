@@ -4,7 +4,7 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_sound_audio_pack[] = {
 		{Localizable("Audio pack directory"), nullptr, "音频包目录"},
 		{Localizable("Default"), nullptr, "默认"},
-		{Localizable("Edit audio pack"), nullptr, "编辑音频包"},
+		{Localizable("Edit audio pack"), nullptr, "编辑音频包 音频包编辑器 单独换钩子声音 替换锤子音效"},
 		{nullptr, "snd_enable", nullptr},
 		{nullptr, "snd_pack", nullptr},
 	};

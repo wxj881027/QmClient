@@ -94,7 +94,7 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_focus_mode[] = {
 		{Localizable("Audio"), nullptr, "语音音效"},
 		{Localizable("Chat"), nullptr, "聊天"},
-		{Localizable("Enable Zen mode"), nullptr, "启用禅模式"},
+		{Localizable("Enable Zen mode"), nullptr, "启用禅模式 专注模式"},
 		{Localizable("Hide Echo messages"), nullptr, "隐藏 Echo 消息"},
 		{Localizable("Hide HUD"), nullptr, "隐藏 HUD"},
 		{Localizable("Hide death/respawn effects"), nullptr, "隐藏死亡/重生特效"},

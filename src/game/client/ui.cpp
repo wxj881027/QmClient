@@ -9,6 +9,7 @@
 #include "QmUi/UiSurface.h"
 #include "QmUi/UiSurfaceText.h"
 #include "QmUi/UiTextRenderState.h"
+#include "QmUi/UiTokens.h"
 #include "components/qmclient/perf_logging.h"
 #include "components/tooltips.h"
 #include "qm_icon.h"
@@ -1145,9 +1146,14 @@ void CUi::DebugRender(float X, float Y)
 {
 	MapScreen();
 
-	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "hot=%p nexthot=%p active=%p lastactive=%p", HotItem(), NextHotItem(), ActiveItem(), m_pLastActiveItem);
-	TextRender()->Text(X, Y, 10.0f, aBuf);
+	const CUiScopedTextRenderState TextState(*TextRender());
+	TextRender()->SetFontPreset(ui_token::hud::font::DEBUG_PRESET);
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf), Localize("Hovered: %p   Next hovered: %p   Active: %p   Last active: %p"), HotItem(), NextHotItem(), ActiveItem(), m_pLastActiveItem);
+	const float FontSize = ui_token::hud::font::DebugSize(Screen()->w, Screen()->h);
+	const float Available = std::max(1.0f, Screen()->w - X);
+	const float FittedSize = FontSize * std::min(1.0f, Available / std::max(1.0f, TextRender()->TextWidth(FontSize, aBuf)));
+	TextRender()->Text(X, Y, FittedSize, aBuf);
 }
 
 bool CUi::MouseInside(const CUIRect *pRect) const
@@ -1915,17 +1921,7 @@ bool CUi::DoDoubleClickLogic(const void *pId)
 	if(RenderOnly())
 		return false;
 
-	if(m_DoubleClickState.m_pLastClickedId == pId &&
-		Client()->GlobalTime() - m_DoubleClickState.m_LastClickTime < 0.5f &&
-		distance(m_DoubleClickState.m_LastClickPos, MousePos()) <= 32.0f * Screen()->h / Graphics()->ScreenHeight())
-	{
-		m_DoubleClickState.m_pLastClickedId = nullptr;
-		return true;
-	}
-	m_DoubleClickState.m_pLastClickedId = pId;
-	m_DoubleClickState.m_LastClickTime = Client()->GlobalTime();
-	m_DoubleClickState.m_LastClickPos = MousePos();
-	return false;
+	return m_DoubleClickState.Click(pId, Client()->GlobalTime(), MousePos(), 32.0f * Screen()->h / Graphics()->ScreenHeight());
 }
 
 EEditState CUi::DoPickerLogic(const void *pId, const CUIRect *pRect, float *pX, float *pY)

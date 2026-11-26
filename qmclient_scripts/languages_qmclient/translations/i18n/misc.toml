@@ -16253,22 +16253,6 @@ turkish = "Kanca tuşu basılıyken kanca yardımcı çizgisi gösterildiğinde 
 polish = "Używa poniższych własnych kolorów, gdy linia haka jest pokazywana z wciśniętym klawiszem haka; gdy wyłączone, kolory niewciśnięte są automatycznie odwracane"
 
 [[message]]
-key = "Use the custom colors below while the hook key is held"
-[message.translations]
-simplified_chinese = "按住钩子键时使用下方的自定义颜色"
-traditional_chinese = "按住鉤索鍵時使用下方的自訂顏色"
-japanese = "フックキー押下中は下のカスタムカラーを使用"
-korean = "훅 키를 누르고 있는 동안 아래의 사용자 지정 색상 사용"
-russian = "Использовать указанные ниже цвета, пока удерживается клавиша зацепа"
-german = "Verwendet die folgenden eigenen Farben, während die Haktaste gehalten wird"
-spanish = "Usa los colores personalizados de abajo mientras se mantiene la tecla de gancho"
-french = "utilise les couleurs personnalisées ci-dessous tant que la touche de grappin est maintenue"
-brazilian_portuguese = "Usa as cores personalizadas abaixo enquanto a tecla de gancho é mantida"
-portuguese = "Usa as cores personalizadas abaixo enquanto a tecla de gancho é mantida premida"
-turkish = "Kanca tuşu basılı tutulurken aşağıdaki özel renkleri kullan"
-polish = "Używa poniższych własnych kolorów, gdy wciśnięty jest klawisz haka"
-
-[[message]]
 key = "Use the mouse wheel on a hovered module to scale it by 5%"
 [message.translations]
 simplified_chinese = "将鼠标悬停在 HUD 模块上并滚动滚轮可按 5% 缩放"
@@ -18067,3 +18051,243 @@ brazilian_portuguese = "Medir um lote fixo de glifos frios com os diagnósticos 
 portuguese = "Medir um lote fixo de glifos frios com os diagnósticos de desempenho ativados"
 turkish = "Performans tanılama açıkken sabit bir soğuk glif partisini ölç"
 polish = "Zmierz stałą partię zimnych glifów przy włączonej diagnostyce wydajności"
+
+[[message]]
+key = "Average payload"
+[message.translations]
+simplified_chinese = "平均载荷"
+traditional_chinese = "平均酬載"
+japanese = "平均ペイロード"
+korean = "평균 페이로드"
+russian = "Средняя полезная нагрузка"
+german = "Mittlere Nutzlast"
+spanish = "Carga útil media"
+french = "Charge utile moyenne"
+brazilian_portuguese = "Carga útil média"
+portuguese = "Carga útil média"
+turkish = "Ortalama veri yükü"
+polish = "Średni ładunek danych"
+
+[[message]]
+key = "Bytes per update"
+[message.translations]
+simplified_chinese = "每次更新字节数"
+traditional_chinese = "每次更新位元組數"
+japanese = "更新あたりのバイト数"
+korean = "갱신당 바이트"
+russian = "Байт на обновление"
+german = "Bytes je Aktualisierung"
+spanish = "Bytes por actualización"
+french = "Octets par mise à jour"
+brazilian_portuguese = "Bytes por atualização"
+portuguese = "Bytes por atualização"
+turkish = "Güncelleme başına bayt"
+polish = "Bajty na aktualizację"
+
+[[message]]
+key = "Game / predicted tick"
+[message.translations]
+simplified_chinese = "游戏刻/预测刻"
+traditional_chinese = "遊戲刻 / 預測刻"
+japanese = "ゲームティック / 予測ティック"
+korean = "게임 틱 / 예측 틱"
+russian = "Игровой / прогнозируемый тик"
+german = "Spiel-Tick / vorhergesagter Tick"
+spanish = "Tick de juego / previsto"
+french = "Tick de jeu / prédit"
+brazilian_portuguese = "Tick do jogo / previsto"
+portuguese = "Tick do jogo / previsto"
+turkish = "Oyun tiki / tahmini tik"
+polish = "Tik gry / przewidywany tik"
+
+[[message]]
+key = "Horizontal speed × ramp (%d to %d blocks/s)"
+[message.translations]
+simplified_chinese = "横向速度 × 速度倍率（%d 至 %d 格/秒）"
+traditional_chinese = "橫向速度 × 速度倍率（%d 至 %d 格/秒）"
+japanese = "水平速度 × 速度倍率（%d～%d ブロック/秒）"
+korean = "수평 속도 × 속도 배율 (%d~%d 블록/초)"
+russian = "Горизонтальная скорость × множитель (от %d до %d блоков/с)"
+german = "Horizontalgeschwindigkeit × Faktor (%d bis %d Blöcke/s)"
+spanish = "Velocidad horizontal × factor (de %d a %d bloques/s)"
+french = "Vitesse horizontale × facteur (de %d à %d blocs/s)"
+brazilian_portuguese = "Velocidade horizontal × fator (%d a %d blocos/s)"
+portuguese = "Velocidade horizontal × fator (%d a %d blocos/s)"
+turkish = "Yatay hız × hız çarpanı (%d ile %d blok/sn)"
+polish = "Prędkość pozioma × mnożnik (od %d do %d bloków/s)"
+
+[[message]]
+key = "Hovered: %p   Next hovered: %p   Active: %p   Last active: %p"
+[message.translations]
+simplified_chinese = "悬停：%p 下一悬停：%p 活动：%p 上次活动：%p"
+traditional_chinese = "懸停：%p   下一懸停：%p   作用中：%p   上次作用中：%p"
+japanese = "ホバー中: %p   次のホバー先: %p   アクティブ: %p   前回: %p"
+korean = "가리킨 항목: %p   다음 항목: %p   활성 항목: %p   이전 활성 항목: %p"
+russian = "Под курсором: %p   Далее: %p   Активный: %p   Предыдущий активный: %p"
+german = "Unter Mauszeiger: %p   Nächstes Ziel: %p   Aktiv: %p   Zuletzt aktiv: %p"
+spanish = "Bajo el cursor: %p   Siguiente: %p   Activo: %p   Último activo: %p"
+french = "Sous le pointeur : %p   Suivant : %p   Actif : %p   Dernier actif : %p"
+brazilian_portuguese = "Sob o cursor: %p   Próximo: %p   Ativo: %p   Último ativo: %p"
+portuguese = "Sob o cursor: %p   Seguinte: %p   Ativo: %p   Último ativo: %p"
+turkish = "İşaretçinin altında: %p   Sıradaki: %p   Etkin: %p   Son etkin: %p"
+polish = "Pod kursorem: %p   Następny: %p   Aktywny: %p   Ostatnio aktywny: %p"
+
+[[message]]
+key = "packets"
+[message.translations]
+simplified_chinese = "个包"
+traditional_chinese = "個封包"
+japanese = "パケット"
+korean = "패킷"
+russian = "пак."
+german = "Pakete"
+spanish = "paquetes"
+french = "paquets"
+brazilian_portuguese = "pacotes"
+portuguese = "pacotes"
+turkish = "paket"
+polish = "pak."
+
+[[message]]
+key = "Peak speed: %.2f blocks/s"
+[message.translations]
+simplified_chinese = "峰值速度：%.2f 格/秒"
+traditional_chinese = "峰值速度：%.2f 格/秒"
+japanese = "ピーク速度: %.2f ブロック/秒"
+korean = "최고 속도: %.2f 블록/초"
+russian = "Пиковая скорость: %.2f блоков/с"
+german = "Spitzengeschwindigkeit: %.2f Blöcke/s"
+spanish = "Velocidad máxima: %.2f bloques/s"
+french = "Vitesse de pointe : %.2f blocs/s"
+brazilian_portuguese = "Velocidade máxima: %.2f blocos/s"
+portuguese = "Velocidade máxima: %.2f blocos/s"
+turkish = "En yüksek hız: %.2f blok/sn"
+polish = "Prędkość szczytowa: %.2f bloków/s"
+
+[[message]]
+key = "Process UDP receive (estimated)"
+[message.translations]
+simplified_chinese = "进程 UDP 接收（估算）"
+traditional_chinese = "行程 UDP 接收（估算）"
+japanese = "プロセスの UDP 受信（推定）"
+korean = "프로세스 UDP 수신 (추정)"
+russian = "Приём UDP процессом (оценка)"
+german = "UDP-Empfang des Prozesses (geschätzt)"
+spanish = "Recepción UDP del proceso (estimada)"
+french = "Réception UDP du processus (estimation)"
+brazilian_portuguese = "Recebimento UDP do processo (estimativa)"
+portuguese = "Receção UDP do processo (estimativa)"
+turkish = "İşlemin aldığı UDP trafiği (tahmini)"
+polish = "Ruch UDP odebrany przez proces (szac.)"
+
+[[message]]
+key = "Process UDP send (estimated)"
+[message.translations]
+simplified_chinese = "进程 UDP 发送（估算）"
+traditional_chinese = "行程 UDP 傳送（估算）"
+japanese = "プロセスの UDP 送信（推定）"
+korean = "프로세스 UDP 송신 (추정)"
+russian = "Отправка UDP процессом (оценка)"
+german = "UDP-Versand des Prozesses (geschätzt)"
+spanish = "Envío UDP del proceso (estimado)"
+french = "Émission UDP du processus (estimation)"
+brazilian_portuguese = "Envio UDP do processo (estimativa)"
+portuguese = "Envio UDP do processo (estimativa)"
+turkish = "İşlemin gönderdiği UDP trafiği (tahmini)"
+polish = "Ruch UDP wysłany przez proces (szac.)"
+
+[[message]]
+key = "Total bytes"
+[message.translations]
+simplified_chinese = "总字节数"
+traditional_chinese = "總位元組數"
+japanese = "合計バイト数"
+korean = "총 바이트"
+russian = "Всего байт"
+german = "Bytes insgesamt"
+spanish = "Total de bytes"
+french = "Total des octets"
+brazilian_portuguese = "Total de bytes"
+portuguese = "Total de bytes"
+turkish = "Toplam bayt"
+polish = "Łącznie bajtów"
+
+[[message]]
+key = "Tuning parameter"
+[message.translations]
+simplified_chinese = "调校参数"
+traditional_chinese = "調校參數"
+japanese = "調整パラメーター"
+korean = "튜닝 매개변수"
+russian = "Параметр настройки"
+german = "Tuningparameter"
+spanish = "Parámetro de ajuste"
+french = "Paramètre de réglage"
+brazilian_portuguese = "Parâmetro de ajuste"
+portuguese = "Parâmetro de afinação"
+turkish = "Ayar parametresi"
+polish = "Parametr strojenia"
+
+[[message]]
+key = "Turning point (%d to %d blocks/s)"
+[message.translations]
+simplified_chinese = "速度拐点（%d 至 %d 格/秒）"
+traditional_chinese = "速度轉折點（%d 至 %d 格/秒）"
+japanese = "転換点（%d～%d ブロック/秒）"
+korean = "속도 전환점 (%d~%d 블록/초)"
+russian = "Точка перегиба (от %d до %d блоков/с)"
+german = "Wendepunkt (%d bis %d Blöcke/s)"
+spanish = "Punto de inflexión (de %d a %d bloques/s)"
+french = "Point d’inflexion (de %d à %d blocs/s)"
+brazilian_portuguese = "Ponto de inflexão (%d a %d blocos/s)"
+portuguese = "Ponto de inflexão (%d a %d blocos/s)"
+turkish = "Dönüm noktası (%d ile %d blok/sn)"
+polish = "Punkt przegięcia (od %d do %d bloków/s)"
+
+[[message]]
+key = "Type ID"
+[message.translations]
+simplified_chinese = "类型编号"
+traditional_chinese = "類型編號"
+japanese = "種類 ID"
+korean = "유형 ID"
+russian = "Код типа"
+german = "Typkennung"
+spanish = "ID de tipo"
+french = "ID du type"
+brazilian_portuguese = "ID do tipo"
+portuguese = "ID do tipo"
+turkish = "Tür kimliği"
+polish = "ID typu"
+
+[[message]]
+key = "Unknown UUID"
+[message.translations]
+simplified_chinese = "未知 UUID"
+traditional_chinese = "未知 UUID"
+japanese = "不明な UUID"
+korean = "알 수 없는 UUID"
+russian = "Неизвестный UUID"
+german = "Unbekannte UUID"
+spanish = "UUID desconocido"
+french = "UUID inconnu"
+brazilian_portuguese = "UUID desconhecido"
+portuguese = "UUID desconhecido"
+turkish = "Bilinmeyen UUID"
+polish = "Nieznany UUID"
+
+[[message]]
+key = "Updates"
+[message.translations]
+simplified_chinese = "更新次数"
+traditional_chinese = "更新次數"
+japanese = "更新回数"
+korean = "갱신 횟수"
+russian = "Обновления"
+german = "Aktualisierungen"
+spanish = "Actualizaciones"
+french = "Mises à jour"
+brazilian_portuguese = "Atualizações"
+portuguese = "Atualizações"
+turkish = "Güncellemeler"
+polish = "Aktualizacje"

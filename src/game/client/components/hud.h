@@ -121,7 +121,6 @@ class CHud : public CComponent
 
 	int m_HudQuadContainerIndex;
 	SScoreInfo m_aScoreInfo[2];
-	STextContainerIndex m_FPSTextContainerIndex;
 	STextContainerIndex m_DDRaceEffectsTextContainerIndex;
 	STextContainerIndex m_PlayerAngleTextContainerIndex;
 	float m_PlayerPrevAngle;
@@ -137,20 +136,7 @@ class CHud : public CComponent
 	ESpeedChange m_aLastPlayerSpeedChange[2];
 	STextContainerIndex m_aPlayerPositionContainers[2];
 	float m_aPlayerPrevPosition[2];
-	struct SHudTextInfoDiagnostics
-	{
-		uint64_t m_DiagnosticFpsSignature = UINT64_MAX;
-		uint64_t m_DiagnosticPredSignature = UINT64_MAX;
-		uint64_t m_DiagnosticLossSignature = UINT64_MAX;
-
-		void Reset()
-		{
-			m_DiagnosticFpsSignature = UINT64_MAX;
-			m_DiagnosticPredSignature = UINT64_MAX;
-			m_DiagnosticLossSignature = UINT64_MAX;
-		}
-	};
-	SHudTextInfoDiagnostics m_TextInfoDiagnostics;
+	uint64_t m_DiagnosticLossSignature = UINT64_MAX;
 	struct SHudLocalTimeV2AnimState
 	{
 		float m_TargetBoxX = 0.0f;
@@ -477,7 +463,6 @@ class CHud : public CComponent
 		}
 	};
 	SHudMediaIslandMuteState m_MediaIslandMuteState;
-	std::vector<SUiLayoutChild> m_vTextInfoLayoutChildrenScratch;
 	std::vector<SUiLayoutChild> m_vLocalTimeLayoutChildrenScratch;
 
 	void RenderCursor();

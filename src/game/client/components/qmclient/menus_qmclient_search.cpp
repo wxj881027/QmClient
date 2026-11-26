@@ -88,7 +88,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 
 	CLineInputBuffered<128> &ModuleSearchInput = m_GlobalCardSearchInput;
 	const char *pModuleSearch = ModuleSearchInput.GetString();
-	const bool HasSearchQuery = pModuleSearch != nullptr && pModuleSearch[0] != '\0';
+	const bool HasSearchQuery = !ModuleSearchInput.IsEmpty();
 	static CSettingsGlobalSearchCache s_GlobalSearchCache;
 	static std::shared_ptr<qm_card_catalog::SSearchAnswerCardState> s_GlobalSearchAnswerCardState;
 	static qm_card_catalog::SQmCardBuildContext s_GlobalSearchCardBuild;
@@ -209,22 +209,25 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	}
 	// s_GlobalSearchCardBuild 是函数内静态对象，直接引用即可，无需附加捕获。
 	const auto BuildDefinitions = [this, UiScale, SmallSize, LineHeight, LineSpacing, Metrics, SearchMatchedGlobalCardCount, HasSearchQuery, ReadOnly = ResultsReadOnly, SearchCtx, pSearchResults, SearchAnswerCount, WikiMatchCount](std::vector<SSettingsCardDefinition> &vCards) {
-		vCards.reserve(SearchMatchedGlobalCardCount + 3);
+		vCards.reserve(SearchMatchedGlobalCardCount + WikiMatchCount + 2);
 		// 搜索输入卡片已脱离卡组，在 RenderCached 之前手动绘制并定位。
 		if(SearchAnswerCount > 0)
 		{
 			if(!s_GlobalSearchAnswerCardState)
 				s_GlobalSearchAnswerCardState = qm_card_catalog::CreateSearchAnswerCardState();
 			SSettingsCardDefinition AnswerCard;
-			qm_card_catalog::BuildSearchAnswerCard({Ui(), TextRender(), Input(), Storage(), Client()}, pSearchResults->m_Answers, ReadOnly, Metrics, [this](const char *pQuestion) { m_GlobalCardSearchInput.Set(pQuestion); }, AnswerCard, s_GlobalSearchAnswerCardState);
+			qm_card_catalog::BuildSearchAnswerCard({Ui(), TextRender(), Input(), Storage(), Client(), &GameClient()->m_Tooltips}, pSearchResults->m_Answers, ReadOnly, Metrics, [this](const char *pQuestion) { m_GlobalCardSearchInput.Set(pQuestion); }, AnswerCard, s_GlobalSearchAnswerCardState);
 			vCards.push_back(std::move(AnswerCard));
 		}
 		if(WikiMatchCount > 0)
 		{
 			const bool PreferChinese = str_find_nocase(g_Config.m_ClLanguagefile, "chinese") != nullptr;
-			SSettingsCardDefinition WikiCard;
-			qm_card_catalog::BuildDdnetWikiSearchCard(SearchCtx, pSearchResults->m_vWikiMatches, PreferChinese, ReadOnly, Metrics, WikiCard);
-			vCards.push_back(std::move(WikiCard));
+			for(const auto &Match : pSearchResults->m_vWikiMatches)
+			{
+				SSettingsCardDefinition WikiCard;
+				qm_card_catalog::BuildDdnetWikiSearchCard(SearchCtx, Match, PreferChinese, ReadOnly, Metrics, WikiCard);
+				vCards.push_back(std::move(WikiCard));
+			}
 		}
 
 		SSettingsCardDefinition EmptyCard;
@@ -329,8 +332,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	// 回退 PR #425 时丢掉了这段展开逻辑，只留下带折叠判据的消费分支。
 	if(!ReadOnly && m_FocusSettingsSearchOnEntry)
 		s_GlobalSearchInputCollapsed = false;
-	const float SearchInputHeight = LineHeight * 1.2f;
-	const float SearchInputFontSize = BodySize * 1.2f;
+	const float SearchInputHeight = LineHeight * 1.55f;
+	const float SearchInputFontSize = BodySize * 1.35f;
 	const bool ShowMatchCount = HasSearchQuery && HasSnapshot;
 	const float MatchCountGap = LineSpacing * 0.65f;
 	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : SearchInputHeight + (ShowMatchCount ? MatchCountGap + LineHeight : 0.0f);
@@ -382,7 +385,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		SSettingsCardVisualState InputVisualState;
 		InputVisualState.m_Collapsed = s_GlobalSearchInputCollapsed;
 		InputVisualState.m_ClipContent = true;
-		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, MatchCountGap, SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount, ShowMatchCount, ReadOnly](CUIRect Content) {
+		const auto RenderInputContent = [this, UiScale, Metrics, PrewarmOnly, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, MatchCountGap, SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount, ShowMatchCount, ReadOnly](CUIRect Content) {
 			if(Content.h <= 0.0f || Content.w <= 0.0f)
 				return;
 			CUIRect Row;
@@ -398,8 +401,22 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 			InputOptions.m_Clearable = true;
 			InputOptions.m_SearchHotkeyEnabled = !ReadOnly && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive();
 			InputOptions.m_FontSize = SearchInputFontSize;
+			InputOptions.m_MinTextWidth = SearchInputFontSize * 2.0f;
 			InputOptions.m_pPlaceholder = m_GlobalSearchHeaderSession.Placeholder();
-			ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Row, InputOptions);
+			const auto Layout = ResolveSettingsInputActionsLayout(Row, 1, Metrics);
+			const CUiScopedMeasurement PrewarmInput(Ui(), PrewarmOnly && !Ui()->RenderOnly());
+			const ui_widget::SInputFieldResult Result = ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Layout.m_Input, InputOptions);
+			static CButtonContainer s_SearchButton;
+			const CUIRect &Button = Layout.m_Actions.m_aButtons[0];
+			const bool Clicked = Ui()->DoButton_QmIcon(&s_SearchButton, EQmIcon::SEARCH, FontIcons::FONT_ICON_MAGNIFYING_GLASS, 0, &Button, BUTTONFLAG_LEFT);
+			if(!ReadOnly)
+			{
+				GameClient()->m_Tooltips.DoToolTip(&s_SearchButton, &Button, Localize("Search"));
+				if(const char *pQuery = m_GlobalSearchHeaderSession.PlaceholderForSubmit(m_GlobalCardSearchInput.GetString(), Result.m_Submitted, Clicked))
+					m_GlobalCardSearchInput.Set(pQuery);
+				if(Clicked)
+					Ui()->ReleaseActiveTextInput(&m_GlobalCardSearchInput);
+			}
 			if(!ShowMatchCount)
 				return;
 			Content.HSplitTop(MatchCountGap, nullptr, &Content);

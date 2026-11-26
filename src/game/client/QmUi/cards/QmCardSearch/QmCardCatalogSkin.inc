@@ -2,6 +2,17 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_skin_appearance[] = {
+		{Localizable("Frozen color darkening"), nullptr, "冻结时颜色变暗强度"},
+		{Localizable("Use skin color for frozen feet"), nullptr, "冻结脚部使用皮肤色"},
+		{Localizable("Render all custom colored feet as white feet skin"), nullptr, "将所有自定义脚部颜色渲染为白色"},
+		{Localizable("Show katana on frozen players"), nullptr, "在被冻结的玩家身上显示武士刀"},
+		{Localizable("Use colored skins for frozen tees"), nullptr, "冻结 Tee 使用彩色皮肤"},
+		{nullptr, "qm_color_freeze", nullptr},
+		{nullptr, "qm_color_freeze_darken", nullptr},
+		{nullptr, "qm_color_freeze_feet", nullptr},
+		{nullptr, "qm_frozen_katana", nullptr},
+		{nullptr, "qm_white_feet", nullptr},
+		{nullptr, "qm_white_feet_skin", nullptr},
 		{Localizable("Also apply to dummy"), nullptr, "同时应用到分身"},
 		{Localizable("Cycle custom Tee hue"), nullptr, "循环自定义 Tee 色调"},
 		{Localizable("Emoticon projectile duration"), nullptr, "表情弹射时长"},
@@ -10,7 +21,7 @@ namespace
 		{Localizable("Only affects custom Tee colors."), nullptr, "仅对自定义 Tee 颜色生效。"},
 		{Localizable("Skin outline color"), nullptr, "皮肤描边颜色"},
 		{Localizable("Skin outline for other players"), nullptr, "其他玩家的皮肤描边"},
-		{Localizable("Skin outline for self and dummy"), nullptr, "自己和分身的皮肤描边"},
+		{Localizable("Skin outline for self and dummy"), nullptr, "自己和分身的皮肤描边 皮肤轮廓"},
 		{Localizable("Skin outline opacity"), nullptr, "皮肤描边不透明度"},
 		{Localizable("Skin outline width"), nullptr, "皮肤描边宽度"},
 		{Localizable("When TClient rainbow Tee is enabled, this feature has no effect."), nullptr, "已启用 TClient 彩虹 Tee 时，本功能不会生效。"},

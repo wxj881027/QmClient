@@ -110,7 +110,7 @@ namespace
 		}
 		void Render(CGraph &Graph)
 		{
-			Graph.Render(&m_Graphics, m_pText.get(), 10.0f, 20.0f, 120.0f, 132.0f, "Graph");
+			Graph.Render(&m_Graphics, m_pText.get(), 10.0f, 20.0f, 120.0f, 132.0f, 12.0f, "Graph");
 			EXPECT_EQ(m_Graphics.m_BatchBegins, m_Graphics.m_BatchEnds);
 		}
 	};

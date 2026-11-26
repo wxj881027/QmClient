@@ -227,7 +227,7 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 			RenderQmFunctionCheckbox(pId, pTextId, Localize(pText), pValue, &Row, PrewarmOnly);
 	};
 	RenderCheckbox(&g_Config.m_QmSoloSplitLinkDummy, "qmclient-solo-split-link-dummy", "Auto-connect dummy", &g_Config.m_QmSoloSplitLinkDummy);
-	RenderCheckbox(&g_Config.m_QmSoloSplitAutoTeamLock, "qmclient-solo-split-auto-team-lock", "Lock both teams immediately when entering solo split mode", &g_Config.m_QmSoloSplitAutoTeamLock);
+	RenderCheckbox(&g_Config.m_QmSoloSplitAutoTeamLock, "qmclient-solo-split-auto-team-lock", "Lock team", &g_Config.m_QmSoloSplitAutoTeamLock);
 	if(Flow.Control("qmclient-solo-split-restore-team", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);

@@ -762,6 +762,9 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == Настройте параметры отображения; перед заходом на оживлённый сервер откройте голосование и проверьте вид.
 
+Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
+== Здесь настраиваются размер шрифта и анимация подсказки. Фон берётся из цвета слоя всплывающих окон.
+
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -797,9 +800,6 @@ After uploading again, use: reload or hot_reload
 
 Afterimage pop
 == Всплытие послесвечения
-
-AGC, experimental
-== AGC, экспериментально
 
 Agree
 == Согласиться
@@ -885,6 +885,9 @@ Allow /rescue command to teleport out of freeze (only applies in initial config)
 Allow arbitrary game resolution when scaling (may cause issues on Windows)
 == Разрешить произвольное разрешение игры при масштабировании (может вызвать проблемы на Windows)
 
+Allow direct pings by default for new favorites in the server browser info panel. Pinging reveals your IP to the server. LAN favorites always allow pings; in-game favorites ignore this setting.
+== По умолчанию разрешает прямой ping для избранного, добавленного через панель сведений в браузере серверов. При ping сервер видит ваш IP. При добавлении из LAN ping разрешён всегда, а при добавлении из игры настройка не применяется.
+
 Allow downloading community-created skins. Use cl_skin_community_download_url instead of cl_skin_download_url for download
 == Разрешить загрузку скинов, созданных сообществом. Использовать cl_skin_community_download_url вместо cl_skin_download_url для загрузки
 
@@ -897,8 +900,8 @@ Allow Duplicate Entries
 Allow firing non-auto weapons while deep frozen
 == Разрешить стрельбу из неавтоматического оружия при глубокой заморозке
 
-Allow FTAPI auto-translate (may cause overload)
-== Разрешить автоматический перевод FTAPI (может вызвать перегрузку)
+Allow FTAPI to auto-translate received chat messages. Busy chats can overload the free service. Outgoing auto-translation is controlled separately.
+== Разрешает FTAPI автоматически переводить входящие сообщения чата. Активный чат может перегрузить бесплатный сервис. Автоперевод исходящих настраивается отдельно.
 
 Allow insecure HTTP protocol in addition to secure HTTPS. Primarily for testing.
 == Разрешить небезопасный протокол HTTP в дополнение к безопасному HTTPS. В основном для тестирования.
@@ -1086,9 +1089,6 @@ Apply a writable preset and edit first
 Apply Changes
 == Применить изменения
 
-Apply input early before next tick for prediction
-== Применять ввод заранее до следующего тика для предсказания
-
 Apply Qm recommended appearance
 == Применить рекомендуемый вид Qm
 
@@ -1206,6 +1206,9 @@ Assigned group
 Assigns commands and labels to the slots of the radial bind wheel.
 == Назначает команды и подписи ячейкам кругового колеса привязок.
 
+At full entity overlay, draw supported moving blocks and freeze zones so they remain visible without map artwork.
+== При отображении слоя сущностей на 100% сохраняет видимость поддерживаемых движущихся блоков и зон заморозки.
+
 Attempt to change your name when near finish
 == Попытаться сменить имя при приближении к финишу
 
@@ -1262,9 +1265,6 @@ Auto
 
 auto
 == авто
-
-Auto adjust prediction margin (fixed base margin when off)
-== Автоматическая регулировка предсказательного отступа (при выключении используется фиксированный базовый отступ)
 
 Auto agree vote
 == Автосогласие на голосование
@@ -1440,9 +1440,6 @@ Auto-screenshot on game end
 Auto-send emote and chat message when entering freeze
 == Автоматически отправлять эмоцию и сообщение в чат при входе в заморозку
 
-Auto-switch to first unfrozen when both frozen
-== Если оба в freeze — к размороженному
-
 Auto-sync player camera
 == Автосинхронизация камеры игрока
 
@@ -1464,9 +1461,6 @@ Auto-translate outgoing messages
 Auto-translation mode (0=Trigger on common source languages only, 1=Always translate)
 == Режим автоперевода (0=только при вводе на распространённом языке, 1=всегда переводить)
 
-Auto-unspec when unfrozen
-== Автоматически выходить из режима наблюдателя при разморозке
-
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
@@ -1484,9 +1478,6 @@ Automatic demos, game-end screenshots and CSV exports, their file limits and sav
 
 Automatic effect LOD when crowded
 == Автоупрощение эффектов при скоплении
-
-Automatic gain control (0=off 1=on)
-== Автоматическая регулировка усиления (0=выкл 1=вкл)
 
 Automatic game-end scoreboard screenshot
 == Автоматический скриншот таблицы результатов при завершении игры
@@ -1536,9 +1527,6 @@ Automatically reply to muted players
 Automatically reply while the window is unfocused
 == Автоматически отвечать, когда окно не в фокусе
 
-Automatically switch hammer/gun in Gores mode
-== Автоматическое переключение молот/пистолет в режиме Gores
-
 Automatically take game over screenshot
 == Автоматически делать скриншот окончания игры
 
@@ -1553,6 +1541,9 @@ Available rescue modes: auto, manual
 
 Available resolutions
 == Доступные разрешения
+
+Average payload
+== Средняя полезная нагрузка
 
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Средн. %.*f   ↓ %.*f   ↑ %.*f
@@ -1878,11 +1869,11 @@ Blink the active local tee
 Block
 == Блок
 
-Block client-initiated self-kill (K key / kill command)
-== Блокировать самоубийство со стороны клиента (клавиша K / команда kill)
-
 Block enemy chat
 == Блокировать чат врагов
+
+Block the K key and kill command in normal play. In fast practice, the practice reset takes priority.
+== В обычной игре блокирует самоубийство клавишей K и командой kill. В быстрой тренировке приоритет имеет сброс тренировки.
 
 Block votes from blacklisted addresses
 == Блокировать голоса с адресов из чёрного списка
@@ -1989,11 +1980,20 @@ Brutal
 Bubble opacity
 == Непрозрачность пузырька
 
+Buffer memory
+== Память буферов
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
 Built-in
 == Встроенный
+
+Button - Disabled
+== Кнопка - Отключена
+
+Button - Enabled
+== Кнопка - Включена
 
 Button browser
 == Браузер кнопок
@@ -2027,6 +2027,9 @@ By player name
 
 By row
 == По строкам
+
+Bytes per update
+== Байт на обновление
 
 c = Player position
 == c = Позиция игрока
@@ -2394,6 +2397,12 @@ Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
 == Сначала проверьте устройство вывода, убедитесь, что наушники/колонки всё ещё работают.
 
+Check to cap the client update rate at 480 Hz to save power, which may increase input latency. Uncheck to restore unlimited updates (0).
+== При включении ограничивает частоту обновлений клиента до 480 Гц для экономии энергии, что может увеличить задержку ввода. При выключении снимает ограничение (0).
+
+Check to set the background map name to %current%. Uncheck to clear the name.
+== При включении задаёт имя фоновой карты %current%. При выключении очищает имя.
+
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == Сначала проверьте устройства, потом крутите пороги; чаще всего микрофон молчит из-за неверного устройства ввода.
 
@@ -2607,9 +2616,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Щёлкните язык в списке, и он применится сразу; флаг слева показывает текущий выбор.
 
-Click a part on the right to edit its color, blend mode and strength.
-== Нажмите на часть справа, чтобы изменить цвет, режим и силу смешивания.
-
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == Нажмите на строку вроде HDF или «Прыжок влево» и нажмите нужную клавишу. Значок корзины рядом снимает привязку.
 
@@ -2669,6 +2675,9 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == Нажмите, чтобы выбрать сервер. Дважды нажмите, чтобы присоединиться к другу.
+
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
+== Щелчок выбирает деталь, двойной щелчок открывает палитру. Перетащите деталь для замены. Правая кнопка сбрасывает изменения.
 
 Client
 == Клиент
@@ -3654,6 +3663,9 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
+Customize translate button and menu colors
+== Настройка цветов кнопки перевода и меню
+
 Customize vote display and interaction
 == Customize vote display and interaction
 
@@ -4155,9 +4167,6 @@ Disable clipping
 Disable fast practice mode
 == Отключить режим быстрой практики
 
-Disable Gores auto-switch when picking up extra weapon
-== Отключить автосмену Gores при получении дополнительного оружия
-
 Disabled
 == Отключено
 
@@ -4455,6 +4464,9 @@ Dragger laser outline color
 Dragger Outline Color
 == Внешний цвет драггера
 
+Draw a ghost at the server position of other tees so you can compare it with their predicted position.
+== Показывает призрака в серверной позиции другого игрока для сравнения с предсказанной позицией.
+
 Draw a glow around tees colored by their race team
 == Рисовать свечение вокруг ти по цвету команды
 
@@ -4517,9 +4529,6 @@ Drift intensity
 
 Drift smoothness
 == Плавность дрейфа
-
-Drop on right canvas to replace one part.
-== Перетащите на правое полотно, чтобы заменить одну часть.
 
 Droplet
 == Капля
@@ -5091,9 +5100,6 @@ Enable ghost
 Enable Gores mode
 == Включить режим Gores
 
-Enable Gores mode (King of Gores helper tools)
-== Включить режим Gores (набор инструментов King of Gores)
-
 Enable gun sound
 == Включить звук пистолета
 
@@ -5322,6 +5328,9 @@ Enable the outlines, choose color and thickness, then test on a map with many di
 Enable the pet, pick its skin and size, then move around to watch how it follows.
 == Включите питомца, выберите скин и размер, затем подвигайтесь и посмотрите, как он следует.
 
+Enable the selected Gores helpers, such as hammer switching and fast input, while this mode is active.
+== В режиме Gores включает выбранные помощники, например смену молотка и быстрый ввод.
+
 Enable the war list to change this setting
 == Включите список врагов, чтобы изменить этот параметр
 
@@ -5351,9 +5360,6 @@ Enable visual markers for enemy list
 
 Enable voice
 == Включить голос
-
-Enable voice activation (VAD)
-== Включить голосовую активацию (VAD)
 
 Enable voice chat
 == Включить голосовой чат
@@ -5646,11 +5652,8 @@ Expand console
 Expanded personalization sections (format: stableId=1;stableId2=0;)
 == Развёрнутые разделы персонализации (формат: stableId=1;stableId2=0;)
 
-Experimental
-== экспериментально
-
-Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
-== Экспериментальная функция: повторно отправляет исходящие игровые UDP-пакеты, если нет ответов на проверочные запросы. Исходящий трафик может утроиться; потеря входящих пакетов и запоздалые копии ввода всё ещё могут вызывать проблемы. При KCP отключена.
+Experimental: without KCP and with PingEx support, use main connection probe reply statistics to add copies to subsequent outgoing UDP packets. Upload traffic may triple; download loss and late duplicates can still cause problems.
+== Экспериментально: без KCP и при поддержке PingEx статистика ответов на пробы основного соединения определяет число копий последующих исходящих UDP-пакетов. Исходящий трафик может утроиться; потери на приёме и запоздалые копии всё ещё могут мешать.
 
 Export
 == Экспорт
@@ -5715,8 +5718,8 @@ Exported to %s
 Exporting chat images: %d
 == Экспорт изображений чата: %d
 
-Expose IP to servers by default when adding a favorite (last choice on the server info page)
-== По умолчанию открывать IP серверам при добавлении в избранное (запоминает последний выбор на странице сервера)
+Expose playback controls to the operating system
+== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == Пароль внешней консоли. Должен быть установлен для включения экономики.
@@ -6159,9 +6162,6 @@ Font weight:
 Fonts without CJK glyphs show fallback squares for Chinese text.
 == Шрифты без глифов CJK показывают для китайского текста запасные квадраты.
 
-For Gores
-== для Gores
-
 for Gores
 == for Gores
 
@@ -6207,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == Фраги
 
+Frame rate
+== Частота кадров
+
 Frame time
 == Время кадра
 
@@ -6215,9 +6218,6 @@ Frames buffered between capture and encoding. Deeper queues absorb slow encoder 
 
 Frames drawn per second when V-Sync is off; 0 = unlimited
 == Максимум кадров в секунду при выключенной вертикальной синхронизации; 0 = без ограничения
-
-Frankenstein (drop parts on right)
-== Франкенштейн (перетащите части справа)
 
 Free move
 == Свободное движение
@@ -6401,6 +6401,9 @@ Functions
 
 Game
 == Игра
+
+Game / predicted tick
+== Игровой / прогнозируемый тик
 
 Game assets
 == Игровые ресурсы
@@ -6807,6 +6810,12 @@ Has unread news
 HDF
 == HDF
 
+Hear members of your voice group at any distance on the map. Other players keep their usual distance limit.
+== Позволяет слышать участников своей голосовой группы на любом расстоянии на карте. Для остальных действует обычное ограничение по расстоянию.
+
+Hear players who transmit by voice activation. With this off, only speakers on your VAD allowlist can use it to reach you.
+== Разрешает слышать игроков с активацией по голосу. При отключении этим способом слышны только игроки из списка разрешений VAD.
+
 Heart
 == Сердце
 
@@ -6821,9 +6830,6 @@ Hello from ui_widget::Modal
 
 Help: %s
 == Помощь: %s
-
-Helpful for Gores: allow negative internal certainty for more conservative prediction
-== Полезно для Gores: разрешить отрицательную внутреннюю уверенность для более консервативного предсказания
 
 Hi!
 == Привет!
@@ -6975,9 +6981,6 @@ Hide the in-game HUD, chat and spectator overlays while recording. Camera switch
 Hide toast
 == Скрыть toast
 
-Hide typing emoji during input
-== Не показывать смайлики при вводе текста
-
 Hide UI for focused gameplay
 == Скрыть UI для сосредоточенной игры
 
@@ -7002,14 +7005,14 @@ High particle counts and trails cost frame rate; lower "Particle count" if your 
 High quality, slow
 == Высокое качество, медленно
 
-Higher input latency
-== более высокая задержка ввода
-
 Highlight Color
 == Цвет выделения
 
 Highlight console commands
 == Подсвечивать команды консоли
+
+Highlight frozen tees holding hammer or hook. For other players, this requires a teammate whose pre-input has been received. Enable the matching icons to see which input is held.
+== Выделяет замороженных tee, удерживающих молоток или крюк. Из других игроков выделяются только союзники, чьи предварительные команды ввода получены. Включите значки, чтобы отличить молоток от крюка.
 
 Highlight game type
 == Выделять тип игры
@@ -7025,6 +7028,9 @@ Highlight ping value
 
 Highlight selected players in the game world
 == Highlight selected players in the game world
+
+Highlight the X coordinate when a teammate stays horizontally aligned with you or your dummy for the configured time.
+== Выделяет координату X, когда товарищ по команде держится на одной вертикали с вами или вашим дамми в течение заданного времени.
 
 Highlighted message
 == Выделенное сообщение
@@ -7140,6 +7146,9 @@ Horizontal position
 Horizontal speed × ramp
 == Горизонтальная скорость × множитель
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== Горизонтальная скорость × множитель (от %d до %d блоков/с)
+
 Hostname of DNSBL provider for IP verification
 == Имя хоста провайдера DNSBL для проверки IP
 
@@ -7148,6 +7157,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == Наведите для подсказки
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== Под курсором: %p   Далее: %p   Активный: %p   Предыдущий активный: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == Насколько колесо или перетаскивание может выйти за край, в пикселях UI; 0 отключает
@@ -7263,6 +7275,9 @@ If 1, current driver is in blocking error state.
 If a device disappears after unplugging headphones, reselect it or restart the client.
 == Если после отключения наушников устройство пропало, выберите его заново или перезапустите клиент.
 
+If both tees are frozen and another player hammers the inactive tee awake first, switch control to it.
+== Если оба tee заморожены и другой игрок первым освободит неактивного tee молотком, переключает управление на него.
+
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == Если оценка чата превышает это значение, игрок будет заглушен на sv_spam_mute_duration секунд
 
@@ -7271,6 +7286,9 @@ If lasers can hit you when shot and pull you to bounce origin (0 for all new map
 
 If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IME appearance" brings back the defaults.
 == Если строка закрывает чат, сначала уменьшите непрозрачность или размер шрифта IME; сброс оформления IME вернёт настройки по умолчанию.
+
+If the server allows event prediction, play predicted sounds and particles before its reply. A hammer hit can sound twice.
+== Если сервер разрешает предсказание событий, воспроизводит звуки и частицы до ответа сервера. Звук удара молотком может прозвучать дважды.
 
 If the wheel feels crowded, remove unused slots in the editor card.
 == Если колесо кажется перегруженным, уберите лишние ячейки в карточке редактора.
@@ -7355,6 +7373,9 @@ Improved -%s
 
 Improved anti ping
 == Улучшенный антипинг
+
+In Always Show mode, holding the hook collision line key uses four custom colors when enabled. When disabled, only the main line is inverted; the end segment keeps its color.
+== В режиме постоянного показа линии крюка при удержании клавиши используются четыре заданных цвета. Если отключено, инвертируется только основная линия, цвет конечного отрезка сохраняется.
 
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 == В DDNet проигрывается, когда замораживающее сердце замораживает игрока. В других режимах может использоваться при подборе здоровья.
@@ -7845,9 +7866,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 Keep the feeling of the maximum cursor distance independent of resolution
 == Сохранять ощущение максимальной дистанции курсора независимо от разрешения
 
-Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
-== На тёмном фоне лучше читается светлый текст; кнопка сброса вернёт рекомендуемый вид подсказки.
-
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 == Не делайте их такими же, как цвета команды, иначе имена соклановцев сольются с панелью команды и станут плохо читаемыми.
 
@@ -8085,9 +8103,6 @@ Last viewed client release notes
 Latency
 == Задержка
 
-Latency compensation
-== компенсация задержки
-
 Latency Jitter
 == Джиттер задержки
 
@@ -8151,6 +8166,9 @@ Leave preview
 Leave solo split mode
 == Выйти из режима соло-разделения
 
+Leave spectating when another player hammers your active tee awake. A thawing timer alone does not trigger this.
+== Выходит из наблюдения, когда другой игрок размораживает активного tee молотком. Разморозка по таймеру не срабатывает.
+
 Leave the path empty to auto-detect; fill it in only when the status says "Steam not found".
 == Оставьте путь пустым для автоопределения; заполняйте его только если статус сообщает, что Steam не найден.
 
@@ -8159,9 +8177,6 @@ Leave the pose session
 
 Left jump
 == Левый прыжок
-
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
-== Левый клик по части Франкенштейна для тонирования. Перетащите части для замены. Правый клик сбрасывает.
 
 Left/right channel width
 == Ширина левого/правого канала
@@ -8637,6 +8652,9 @@ Manual target
 Map
 == Карта
 
+Map and environment
+== Карта и окружение
+
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 == Битовая маска фильтра категорий сложности в браузере карт (биты 0-14, см. map_vote_difficulty.h)
 
@@ -8785,7 +8803,7 @@ Mark the end of a demo cut
 == Отметить конец обрезки демо
 
 Mark the freeze check at the center and the four death checks around each Tee
-== Отмечать крестом точку проверки заморозки в центре и четыре точки проверки смерти вокруг каждого Tee
+== Отмечает точку проверки заморозки в центре tee и четыре точки проверки смерти вокруг него.
 
 Markers
 == Метки
@@ -8943,9 +8961,6 @@ Maximum undo steps in editor history (editor, envelope editor, and server settin
 may cause delay
 == может вызвать задержку
 
-May overload the service
-== может перегрузить сервис
-
 Measure a fixed cold glyph batch with performance diagnostics enabled
 == Измерить фиксированный пакет холодных глифов при включённой диагностике производительности
 
@@ -8960,6 +8975,9 @@ Mention option color
 
 Menu accent panel opacity
 == Прозрачность акцентной панели меню
+
+Menu background
+== Фон меню
 
 Menu button hover
 == Наведение на кнопку меню
@@ -8984,6 +9002,12 @@ Menu music
 
 Menu opacity (0-100)
 == Непрозрачность меню (0-100)
+
+Menu option - normal
+== Пункт меню - обычный
+
+Menu option - selected
+== Пункт меню - выбранный
 
 Menu panel color
 == Цвет панели меню
@@ -9041,9 +9065,6 @@ Milliseconds to apply quick input early
 
 Min size
 == Минимальный размер
-
-Mini debug
-== мини-отладка
 
 Mini features
 == Мини-функции
@@ -9486,12 +9507,6 @@ Nameplate X alignment hint duration window (ms)
 Nameplate X alignment hint highlight color
 == Цвет подсветки подсказки выравнивания по оси X для таблички с именем
 
-Nameplate X alignment hint strict mode
-== Строгий режим подсказки выравнивания по оси X для таблички с именем
-
-Nameplate X alignment hint with local player
-== Показывать подсказку выравнивания по оси X с локальным игроком на табличке с именем
-
 Nameplates
 == Именные таблички
 
@@ -9632,9 +9647,6 @@ No assets
 
 No assets available for composition.
 == Нет доступных ресурсов для композиции.
-
-No assets found.
-== Ресурсы не найдены.
 
 No audio issues detected
 == Проблем с аудио не обнаружено
@@ -10053,6 +10065,9 @@ Old single-segment hook collision line
 Oldschool
 == Олдскул
 
+Omit the typing flag from both tees' outgoing input so other players do not see your typing bubble.
+== Оба tee перестают передавать серверу признак набора текста, поэтому другие игроки не видят ваш значок ввода.
+
 On
 == Вкл
 
@@ -10419,6 +10434,9 @@ p = Ping latency
 Pack name
 == Имя пакета
 
+packets
+== пак.
+
 Panel
 == Панель
 
@@ -10551,6 +10569,9 @@ Pause voice when window unfocused
 Pause/unpause game
 == Поставить/снять игру на паузу
 
+Peak speed: %.2f blocks/s
+== Пиковая скорость: %.2f блоков/с
+
 Penalty in seconds for saving or swapping positions
 == Штраф в секундах за сохранение или обмен позициями
 
@@ -10610,9 +10631,6 @@ Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 
 Phrase
 == Фраза
-
-Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
-== Выберите цвет фона и цвет текста подсказки, задайте размер шрифта, а для лёгкого подпрыгивания оставьте включённой анимацию подсказки.
 
 Pick a color preset or a custom color, then choose regular or bold weight.
 == Выберите пресет цвета или свой цвет, затем обычное или жирное начертание.
@@ -11133,9 +11151,6 @@ Practice: teleport the other tee to your cursor
 Practice: teleport yourself to your cursor
 == Практика: переместить себя к курсору
 
-Pre-warm settings page on startup and menu idle
-== Прогревать страницу настроек при запуске и простое в меню
-
 Predict client movement
 == Прогнозировать движение клиента
 
@@ -11168,6 +11183,9 @@ Predict ninja path
 
 Predict other player's movement (only enabled if cl_antiping is set to 1) (1 = always on, 2 = interaction only, 3 = 2 and frozen tees always)
 == Предсказывать движение других игроков (включается только при cl_antiping = 1) (1 = всегда, 2 = только при взаимодействии, 3 = режим 2 и всегда для замороженных Tee)
+
+Predict other tees and projectiles locally to show movement sooner. Their positions may shift when server updates arrive.
+== Клиент заранее показывает движение других игроков и снарядов. После обновления с сервера их положение может измениться.
 
 Predict weapon projectiles (only with cl_antiping 1)
 == Прогнозировать снаряды оружия (только с cl_antiping 1)
@@ -11208,8 +11226,14 @@ Prediction margin
 Prediction margin when frozen
 == Отступ предсказания при заморозке
 
+Prediction time
+== Время предсказания
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == Предсказание обменивает точность на отзывчивость; избыточность может утроить исходящий трафик. «Приоритет игрового трафика» лишь помечает пакеты в Windows и требует QoS-совместимый маршрутизатор.
+
+Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
+== Готовит страницы настроек за несколько кадров при запуске и простое меню, чтобы уменьшить задержку при первом открытии.
 
 Preparing chat export: %d%%
 == Подготовка экспорта чата: %d%%
@@ -11409,8 +11433,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == Вероятность отправки сообщения о заморозке в чат (0-100%)
 
+Process UDP receive (estimated)
+== Приём UDP процессом (оценка)
+
 Process UDP RX (est.)
 == Приём UDP процессом (оценка)
+
+Process UDP send (estimated)
+== Отправка UDP процессом (оценка)
 
 Process UDP TX (est.)
 == Отправка UDP процессом (оценка)
@@ -11892,9 +11922,6 @@ Receive Rate
 Receive translation method
 == Способ перевода входящих сообщений
 
-Receive VAD speakers
-== Принимать говорящих VAD
-
 Receive voice from spectators/inactive players
 == Принимать голос наблюдателей/неактивных игроков
 
@@ -11946,14 +11973,8 @@ Redeem your sponsor code to unlock a custom title, shown in chat and on your nam
 Redeems a sponsor code, sets the custom title it unlocks and picks how that title looks in chat.
 == Активирует код спонсора, задаёт открываемый им свой титул и выбирает, как этот титул выглядит в чате.
 
-Reduce antiping and player prediction when frozen
-== Уменьшить антипинг и предсказание игрока при заморозке
-
 Reduce prediction while frozen
 == Уменьшать предсказание во время заморозки
-
-Reduce visual latency
-== уменьшает визуальную задержку
 
 Reduced
 == Уменьшенный
@@ -12312,11 +12333,11 @@ Repeat message
 Repeat the latest chat message
 == Повторить последнее сообщение чата
 
+Repeat the replacement character per UTF-8 byte in custom word lists or per character in the public list. When off, use it once per match.
+== В своём списке подставляет один символ замены на каждый байт UTF-8 совпадения, в общем списке — на каждый символ. Если отключить, подставляет один символ на всё совпадение.
+
 Replace all friends
 == Заменить всех друзей
-
-Replace censored words with length-based chars
-== Замена нескольких символов по длине заблокированного слова
 
 Replace mode
 == Заменить имена не-друзей на ID
@@ -12329,6 +12350,9 @@ Replace non-friend names with ID
 
 Replace non-friend skins with default
 == Символы замены
+
+Replace same-size parts in the target family.
+== Заменить все детали того же размера в группе выбранной детали.
 
 Replace selected variant
 == Заменить выбранный вариант
@@ -12410,6 +12434,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == Требовать клиент с поддержкой KCP для обновления сессии (отключать во время серого периода для fallback)
+
+Require matching X coordinates rounded to hundredths of a tile for the whole interval. Normal mode allows a difference of 0.03 tiles.
+== Координаты X, округлённые до сотых долей тайла, должны совпадать весь интервал. Обычный режим допускает разницу в 0,03 тайла.
 
 Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
 == При включённом qm_graphics_trace повторно сканировать шрифты и запрашивать выбранное начертание и глиф Unicode
@@ -12509,6 +12536,12 @@ Reset to defaults
 
 Reset tooltip appearance
 == Сбросить оформление подсказок
+
+Reset tooltip appearance to restore the default font size and bounce animation.
+== Сброс оформления подсказки возвращает стандартный размер шрифта и анимацию.
+
+Reset translation colors
+== Сбросить цвета перевода
 
 Reset tuning after each map change
 == Сбрасывать настройки после каждой смены карты
@@ -12753,8 +12786,8 @@ Same as "vote no"
 Same clan color in scoreboard
 == Цвет одного клана в таблице лидеров
 
-Same group full map listening
-== Прослушивание всей карты в одной группе
+Same-size family
+== Группа по размеру
 
 Sans-serif
 == Без засечек
@@ -12905,6 +12938,9 @@ Scale down Tee
 
 Scale max mouse distance to 1000 for better aim
 == Масштабировать максимальное расстояние мыши до 1000 для лучшего прицеливания
+
+Scale the existing faded opacity of paused tees and their nameplates in water or freeze zones by this percentage. At 100% their usual fading is unchanged.
+== Для приостановленных tee и их имён в воде или зонах заморозки умножает уже уменьшенную непрозрачность наблюдателя на этот процент. При 100% исходное затухание сохраняется.
 
 Scale uncertainty duration by ping (100=1.0x)
 == Масштабировать длительность неопределённости по пингу (100=1.0x)
@@ -13161,9 +13197,6 @@ Select map
 Select map for the pose file
 == Выбор карты для файла поз
 
-Select several name plate blocks in the preview and move them together
-== Выберите несколько блоков таблички в предпросмотре и двигайте их вместе
-
 Select the country flag for each player
 == Select the country flag for each player
 
@@ -13172,9 +13205,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == Выбран кандидат %d/%d под курсором.
-
-Selected part: %d
-== Выбранная часть: %d
 
 Selected text color
 == Цвет выбранного текста
@@ -13482,9 +13512,6 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 Sets player and dummy name, clan and identity information.
 == Задаёт имя игрока и дамми, клан и сведения об идентичности.
 
-Sets the client update rate to 480 Hz (0 = unlimited)
-== Устанавливает частоту обновления клиента на 480 Гц (0 = без ограничения)
-
 Sets the position, size and text style of the status bar.
 == Задаёт положение, размер и стиль текста строки состояния.
 
@@ -13601,6 +13628,9 @@ Show %s group
 
 Show a distance link between main tee and dummy
 == Соединять основного ти и дамми линией расстояния
+
+Show a fixed HUD reference with fractional coordinates for takeoff and double jumps near tile edges.
+== Выводит на HUD постоянную памятку с дробными частями координат для отрыва от края тайла и двойного прыжка.
 
 Show a ghost of your best time after crossing the start line
 == Показывать призрак лучшего времени после пересечения стартовой линии
@@ -13875,9 +13905,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == Показывать флаг на табличке с именем
 
-Show FPS, prediction time, and performance graphs
-== Показывать FPS, время предсказания и графики производительности
-
 Show freeze bar under frozen players indicating thaw time
 == Показывать полосу заморозки под замороженными игроками, указывающую время разморозки
 
@@ -13923,9 +13950,6 @@ Show generated skin outline for other tees
 Show ghost
 == Показать призрак
 
-Show ghost at unpredictable position of other players
-== Показывать призрака в непредсказуемой позиции других игроков
-
 Show ghost direction
 == Показывать направление призрака
 
@@ -13955,9 +13979,6 @@ Show hazard borders, character check points and weapon ranges
 
 Show health, shields and ammo
 == Показывать здоровье, щиты и патроны
-
-Show hint at random top-left/right of player when main or dummy is hammered awake
-== Показывать подсказку в случайном верхнем левом или правом углу соответствующего игрока, когда основное тело или дамми разбужены ударом молота
 
 Show hitboxes for
 == Показывать хитбоксы для
@@ -14079,9 +14100,6 @@ Show IP addresses in rcon commands (1 = on, 0 = off)
 Show join team option
 == Показывать вступление в команду
 
-Show jump hint based on fractional part of position
-== Показывать подсказку прыжка в зависимости от дробной части позиции
-
 Show jumps indicator
 == Показывать индикатор прыжков
 
@@ -14153,9 +14171,6 @@ Show mention option
 
 Show moving tiles in entities
 == Показывать движущиеся плитки в объектах
-
-Show moving tiles in entity layer
-== Показывать движущиеся тайлы в слое сущностей
 
 Show my titles locally
 == Мои титулы на этом устройстве
@@ -14295,6 +14310,9 @@ Show pending crash reports on startup
 Show per-character title waves locally
 == Показывать волнообразное движение букв титула у себя
 
+Show performance graphs.
+== Показывать графики производительности.
+
 Show pet
 == Показывать питомца
 
@@ -14346,14 +14364,8 @@ Show position and angle
 Show position and angle (mini debug)
 == Показывать позицию и угол (мини-отладка)
 
-Show position and angle debug info
-== Показывать отладочную информацию о позиции и угле
-
 Show practice timer
 == Показывать таймер практики
-
-Show predicted position as ghost, original as unpredictable player
-== Показывать предсказанную позицию как призрака, оригинальную как непредсказуемого игрока
 
 Show pressed keys
 == Показывать нажатые клавиши
@@ -14426,6 +14438,9 @@ Show skin names in nameplate
 
 Show skin release date and author
 == Показать дату выпуска и автора скина
+
+Show song info in top-left corner
+== Показывать информацию о песне в левом верхнем углу
 
 Show spectate option
 == Показывать действие наблюдения
@@ -14615,6 +14630,9 @@ Show X
 
 Show Y
 == Показывать Y
+
+Show your coordinates and aim angle on the HUD, or those of the tee you are watching. Free view shows coordinates only.
+== Показывает на HUD координаты и угол прицела вашего tee или игрока, за которым вы наблюдаете. В свободной камере видны только координаты.
 
 Show your current team
 == Показать свою текущую команду
@@ -14910,9 +14928,6 @@ Slightly fast encode
 Slow down the demo
 == Замедлить демо
 
-Slower
-== медленнее
-
 Slower +%s
 == Замедление +%s
 
@@ -14960,9 +14975,6 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == Длительность анимации плавной прокрутки в меню/редакторе (ms, 0 = выкл)
-
-Smooth sudden prediction margin corrections caused by ping spikes
-== Сглаживает резкие правки запаса предсказания из-за скачков пинга
 
 Smooth the mouse-driven camera in live and demo free spectating
 == Сглаживать управляемую мышью камеру при свободном наблюдении в игре и демозаписях
@@ -15165,9 +15177,6 @@ Spectated player and friends
 Spectator opacity
 == Непрозрачность зрителя
 
-Spectator opacity (percent)
-== Непрозрачность зрителя (в процентах)
-
 Spectators
 == Наблюдатели
 
@@ -15263,6 +15272,9 @@ Squishy Tee deformation duration
 
 Squishy Tee deformation intensity
 == Интенсивность деформации упругого Tee
+
+Staging memory
+== Промежуточная память
 
 Standalone
 == Отдельно
@@ -15462,6 +15474,9 @@ Store the current practice tee state as the respawn point
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == Сохраняет текущее состояние Tee (позицию, оружие, прыжки и состояние движения) как точку возрождения практики.
 
+Streamed memory
+== Потоковая память
+
 Streamer mode
 == Режим стримера
 
@@ -15659,6 +15674,9 @@ System default
 
 System graphics settings
 == Системные настройки графики
+
+System media controls
+== Системные медиа-кнопки
 
 System message
 == Системное сообщение
@@ -15879,9 +15897,6 @@ Tee size
 Tee status bar
 == Строка состояния ти
 
-Tee to Freeze
-== Tee с Freeze
-
 Tee to Tee
 == Tee с Tee
 
@@ -16068,6 +16083,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 Text is too long for the selected translation service.
 == Текст превышает ограничение длины выбранного сервиса перевода.
 
+Texture memory
+== Память текстур
+
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Спасибо за вашу компанию и доверие. Именно это даёт мне смелость продолжать.
 
@@ -16157,9 +16175,6 @@ The selected button is not visible. Do you want to deselect it or edit its visib
 
 The selected button is overlapping with other buttons.
 == Выбранная кнопка пересекается с другими кнопками.
-
-The selected part stays highlighted while you adjust its color.
-== Выбранная часть остается подсвеченной, пока вы настраиваете ее цвет.
 
 The server is running a non-standard tuning on a pure game type.
 == Сервер использует нестандартные настройки в чистом игровом режиме.
@@ -16259,6 +16274,9 @@ This ID is not connected
 
 This is the master switch for all interface animations
 == Главный переключатель всех анимаций интерфейса
+
+This legacy switch is saved, but microphone capture currently uses only the manual mic volume.
+== Сохраняется для совместимости. При записи сейчас применяется только уровень микрофона, заданный вручную.
 
 This map path cannot be used.
 == Этот путь к карте нельзя использовать.
@@ -16379,9 +16397,6 @@ Ticks after freeze before applying max prediction reduction
 
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 == Сколько тиков проигрывать без записи перед каждым сегментом, чтобы эффекты и чат соответствовали началу сегмента. 50 тиков — это одна секунда.
-
-tile
-== тайл
 
 Tile outlines
 == Контуры плиток
@@ -16689,9 +16704,6 @@ Too many translation tasks
 Toolbox page
 == Страница инструментов
 
-Tooltip background color
-== Цвет фона подсказки
-
 Tooltip bounce animation
 == Упругая анимация подсказки
 
@@ -16700,9 +16712,6 @@ Tooltip font size
 
 Tooltip preview
 == Предпросмотр подсказки
-
-Tooltip text color
-== Цвет текста подсказки
 
 Tooltips
 == Подсказки
@@ -16715,6 +16724,9 @@ Top right
 
 Total
 == Всего
+
+Total bytes
+== Всего байт
 
 Total fonts:
 == Всего шрифтов:
@@ -16782,6 +16794,9 @@ Translate outgoing messages to
 Translate received messages to
 == Язык перевода входящих
 
+Translate UI
+== Перевод интерфейса
+
 Translate:
 == Перевести:
 
@@ -16842,6 +16857,9 @@ Translation service returned an invalid or incomplete translation.
 Translation Settings
 == Настройки перевода
 
+Transmit without holding the talk key when the microphone level reaches or exceeds the voice activation threshold.
+== Передаёт голос без удержания клавиши разговора, когда уровень микрофона достигает порога голосовой активации или превышает его.
+
 transmits your player name to info.ddnet.org
 == передаёт ваше имя игрока на info.ddnet.org
 
@@ -16865,9 +16883,6 @@ Try reselecting output device, confirm headphones/speakers are online
 
 Try to change name near finish
 == Попытаться сменить имя рядом с финишем
-
-Try to predict other entities to reduce lag feeling at high latency
-== Попытаться предсказать другие сущности для уменьшения ощущения задержки при высокой задержке
 
 Try toggling voice or reconnecting to server
 == Попробуйте переключить голос или переподключиться к серверу
@@ -16895,6 +16910,9 @@ Tune variable to value or show current value
 
 Tune zone (map / override)
 == Зона настроек (карта / переопределение)
+
+Tuning parameter
+== Параметр настройки
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == На слабых машинах выключите: карточки открываются и прокручиваются сразу. Форма курсора только внешняя: все три стиля занимают одно знакоместо.
@@ -16986,6 +17004,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == Включите звук, затем выберите устройство; список берётся из аудиобэкенда при запуске.
 
+Turning point (%d to %d blocks/s)
+== Точка перегиба (от %d до %d блоков/с)
+
 Turning this off only changes your display.
 == Отключение влияет только на отображение у вас.
 
@@ -17024,6 +17045,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == Введите слово — результаты фильтруются по мере ввода, охватывая карточки и названия конфигов.
+
+Type ID
+== Код типа
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == Введите текст в поиске или переключитесь на Все, Избранное и Недавние, клик по скину применяет его, а значок плюса ставит в очередь.
@@ -17262,6 +17286,9 @@ Unknown status
 Unknown title style
 == Неизвестный стиль титула
 
+Unknown UUID
+== Неизвестный UUID
+
 Unlimited
 == Без ограничения
 
@@ -17361,6 +17388,9 @@ Updated this configuration.
 Updated this phrase.
 == Фраза обновлена.
 
+Updates
+== Обновления
+
 Updates per second while the window is inactive; 0 = unlimited
 == Число обновлений в секунду, когда окно неактивно; 0 = без ограничения
 
@@ -17453,9 +17483,6 @@ Use custom chat bubble colors
 
 Use custom colors
 == Использовать свои цвета
-
-Use custom colors for the pressed hook collision line (0 = always invert)
-== Использовать свои цвета линии зацепа при нажатой клавише (0 = всегда инвертировать)
 
 Use custom skins instead of the ninja tee
 == Использовать пользовательские скины вместо скина ниндзя
@@ -17565,9 +17592,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == Использовать иконки Tee вместо кругов
 
-Use the custom colors below while the hook key is held
-== Использовать указанные ниже цвета, пока удерживается клавиша зацепа
-
 Use the mouse wheel on a hovered module to scale it by 5%
 == Используйте колесо мыши на наведённом модуле для масштабирования на 5%
 
@@ -17589,6 +17613,9 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == Использовать группы списка врагов для индикатора
 
+Use your latest input in local prediction before the next tick so movement appears sooner.
+== Учитывает последний ввод в локальном предсказании до следующего тика, чтобы движение раньше появлялось на экране.
+
 Uses the active action with the current aiming position.
 == Использует активное действие с текущей позицией прицеливания.
 
@@ -17606,9 +17633,6 @@ VAD allow list (comma-separated)
 
 VAD release delay (ms)
 == Задержка отпускания VAD (мс)
-
-VAD threshold (percent)
-== Порог VAD (в процентах)
 
 Valid
 == Действительно
@@ -18057,6 +18081,12 @@ Wheel distance per tick; hold Alt for 3x
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == Ощущение прокрутки колесом: 0=Оригинал (сбрасывается на каждом тике), 1=Плавно (скорость сохраняется), 2=Пружина
 
+When another player hammers your main tee or dummy awake, show a hint above the other local tee, randomly on the left or right, only if it is connected and alive.
+== Когда другой игрок размораживает молотком основного персонажа или дамми, подсказка появляется случайно слева или справа над вторым локальным персонажем, только если тот подключён и жив.
+
+When other players' ghosts are visible, draw the solid tee at the server position and the ghost at the predicted position.
+== Когда включены призраки других игроков, сам tee отображается в серверной позиции, а призрак — в предсказанной.
+
 When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
 == Во время гонок можно оставить включённым пункт «Снаряды и лазеры заморозки», а пункты «Зона удара молотом и крюка» и «Снаряды, взрывы и обычные лазеры» выключить — так приближающиеся угрозы заморозки видны лучше.
 
@@ -18137,6 +18167,9 @@ Which message to display on zone enter; use 0 for normal area
 
 Which message to display on zone leave; use 0 for normal area
 == Какое сообщение показывать при выходе из зоны; используйте 0 для обычной зоны
+
+While your tee is frozen, gradually shorten prediction up to the configured limit so displayed movement stays closer to server updates.
+== Пока ваш tee заморожен, постепенно сокращает упреждение до заданного предела, приближая отображаемое движение к данным сервера.
 
 Whisper
 == Шёпот
@@ -18227,6 +18260,21 @@ Windowed borderless
 
 Windowed fullscreen
 == Оконный полноэкранный
+
+With free movement enabled, select multiple nameplate elements in the preview and drag them together.
+== При включённом свободном перемещении можно выбрать несколько элементов таблички имени в предпросмотре и перетащить их вместе.
+
+With Gores auto-switch on and extra weapons equipped, pressing fire briefly selects the hammer, then restores your weapon.
+== Если включена автосмена оружия Gores и есть дополнительное оружие, нажатие огня ненадолго выбирает молоток, затем возвращает прежнее оружие.
+
+With improved smoothing, erratic movement keeps other tees near their server positions for longer. This can help in Gores but makes network jitter more visible.
+== При новом сглаживании игрок, часто меняющий направление, дольше отображается вблизи серверной позиции. Это помогает при спасении в Gores, но колебания задержки могут стать заметнее.
+
+With only hammer and pistol in Gores mode, return to the pistol after switching to the hammer.
+== В режиме Gores, если есть только молоток и пистолет, после выбора молотка автоматически возвращает пистолет.
+
+With SyncWeaponInput, adjust the prediction margin to network timing. When off, use the larger of the base margin and the enabled fast input lead. Without server support, always use 10 ms.
+== С SyncWeaponInput запас предсказания подстраивается под сеть. При отключении берётся большее из базового запаса и опережения включённого быстрого ввода. Без поддержки сервера всегда используется 10 мс.
 
 Word Filter
 == Фильтр слов
@@ -18659,9 +18707,6 @@ Zoom out
 
 Zoom to current mouse target
 == Приблизить к текущей цели мыши
-
-⚠️ FTAPI is a free service. Excessive use may cause service suspension.
-== ⚠️ FTAPI — это бесплатный сервис. Чрезмерное использование может привести к приостановке обслуживания.
 
 [AntiPing: predict other players]
 All

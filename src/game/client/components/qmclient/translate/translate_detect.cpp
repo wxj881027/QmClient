@@ -48,17 +48,6 @@ namespace qm_translate
 			return Codepoint > 0 && IsNeutralCodepoint(Codepoint);
 		}
 
-		const char *AfterAddressColon(const char *pText)
-		{
-			while(*pText == ' ' || *pText == '\t')
-				++pText;
-			if(*pText == ':')
-				return pText + 1;
-			if(str_startswith(pText, "："))
-				return pText + 3;
-			return nullptr;
-		}
-
 		const char *AfterNamePrefix(const char *pText, const char *pName)
 		{
 			while(*pName)
@@ -80,12 +69,9 @@ namespace qm_translate
 				const char *pPlayerName = pPlayers[i].m_pName;
 				if(!pPlayerName || !*pPlayerName)
 					continue;
-				const int Length = str_length(pPlayerName);
-				if(str_comp_num(pName, pPlayerName, Length) != 0)
-					continue;
-				const char *pEnd = pName + Length;
-				if(IsReferenceBoundary(pEnd))
-					BestLength = std::max(BestLength, Length + 1);
+				const char *pEnd = AfterNamePrefix(pName, pPlayerName);
+				if(pEnd && IsReferenceBoundary(pEnd))
+					BestLength = std::max(BestLength, static_cast<int>(pEnd - pText));
 			}
 			// 数字 ID 只接受显式 @ID，且必须对应当前连接的玩家。
 			if(*pName >= '0' && *pName <= '9')
@@ -119,24 +105,51 @@ namespace qm_translate
 
 	const char *ChatAddressBody(const char *pText, const SPlayerReference *pPlayers, int NumPlayers)
 	{
-		if(!pText || !pPlayers || NumPlayers <= 0 || (!str_find(pText, ":") && !str_find(pText, "：")))
+		if(!pText || !pPlayers || NumPlayers <= 0)
 			return pText;
 
-		const char *pStart = pText;
-		while(*pStart == ' ' || *pStart == '\t')
-			++pStart;
-		const char *pBestEnd = pText;
+		const char *pStart = str_utf8_skip_whitespaces(pText);
+		const char *pBestNameEnd = pStart;
+		const char *pBody = pText;
 		for(int i = 0; i < NumPlayers; ++i)
 		{
 			const char *pName = pPlayers[i].m_pName;
 			if(!pName || !*pName)
 				continue;
 			const char *pNameEnd = AfterNamePrefix(pStart, pName);
-			const char *pColonEnd = pNameEnd ? AfterAddressColon(pNameEnd) : nullptr;
-			if(pColonEnd && pColonEnd > pBestEnd)
-				pBestEnd = pColonEnd;
+			if(!pNameEnd || pNameEnd <= pBestNameEnd)
+				continue;
+			const char *pSeparator = str_utf8_skip_whitespaces(pNameEnd);
+			const char *pEnd = pSeparator;
+			if(*pSeparator == ':' || *pSeparator == ',')
+				pEnd += 1;
+			else if(str_startswith(pSeparator, "：") || str_startswith(pSeparator, "，"))
+				pEnd += 3;
+			else if(pSeparator == pNameEnd || *pSeparator == '\0')
+				continue;
+			pBestNameEnd = pNameEnd;
+			pBody = str_utf8_skip_whitespaces(pEnd);
 		}
-		return pBestEnd == pText ? pText : str_utf8_skip_whitespaces(pBestEnd);
+		return pBody;
+	}
+
+	std::string_view NextChatMention(const char *pText, const SPlayerReference *pPlayers, int NumPlayers)
+	{
+		if(!pText || !pPlayers || NumPlayers <= 0 || !str_find(pText, "@"))
+			return {};
+		bool AtBoundary = true;
+		for(const char *p = pText; *p;)
+		{
+			if(AtBoundary && *p == '@')
+			{
+				const int Length = MentionLength(p, pPlayers, NumPlayers);
+				if(Length > 0)
+					return std::string_view(p, Length);
+			}
+			const int Codepoint = str_utf8_decode(&p);
+			AtBoundary = Codepoint > 0 && IsNeutralCodepoint(Codepoint);
+		}
+		return {};
 	}
 
 	SLanguageStats AnalyzeLanguage(const char *pText, const SPlayerReference *pPlayers, int NumPlayers)
@@ -146,23 +159,18 @@ namespace qm_translate
 			return Stats;
 
 		const char *p = ChatAddressBody(pText, pPlayers, NumPlayers);
-		bool AtBoundary = true;
+		auto Mention = NextChatMention(p, pPlayers, NumPlayers);
 		while(*p)
 		{
-			const int Skip = AtBoundary && *p == '@' ? MentionLength(p, pPlayers, NumPlayers) : 0;
-			if(Skip > 0)
+			if(p == Mention.data())
 			{
-				p += Skip;
-				AtBoundary = false;
+				p += Mention.size();
+				Mention = NextChatMention(p, pPlayers, NumPlayers);
 				continue;
 			}
 			const int Codepoint = str_utf8_decode(&p);
 			if(Codepoint <= 0)
-			{
-				AtBoundary = false;
 				continue;
-			}
-			AtBoundary = IsNeutralCodepoint(Codepoint);
 
 			const bool IsHan = (Codepoint >= 0x4E00 && Codepoint <= 0x9FFF) ||
 					   (Codepoint >= 0x3400 && Codepoint <= 0x4DBF);

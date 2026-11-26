@@ -28,6 +28,7 @@
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsIconOptions.h>
+#include <game/client/QmUi/SettingsLabelMetadata.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiForms.h>
@@ -445,7 +446,6 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			RowAction("graphics-high-detail", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_GfxHighDetail, "High Detail", Localize("High Detail"), g_Config.m_GfxHighDetail, &Button))
 					g_Config.m_GfxHighDetail ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_GfxHighDetail, &Button, Localize("Allows maps to render with more detail"));
 			});
 
 			RowAction("graphics-refresh-rate", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
@@ -467,9 +467,11 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 
 			RowAction("graphics-lower-update-rate", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 				static int s_LowerUpdateRate;
+				Ui()->DoConfigTooltip(&s_LowerUpdateRate, &Button, &g_Config.m_ClRefreshRate);
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &s_LowerUpdateRate, "graphics-lower-update-rate", Localize("Cap update rate to save power"), g_Config.m_ClRefreshRate <= 480 && g_Config.m_ClRefreshRate != 0, &Button))
 					g_Config.m_ClRefreshRate = g_Config.m_ClRefreshRate > 480 || g_Config.m_ClRefreshRate == 0 ? 480 : 0;
-				GameClient()->m_Tooltips.DoToolTip(&s_LowerUpdateRate, &Button, Localize("Sets the client update rate to 480 Hz (0 = unlimited)"));
+				if(const auto *pMetadata = SettingsLabelMetadata("graphics-lower-update-rate"))
+					GameClient()->m_Tooltips.DoToolTip(&s_LowerUpdateRate, &Button, Localize(pMetadata->m_pTip));
 			});
 
 			// 后台限帧：窗口失焦时主循环的节拍。跟随显示器每帧读 gfx_screen_refresh_rate，

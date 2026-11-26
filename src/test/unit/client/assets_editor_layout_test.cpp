@@ -1,3 +1,4 @@
+#include <game/client/QmUi/AssetsEditorLayout.h>
 #include <game/client/components/menus.h>
 
 #include <gtest/gtest.h>
@@ -342,4 +343,98 @@ TEST(AssetsEditorCompose, PartsHaveIndependentModesAndStrengths)
 	// 即使关闭调色，替换来源仍需参与合成。
 	str_copy(vSlots[0].m_aSourceAsset, "donor");
 	EXPECT_TRUE(CMenus::AssetsEditorSlotNeedsProcessing(vSlots[0], "default"));
+}
+
+TEST(AssetsEditorLayout, WideWorkbenchKeepsSelectorsAboveEqualCanvases)
+{
+	const auto Layout = qmclient::assets_editor::ResolveWorkbench({20, 30, 1200, 700}, 1, 24);
+	EXPECT_EQ(Layout.m_ContentHeight, 700);
+	EXPECT_EQ(Layout.m_Tools.y, Layout.m_Export.y);
+	EXPECT_FALSE(Layout.m_WrapInspector);
+	EXPECT_EQ(Layout.m_Donor.m_Canvas.y, Layout.m_Target.m_Canvas.y);
+	EXPECT_EQ(Layout.m_Donor.m_Canvas.w, Layout.m_Target.m_Canvas.w);
+	EXPECT_GT(Layout.m_Target.m_Canvas.x, Layout.m_Donor.m_Canvas.x + Layout.m_Donor.m_Canvas.w);
+	EXPECT_GT(Layout.m_Donor.m_Canvas.y, Layout.m_Donor.m_Search.y + Layout.m_Donor.m_Search.h);
+	EXPECT_GT(Layout.m_Donor.m_Canvas.h, 350);
+	EXPECT_GT(Layout.m_Inspector.y, Layout.m_Target.m_Canvas.y + Layout.m_Target.m_Canvas.h);
+}
+
+TEST(AssetsEditorLayout, NarrowWorkbenchAlwaysReservesBothInspectorRows)
+{
+	for(const float Scale : {1.0f, 1.5f})
+	{
+		const float Line = 24 * Scale;
+		const auto Layout = qmclient::assets_editor::ResolveWorkbench({0, 0, 600 * Scale, 800 * Scale}, Scale, Line);
+		ASSERT_TRUE(Layout.m_WrapInspector);
+		EXPECT_FLOAT_EQ(Layout.m_ContentHeight, 800 * Scale);
+		EXPECT_FLOAT_EQ(Layout.m_Inspector.h, 2 * Line + (2 * ui_token::settings::CARD_PADDING + ui_token::panel::GAP) * Scale);
+		EXPECT_FLOAT_EQ(Layout.m_Target.m_Canvas.y + Layout.m_Target.m_Canvas.h,
+			Layout.m_Inspector.y - (ui_token::panel::GAP + ui_token::settings::CARD_PADDING) * Scale);
+	}
+}
+
+TEST(AssetsEditorReset, RepeatedResetPreservesCleanSlotAndCustomMainIsDistinctFromDefault)
+{
+	auto vSlots = CMenus::BuildStrongWeakEditorSlots("custom");
+	auto &Slot = vSlots.front();
+	EXPECT_FALSE(Slot.ResetTo("custom"));
+	EXPECT_TRUE(Slot.ResetTo("default"));
+	EXPECT_FALSE(Slot.IsResetTo("custom"));
+	EXPECT_FALSE(Slot.ResetTo("default"));
+	EXPECT_TRUE(Slot.ResetTo("custom"));
+	EXPECT_TRUE(Slot.IsResetTo("custom"));
+}
+
+TEST(AssetsEditorReset, RestoresSourceSliceAndTintSettingsEvenAtZeroStrength)
+{
+	auto vSlots = CMenus::BuildStrongWeakEditorSlots("default");
+	auto &Slot = vSlots[1];
+	Slot.m_SrcX = vSlots[0].m_DstX;
+	Slot.m_SourceSpriteId = 7;
+	Slot.m_Color = 0;
+	Slot.m_BlendStrength = 0;
+	Slot.m_ColorBlendMode = CMenus::ASSETS_EDITOR_COLOR_BLEND_SCREEN;
+	EXPECT_TRUE(Slot.ResetTo("default"));
+	EXPECT_EQ(Slot.m_SrcX, Slot.m_DstX);
+	EXPECT_EQ(Slot.m_SourceSpriteId, Slot.m_SpriteId);
+	EXPECT_EQ(Slot.m_Color, vSlots[0].m_Color);
+	EXPECT_EQ(Slot.m_BlendStrength, 100);
+	EXPECT_EQ(Slot.m_ColorBlendMode, CMenus::ASSETS_EDITOR_COLOR_BLEND_MULTIPLY);
+	EXPECT_FALSE(Slot.ResetTo("default"));
+}
+
+TEST(AssetsEditorLayout, NarrowAndScaledWorkbenchesStackWithoutClippingTheirTools)
+{
+	for(const float Scale : {1.0f, 2.0f})
+	{
+		const auto Layout = qmclient::assets_editor::ResolveWorkbench({0, 0, 360 * Scale, 270}, Scale, 24 * Scale);
+		EXPECT_TRUE(Layout.m_WrapInspector);
+		EXPECT_GT(Layout.m_Export.y, Layout.m_Tools.y);
+		EXPECT_GT(Layout.m_Target.m_Panel.y, Layout.m_Donor.m_Panel.y + Layout.m_Donor.m_Panel.h);
+		EXPECT_GT(Layout.m_Donor.m_Search.y, Layout.m_Donor.m_Title.y);
+		EXPECT_GE(Layout.m_Target.m_Canvas.h, 4 * 24 * Scale);
+		EXPECT_LT(Layout.m_Status.y + Layout.m_Status.h, Layout.m_ContentHeight);
+		EXPECT_GT(Layout.m_ContentHeight, 270);
+	}
+}
+
+TEST(AssetsEditorLayout, ShortWideWindowScrollsToInspectorWithoutShrinkingCanvases)
+{
+	const auto Layout = qmclient::assets_editor::ResolveWorkbench({0, 0, 1000, 180}, 1, 24);
+	EXPECT_GT(Layout.m_ContentHeight, 180);
+	EXPECT_GE(Layout.m_Target.m_Canvas.h, 96);
+	EXPECT_EQ(Layout.m_Donor.m_Canvas.y, Layout.m_Target.m_Canvas.y);
+	EXPECT_GT(Layout.m_Status.y, Layout.m_Inspector.y + Layout.m_Inspector.h);
+}
+
+TEST(AssetsEditorLayout, IncreasingScaleAtFixedWidthStacksTheCanvases)
+{
+	const CUIRect Window{0, 0, 800, 600};
+	const auto Normal = qmclient::assets_editor::ResolveWorkbench(Window, 1, 24);
+	const auto Large = qmclient::assets_editor::ResolveWorkbench(Window, 2, 48);
+	EXPECT_EQ(Normal.m_Donor.m_Panel.y, Normal.m_Target.m_Panel.y);
+	EXPECT_GT(Large.m_Target.m_Panel.y, Large.m_Donor.m_Panel.y + Large.m_Donor.m_Panel.h);
+	EXPECT_GT(Large.m_ContentHeight, Window.h);
+	EXPECT_TRUE(Large.m_WrapInspector);
+	EXPECT_GE(Large.m_Inspector.h, 96);
 }

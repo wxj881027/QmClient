@@ -307,16 +307,8 @@ public:
 	virtual void GetServerInfo(class CServerInfo *pServerInfo) const = 0;
 	virtual bool ServerCapAnyPlayerFlag() const = 0;
 
-	enum class EPredictionMarginState
-	{
-		STABLE,
-		IGNORED_SPIKE,
-		UNSTABLE,
-	};
-
 	virtual int GetPredictionTime() = 0;
 	virtual int GetPredictionTick() = 0;
-	virtual EPredictionMarginState PredictionMarginState() const = 0;
 	virtual float PingMs() const = 0;
 	virtual float PredictionLeadMs() const = 0;
 	virtual float PredictionMarginMs() const = 0;
@@ -596,7 +588,7 @@ public:
 	virtual void InitializeLanguage() = 0;
 
 	virtual void ForceUpdateConsoleRemoteCompletionSuggestions() = 0;
-	virtual void RenderQmMonitoringHud(float GraphX, float GraphSpacing) = 0;
+	virtual void RenderQmMonitoringHud() = 0;
 };
 
 extern IGameClient *CreateGameClient();

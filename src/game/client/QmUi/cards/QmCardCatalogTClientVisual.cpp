@@ -97,48 +97,6 @@ float CMenus::LayoutTClientVisualNameplateCard(const qm_card_catalog::SQmCardBui
 	{
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateSkins, "tclient-nameplate-skins", Localize("Show skin names in nameplate"), &g_Config.m_QmNameplateSkins, &Row, LineSize);
 	}
-	if(Flow.Control("freeze-stars", LineSize, Row, RowSpacing))
-	{
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClFreezeStars, "tclient-freeze-stars", Localize("Freeze stars"), &g_Config.m_ClFreezeStars, &Row, LineSize);
-	}
-	if(Flow.Control("color-freeze", LineSize, Row, RowSpacing))
-	{
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmColorFreeze, "tclient-color-freeze", Localize("Use colored skins for frozen tees"), &g_Config.m_QmColorFreeze, &Row, LineSize);
-	}
-	static CSettingsConditionalRows s_ColorFreezeRows;
-	if(s_ColorFreezeRows.Update(g_Config.m_QmColorFreeze, Ctx.m_UiContext.m_FrameDt, g_Config.m_QmUiMotionLevel))
-	{
-		const CSettingsContentRevealScope ColorFreezeRevealScope(Ui(), Flow, s_ColorFreezeRows.Fade(g_Config.m_QmUiMotionLevel));
-		if(Flow.Control("color-freeze-darken", LineSize, Row, RowSpacing))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-color-freeze-darken", &g_Config.m_QmColorFreezeDarken, &g_Config.m_QmColorFreezeDarken, &Row, Localize("Frozen color darkening"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-		}
-		if(Flow.Control("color-freeze-feet", LineSize, Row, RowSpacing))
-		{
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmColorFreezeFeet, "tclient-color-freeze-feet", Localize("Use skin color for frozen feet"), &g_Config.m_QmColorFreezeFeet, &Row, LineSize);
-		}
-	}
-	if(Flow.Control("freeze-katana", LineSize, Row, RowSpacing))
-	{
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFreezeKatana, "tclient-freeze-katana", Localize("Show katana on frozen players"), &g_Config.m_QmFreezeKatana, &Row, LineSize);
-	}
-	if(Flow.Control("white-feet", LineSize, Row, RowSpacing))
-	{
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWhiteFeet, "tclient-white-feet", Localize("Render all custom colored feet as white feet skin"), &g_Config.m_QmWhiteFeet, &Row, LineSize);
-	}
-	static CSettingsConditionalRows s_WhiteFeetRows;
-	if(s_WhiteFeetRows.Update(g_Config.m_QmWhiteFeet, Ctx.m_UiContext.m_FrameDt, g_Config.m_QmUiMotionLevel))
-	{
-		const CSettingsContentRevealScope WhiteFeetRevealScope(Ui(), Flow, s_WhiteFeetRows.Fade(g_Config.m_QmUiMotionLevel));
-		if(Flow.Control("white-feet-skin", LineSize, Row, RowSpacing))
-		{
-			Row.VSplitMid(&Row, nullptr);
-			static CLineInput s_WhiteFeet(g_Config.m_QmWhiteFeetSkin, sizeof(g_Config.m_QmWhiteFeetSkin));
-			s_WhiteFeet.SetEmptyText("x_ninja");
-			IUiContext InputCtx = SettingsUiContext("settings_tclient_white_feet_text_inputs", Ctx.m_Metrics.m_UiScale);
-			ui_widget::InputField(InputCtx, &s_WhiteFeet, Row, nullptr, EditBoxFontSize);
-		}
-	}
 	if(MeasureScope)
 	{
 		CSettingsContentLayoutCache Cache;

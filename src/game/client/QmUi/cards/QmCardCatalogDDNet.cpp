@@ -277,6 +277,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				// 标签源串与上一行同源，缩略后的主标签就是同一个「Show others」→「显示其他玩家」，
 				// 同一张卡里两行同名，玩家分不清第三个开关到底管什么；整句「仅显示同队伍」才是正题。
 				// 搜索/高亮仍按 pTextId 定位，不受显示文案影响。
+				Ui()->DoConfigTooltip(&s_ShowOwnTeamId, &Button, &g_Config.m_ClShowOthers);
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, &s_ShowOwnTeamId, "Show others (own team only)", Localize("Show others (own team only)"), g_Config.m_ClShowOthers == SHOW_OTHERS_ONLY_TEAM, &Button, SLabelProperties{}, true, -1.0f, false) && CanCommit)
 				{
 					g_Config.m_ClShowOthers = g_Config.m_ClShowOthers != SHOW_OTHERS_ONLY_TEAM ? SHOW_OTHERS_ONLY_TEAM : SHOW_OTHERS_OFF;
@@ -326,7 +327,6 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmSmoothPredictionMargin, "Prediction margin smoothing", Localize("Smooth prediction margin"), g_Config.m_QmSmoothPredictionMargin, &Button) && CanCommit)
 					g_Config.m_QmSmoothPredictionMargin ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmSmoothPredictionMargin, &Button, Localize("Smooth sudden prediction margin corrections caused by ping spikes"));
 			}
 
 			// 主控行：延迟补偿。关掉时三个「延迟补偿：预测…」开关整组不存在（约定 A）。
@@ -336,7 +336,6 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				{
 					g_Config.m_ClAntiPing ^= 1;
 				}
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClAntiPing, &Button, Localize("Try to predict other entities to reduce lag feeling at high latency"));
 			}
 			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			static SettingsDependentRows s_AntiPingRows;
@@ -364,6 +363,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 					{
 						static CButtonContainer s_AntiPingFrozenId;
 						const bool FrozenOption = QmAntiPingPlayersSettings::FrozenOptionEnabled(g_Config.m_ClAntiPingPlayers);
+						Ui()->DoConfigTooltip(&s_AntiPingFrozenId, &Button, &g_Config.m_ClAntiPingPlayers);
 						if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &s_AntiPingFrozenId, "anti-ping-players-frozen", Localize("Always predict frozen players", "AntiPing: predict other players"), FrozenOption, &Button) && CanCommit)
 						{
 							g_Config.m_ClAntiPingPlayers = QmAntiPingPlayersSettings::ApplyFrozenOption(g_Config.m_ClAntiPingPlayers, !FrozenOption);
@@ -402,7 +402,6 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmUpstreamRedundancy, "Upstream redundancy (experimental)", Localize("Upstream redundancy (experimental)"), g_Config.m_QmUpstreamRedundancy, &Button) && CanCommit)
 					g_Config.m_QmUpstreamRedundancy ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUpstreamRedundancy, &Button, Localize("Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."));
 			}
 			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			// 约定 A：最大包份数是上行冗余发送的从属行。
@@ -509,6 +508,8 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				Button = CurrentMapRow;
 				const bool UseCurrentMap = IsCurrentMapBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities);
 				static int s_UseCurrentMapId = 0;
+				Ui()->DoConfigTooltip(&s_UseCurrentMapId, &Button, &g_Config.m_ClBackgroundEntities);
+				GameClient()->m_Tooltips.DoToolTipForRect(&s_UseCurrentMapId, &Button, Localize("Check to set the background map name to %current%. Uncheck to clear the name."));
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &s_UseCurrentMapId, "Use current map as background", Localize("Use current map as background"), UseCurrentMap, &Button) && CanCommit)
 				{
 					if(s_BackgroundEntitiesInput.IsActive())

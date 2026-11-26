@@ -140,6 +140,7 @@ namespace qm_module
 		case EQmModuleId::Tooltip: return "qm:tooltip";
 		case EQmModuleId::Console: return "qm:console";
 		case EQmModuleId::ChatCompletion: return "qm:chat_completion";
+		case EQmModuleId::Count: break;
 		}
 		return nullptr;
 	}

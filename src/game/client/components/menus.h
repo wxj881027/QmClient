@@ -21,6 +21,8 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/AssetsEditorInput.h>
+#include <game/client/QmUi/AudioPackEditorInput.h>
 #include <game/client/QmUi/MapTagsPanel.h>
 #include <game/client/QmUi/QmAuthorName.h>
 #include <game/client/QmUi/QmAuthorTee.h>
@@ -254,7 +256,7 @@ private:
 	void PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth = -1.0f);
 	void PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete, const struct SSettingsContentMetrics *pMetrics = nullptr);
 	void SplitSettingsScrollbarRects(const CUIRect &Rect, unsigned Flags, CUIRect *pLabelRect, CUIRect *pValueRect, CUIRect *pScrollBarRect) const;
-	int DoButton_CheckBox_Common_WithLabelElement(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, CUIElement *pLabelElement, bool ProcessInput = true, float LabelFontSize = -1.0f, bool MarkedControl = false);
+	int DoButton_CheckBox_Common_WithLabelElement(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, CUIElement *pLabelElement, bool ProcessInput = true, float LabelFontSize = -1.0f, bool MarkedControl = false, const void *pConfigValue = nullptr);
 	int DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
 	const char *TemporaryOverrideTooltip(const int *pValue) const;
 	int DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float RowHeight, float RowSpacing, float BodySize);
@@ -571,6 +573,35 @@ public:
 		int m_BlendStrength = 100;
 		char m_aFamilyKey[64] = {0};
 		char m_aSourceAsset[64] = {0};
+
+		bool UsesAssetRect(const char *pName) const
+		{
+			return str_comp(m_aSourceAsset, pName) == 0 && m_SrcX == m_DstX && m_SrcY == m_DstY && m_SrcW == m_DstW && m_SrcH == m_DstH;
+		}
+
+		bool IsResetTo(const char *pName) const
+		{
+			const SAssetsEditorPartSlot Defaults;
+			return UsesAssetRect(pName) && m_SourceSpriteId == m_SpriteId && m_Color == Defaults.m_Color &&
+			       m_ColorBlendMode == Defaults.m_ColorBlendMode && m_BlendStrength == Defaults.m_BlendStrength;
+		}
+
+		bool ResetTo(const char *pName)
+		{
+			if(IsResetTo(pName))
+				return false;
+			str_copy(m_aSourceAsset, pName);
+			m_SourceSpriteId = m_SpriteId;
+			m_SrcX = m_DstX;
+			m_SrcY = m_DstY;
+			m_SrcW = m_DstW;
+			m_SrcH = m_DstH;
+			const SAssetsEditorPartSlot Defaults;
+			m_Color = Defaults.m_Color;
+			m_ColorBlendMode = Defaults.m_ColorBlendMode;
+			m_BlendStrength = Defaults.m_BlendStrength;
+			return true;
+		}
 	};
 
 	using SAudioPackSlot = qm_audio_pack::SSlot;
@@ -738,15 +769,6 @@ public:
 	static int FindAudioPackCandidateEntryIndex(const std::vector<SAudioPackCandidateEntry> &vEntries, const char *pPath)
 	{
 		return qm_audio_pack::FindCandidateEntryIndex(vEntries, pPath);
-	}
-
-	static std::string ResolveAudioPackPreviewPath(const char *pSelectedCandidatePath, const char *pManualSourcePath)
-	{
-		if(pSelectedCandidatePath != nullptr && pSelectedCandidatePath[0] != '\0')
-			return pSelectedCandidatePath;
-		if(pManualSourcePath != nullptr && pManualSourcePath[0] != '\0')
-			return pManualSourcePath;
-		return {};
 	}
 
 	static std::string ResolveAudioPackExportSourcePath(const char *pSelectedCandidatePath, const char *pManualSourcePath)
@@ -947,10 +969,7 @@ public:
 	static bool AssetsEditorSlotNeedsProcessing(const SAssetsEditorPartSlot &Slot, const char *pMainAssetName)
 	{
 		const char *pResolvedMainAssetName = pMainAssetName != nullptr ? pMainAssetName : "";
-		const bool UsesMainSourceRect = str_comp(Slot.m_aSourceAsset, pResolvedMainAssetName) == 0 &&
-						Slot.m_SrcX == Slot.m_DstX && Slot.m_SrcY == Slot.m_DstY &&
-						Slot.m_SrcW == Slot.m_DstW && Slot.m_SrcH == Slot.m_DstH;
-		return !UsesMainSourceRect || AssetsEditorHasColorOverride(AssetsEditorSlotTint(Slot), Slot.m_ColorBlendMode);
+		return !Slot.UsesAssetRect(pResolvedMainAssetName) || AssetsEditorHasColorOverride(AssetsEditorSlotTint(Slot), Slot.m_ColorBlendMode);
 	}
 
 	static void AssetsEditorApplyColorOverrideToImageRect(CImageInfo &Image, int X, int Y, int W, int H, const ColorRGBA &Tint, int BlendMode)
@@ -1426,13 +1445,13 @@ protected:
 	void AssetsEditorOpen(int Type);
 
 private:
-	struct SAudioPackEditorState
+	struct SAudioPackEditorState : public qm_audio_pack::SEditorCandidates
 	{
 		bool m_Open = false;
 		bool m_Initialized = false;
 		int m_SelectedSlotIndex = 0;
 		int m_Category = 0;
-		int m_SelectedCandidateIndex = -1;
+		qm_audio_pack::CEditorListFocus m_ListFocus;
 		CLineInputBuffered<64> m_FilterInput;
 		CLineInputBuffered<64> m_CandidateFilterInput;
 		CLineInputBuffered<64> m_PackNameInput;
@@ -1440,8 +1459,19 @@ private:
 		char m_aStatusMessage[256] = {0};
 		bool m_StatusIsError = false;
 		int m_PreviewSampleId = -1;
-		std::vector<std::string> m_vCandidatePaths;
-		std::vector<SAudioPackCandidateEntry> m_vCandidateEntries;
+	};
+
+	enum class EAssetsEditorAction
+	{
+		CLOSE,
+		SWITCH_TYPE,
+		SWITCH_MAIN_ASSET
+	};
+	struct SAssetsEditorAction
+	{
+		EAssetsEditorAction m_Kind;
+		int m_Type = -1;
+		std::string m_MainAssetName{};
 	};
 
 	struct SAssetsEditorState
@@ -1455,25 +1485,18 @@ private:
 		bool m_ShowGrid = true;
 		bool m_ApplySameSize = false;
 		int m_SelectedTargetSlotIndex = -1;
-		bool m_DragActive = false;
-		int m_ActiveDraggedSlotIndex = -1;
-		char m_aDraggedSourceAsset[64] = {0};
-		bool m_TargetPressPending = false;
-		int m_PendingTargetSlotIndex = -1;
-		vec2 m_PendingTargetPressPos = vec2(0.0f, 0.0f);
-		int64_t m_PendingTargetPressTime = 0;
+		qmclient::assets_editor::CCanvasGesture m_Gesture;
+		int m_DragSourceIndex = -1;
+		char m_aDraggedSourceAsset[64] = {};
 		int m_ColorPickerSlotIndex = -1;
 		unsigned int m_ColorPickerValue = 0;
-		unsigned int m_LastColorPickerValue = 0;
-		int m_HoveredDonorSlotIndex = -1;
-		int m_HoveredTargetSlotIndex = -1;
 		bool m_DirtyPreview = true;
 		char m_aExportName[64] = {0};
 		char m_aaExportNameByType[ASSETS_EDITOR_TYPE_COUNT][64] = {};
 		char m_aStatusMessage[256] = {0};
 		bool m_StatusIsError = false;
 		bool m_HasUnsavedChanges = false;
-		bool m_ShowExitConfirm = false;
+		std::optional<SAssetsEditorAction> m_PendingAction;
 		bool m_FullscreenOpen = false;
 		int m_HoverCycleSlotIndex = -1;
 		int m_HoverCyclePositionX = -1;
@@ -1498,9 +1521,22 @@ private:
 	void AudioPackEditorRebuildCandidates();
 	void AudioPackEditorStopPreview();
 	bool AudioPackEditorPlayPreview(const char *pFilename, int StorageType);
-	bool AudioPackEditorCopyFileToStorage(const char *pSourcePath, int SourceStorageType, const char *pStoragePath);
+	bool AudioPackEditorValidateSource(const char *pPath, bool Manual);
+	void AudioPackEditorPreviewSource(const char *pPath, bool Manual);
+	void AudioPackEditorReplaceVariant(const SAudioPackSlot &Slot, const char *pCandidate);
+	int RenderAudioPackCatalog(CUIRect View, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics, bool Initialize);
+	bool RenderAudioPackCandidates(CUIRect View, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics, bool ResetScroll, bool Initialize);
 	void RenderAudioPackEditorScreen(CUIRect MainView);
+	void RenderAudioPackEditorContent(CUIRect MainView, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics, bool Initialize);
 	void RenderAssetsEditorScreen(CUIRect MainView);
+	static const char *AssetsEditorTypeName(int Type);
+	void AssetsEditorRenderToolbar(CUIRect Tools, CUIRect Export, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics);
+	void AssetsEditorRenderSelector(CUIRect Search, CUIRect Selector, bool Target, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics);
+	void AssetsEditorRenderInspector(CUIRect Rect, bool Wrap, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics);
+	void AssetsEditorRenderCanvases(CUIRect Left, CUIRect Right, CUIRect Viewport, bool Blocked, const SSettingsContentMetrics &Metrics);
+	void AssetsEditorOpenColorPicker(int Index);
+	void AssetsEditorResetSlot(int Index);
+	bool AssetsEditorHasSlotChanges() const;
 	void AssetsEditorClearAssets();
 	void AssetsEditorEnsureAssetsLoadedForType(int Type);
 	void AssetsEditorEnsurePreviewLoaded(SAssetsEditorAssetEntry &Asset);
@@ -1514,13 +1550,14 @@ private:
 	void AssetsEditorValidateRequiredSlotsForType(int Type);
 	std::optional<int> AssetsEditorComposeImage(CImageInfo &OutputImage);
 	bool AssetsEditorExport();
-	void AssetsEditorRenderCanvas(const CUIRect &Rect, IGraphics::CTextureHandle Texture, int W, int H, int Type, bool ShowGrid, int HighlightSlot, bool ShowTintFeedback, int PersistentHighlightSlot);
+	void AssetsEditorRenderCanvas(const CUIRect &Rect, IGraphics::CTextureHandle Texture, int W, int H, int Type, bool ShowGrid, int HighlightSlot, bool ShowTintFeedback, int PersistentHighlightSlot, const SSettingsContentMetrics &Metrics);
 	void AssetsEditorCollectHoveredCandidates(const CUIRect &Rect, int Type, const std::vector<SAssetsEditorPartSlot> &vSlots, vec2 Mouse, std::vector<int> &vOutCandidates) const;
 	int AssetsEditorResolveHoveredSlotWithCycle(const CUIRect &Rect, int Type, const std::vector<SAssetsEditorPartSlot> &vSlots, vec2 Mouse, bool ClickedLmb, int PreferredSlotIndex);
 	void AssetsEditorCancelDrag();
 	void AssetsEditorApplyDrop(int TargetSlotIndex, const char *pDonorName, int SourceSlotIndex, bool ApplyAllSameSize);
 	void AssetsEditorUpdatePreviewIfDirty();
-	void AssetsEditorRequestClose();
+	void AssetsEditorRequestAction(SAssetsEditorAction Action);
+	void AssetsEditorExecutePendingAction();
 	void AssetsEditorCloseNow();
 	void AssetsEditorRenderExitConfirm(const CUIRect &Rect);
 	void AssetsEditorBuildFamilyKey(int Type, const CDataSprite *pSprite, char *pOut, int OutSize);
@@ -2939,19 +2976,19 @@ public:
 	CUIElement &SettingsTextElement(int Page, int Tab, const char *pTextId);
 	CUIElement &SettingsTextElement(int Page, int Tab, const char *pTextId, const SMenuTextStyleKey &StyleKey);
 	void DoSettingsLabelStreamed(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
-	void DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, bool Render = true, bool DrawSearchBackground = true);
+	void DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, bool Render = true, bool DrawSearchBackground = true, bool ShowMetadataTip = true);
 	// 同组短开关共用测量与渲染；LAYOUT/INPUT 供卡片预布局复用相同的内容尺寸与命中区域。
 	bool DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Content, std::initializer_list<SSettingsToggleEntry> Entries, const SSettingsContentMetrics &Metrics, bool ProcessInput = true, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER);
 	// 短筛选按钮组：一排小按钮，每项左侧带圆形勾选指示；逐行开关仍走 DoSettingsToggleGroup。
 	bool DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect &Content, std::initializer_list<SSettingsToggleEntry> Entries, const SSettingsContentMetrics &Metrics, bool ProcessInput = true, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER);
 	bool DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput = true, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER, bool HoverEmphasis = false);
-	void DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1, bool DrawSearchBackground = true, bool AllowHintSplit = true);
+	const char *DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1, bool DrawSearchBackground = true, bool AllowHintSplit = true, bool ShowMetadataTip = true);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor = nullptr, const ColorRGBA *pHoverColor = nullptr);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps);
-	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, bool ProcessInput, float RequestedFontSize = -1.0f, bool AllowHintSplit = true);
+	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, bool ProcessInput, float RequestedFontSize = -1.0f, bool AllowHintSplit = true, const void *pConfigValue = nullptr);
 	bool DoSettingsScrollbarOption(int Page, int Tab, const char *pTextId, const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &CUi::ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = "", const char *pMaxText = nullptr);
 	bool DoSettingsScrollbarOption(int Page, int Tab, int Subtab, const char *pTextId, const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &CUi::ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = "", const char *pMaxText = nullptr);
 

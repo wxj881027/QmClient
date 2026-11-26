@@ -63,6 +63,7 @@ namespace qm_module
 		Console,
 		SpectatorMode,
 		ChatCompletion,
+		Count,
 	};
 
 	enum class EQmModuleColumn
@@ -80,7 +81,7 @@ namespace qm_module
 		const char *m_pKey;
 	};
 
-	constexpr size_t QmModuleCount = static_cast<size_t>(EQmModuleId::ChatCompletion) + 1;
+	constexpr size_t QmModuleCount = static_cast<size_t>(EQmModuleId::Count);
 } // namespace qm_module
 
 #endif // GAME_CLIENT_QMUI_QMMODULETYPES_H

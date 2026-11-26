@@ -65,7 +65,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 #### 调试 HUD 字体（debug HUD font）
 
 - 定义：调试 HUD 的文字使用 HUD 小字档，字号随视口宽度和单行文字的可用宽度调整。
-- 唯一实现：`ui_token::hud::font::{DEBUG_PRESET, DEBUG_TEXT_REFERENCE_WIDTH, CAPTION}`（`src/game/client/QmUi/UiTokens.h`），由相关绘制入口计算可用宽度。
+- 唯一实现：`ui_token::hud::font::DEBUG_PRESET` 选字体，`ui_token::hud::font::DebugSize` 按 HUD、菜单或像素视口换算小字档（`src/game/client/QmUi/UiTokens.h`）。引擎统计、游戏诊断和菜单控件信息都按可用行宽绘制。
 - 禁止的反面写法：诊断字段各自写固定字号，或让图标字体状态泄漏到诊断字段。
 
 ### 2.1a 组件角色色（component role colors）
@@ -85,6 +85,22 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 定义：按钮/控件里的「图标 + 文字」是一个整体，按文字实测自然宽度居中；标签最大宽度取自然宽度加 1px 并向上取整，锁成单行。行宽真的不够时文字矩形收到可用宽度并省略，不能折成两行撑破控件。
 - 唯一实现：`ui_token::control::TEXT_WIDTH_SLACK`、`ResolveTextMaxWidth`、`SIconTextRowLayout`、`ResolveIconTextRow`（`src/game/client/QmUi/UiTokens.h`）；菜单按钮接线 `MenuButtonIconTextLayout`、`MenuButtonLabelProps`（`src/game/client/components/menus.cpp`）。
 - 禁止的反面写法：把 `TextWidth` 实测值原样塞给 `m_MaxWidth`（等宽边界会让空格处折行）；用 `(int)` 向下截断宽度；按钮标签允许自动换行；图标与文字各算一套矩形或用固定左边距凑对齐。
+#### 材质编辑器画布角色色（assets editor canvas roles）
+
+- 定义：双色棋盘格标识贴图透明区。槽位边框区分悬停、选中、染色和拖拽落点，拖动缩略图使用独立浮层表面。
+- 唯一实现：`src/game/client/QmUi/UiTokens.h` 的 `ui_token::assets_editor` 提供棋盘、网格、槽位、落点与拖动浮层颜色。染色边框直接取部件当前颜色。色块、工作台、面板与拖动浮层的圆角描边宽度共用 `BORDER_WIDTH`。
+- 禁止的反面写法：在画布绘制函数中写角色色字面量，或为每种边框新增玩家配置。
+
+#### 材质编辑器工作台（assets editor workbench）
+
+- 定义：标题和工具栏位于双画布上方，部件检查器和状态栏位于下方。检查器在折行时预留两行，首次选中部件时画布位置和尺寸保持不变。画布卡头容纳搜索与材质选择器，窄屏折行，矮屏滚动整个工作台。
+- 唯一实现：`src/game/client/QmUi/AssetsEditorLayout.h` 的 `ResolveWorkbench` 依据可用尺寸和设置度量计算各区。双画布共用 `AssetsEditorInput.h` 的 `CCanvasGesture`，按移动距离起拖，右侧单击选中、双击取色。
+- 禁止的反面写法：在左右画布底部重复预留搜索行，用按住时长判定拖动，或在模态层打开时继续处理画布按键。
+
+| 编辑器 | 主空间 | 选择后的操作 |
+| --- | --- | --- |
+| 材质编辑器 | 两张等大的材质画布 | 在检查器中调整部件，画布间可拖动替换 |
+| 音频包编辑器 | 槽位目录与候选文件列表 | 在工作区试听并替换选中变体 |
 
 ### 2.2 设置内容布局流（settings content flow）
 
@@ -318,8 +334,8 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.18 图标按钮（icon button）
 
 - 定义：只表达一个动作、不带文字的方形/圆形按钮。刷新、重载、重试、复制这类「动词即全部语义」的动作一律用它；文字按钮只留给需要完整句子才能说清的动作（如「导入并重启」）。
-- 唯一实现：`ui_widget::DoIconButton`（`src/game/client/QmUi/UiButtons.cpp`），调用点走 `CUi::DoButton_QmIcon` / `DoButton_Menu_QmIcon`；图标语义固定：刷新与重试 `EQmIcon::ARROW_ROTATE_RIGHT` + `FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT`，复制 `EQmIcon::COPY`，好友与收藏 `EQmIcon::HEART`，静音 `EQmIcon::BAN`，观战与跟随 `EQmIcon::EYE`，屏蔽表情 `EQmIcon::HEART_CRACK`。禁用走 `Enabled` 形参（外观与命中一起关闭），不要用 `Flags = 0` 绕过。
-- 禁止的反面写法：用文字按钮承担刷新/复制/重试；同一语义换用别的字形（`ARROWS_ROTATE` 与 `ARROW_ROTATE_RIGHT` 混用、直接写 `"\\xEE\\x80\\xB6"` 转义）；图标按钮不给悬停气泡；禁用态直接跳过绘制（按钮数量随状态横跳，玩家看不到「为什么没有这个动作」）；边长各写一个魔数而不是随行高派生。
+- 唯一实现：`ui_widget::DoIconButton`（`src/game/client/QmUi/UiButtons.cpp`），卡头在预布局处理输入，绘制走同组件的 `ui_widget::DrawIconButton`，以 `m_TransparentInactive` 指定常态透明。悬浮时显示圆形底和描边，折叠箭头通过图标回调绘制。普通调用点走 `CUi::DoButton_QmIcon` / `DoButton_Menu_QmIcon`；图标语义固定：刷新与重试 `EQmIcon::ARROW_ROTATE_RIGHT` + `FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT`，复制 `EQmIcon::COPY`，好友与收藏 `EQmIcon::HEART`，静音 `EQmIcon::BAN`，观战与跟随 `EQmIcon::EYE`，屏蔽表情 `EQmIcon::HEART_CRACK`。禁用走 `Enabled` 形参（外观与命中一起关闭），不要用 `Flags = 0` 绕过。
+- 禁止的反面写法：在卡头另画圆角矩形底，或在绘制回调里重复处理点击。用文字按钮承担刷新/复制/重试；同一语义换用别的字形（`ARROWS_ROTATE` 与 `ARROW_ROTATE_RIGHT` 混用、直接写 `"\\xEE\\x80\\xB6"` 转义）；图标按钮不给悬停气泡；禁用态直接跳过绘制（按钮数量随状态横跳，玩家看不到「为什么没有这个动作」）；边长各写一个魔数而不是随行高派生。
 
 ### 2.17 输入光标（text caret）
 
@@ -404,6 +420,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.9a 输入框同行动作（input actions row）
 
 - 定义：输入框填充余宽，右侧动作共用行高和间距；窄行保留输入空间，动作等宽收缩。
+- 全局搜索行通过 `SInputFieldOptions::m_MinTextWidth` 为正文预留两个全角字符的宽度。空间不足时，`ResolveInputFieldLayout` 依次收起前导放大镜和清空叉，右侧搜索按钮仍可提交。
 - 唯一实现：`ResolveSettingsInputActionsLayout` + `SSettingsInputActionsLayout`（`src/game/client/QmUi/SettingsPageLayout.h`）；输入走 `ui_widget::InputField`，图标走 `CUi::DoButton_QmIcon`。关键词规则同行放重命名、正则与删除，前两项以选中态表示开关值，并提供 tooltip。
 - 禁止的反面写法：调用点用固定像素逐个切右侧按钮；按钮与输入框紧贴；为同行图标另设行高；图标开关缺少选中态或 tooltip。
 
@@ -432,6 +449,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 禁止的反面写法：自绘胶囊底 + 手工描边；禁用态换一个灰；按压反馈自己写 alpha 系数。
 
 ### 3.12 列表（List）
+
+#### 列表行尾动作（trailing row action）
+
+- 定义：胶囊行内常驻的单个图标按钮独立接收点击，整行保留选中反馈。
+- 唯一实现：给 `CListBox::DoNextItem` 传入动作边长，用同一边长调用 `CListboxItem::TrailingAction` 排版按钮。`SelectionHitRect` 将行选择与双击限制在按钮左侧。
+- 禁止的反面写法：在整行双击热区上叠放试听按钮，依赖绘制顺序决定是否执行替换。
 
 - 定义：行式或网格式可滚动集合，行反馈（选中/悬浮）由主题派生，容器内边距与「悬浮是否带描边」都是显式能力。
 - 唯一实现：`CListBox`（`src/game/client/ui_listbox.h`）：`SetCapsuleRows`、`SetContainerPadding`、`SetItemSelectionInset`、`SetRowFeedbackBorder`、`SetDeferredItemFeedback` + `DrawItemFeedback`、`SetFillViewportHeight`、`SetWheelStepScale`、`SetVisibleRowRange`、`SetScrollbarOverlay`、`DoAutoSpacing`；入场动画 `CQmListEntryAnimation` + `QmListBoxShouldStartEntryAnimation`（`src/game/client/QmUi/QmListEntryAnimation.h`）；反馈色 `Ui()->QmControlTheme().m_Selected`；悬浮描边 `ui_token::feedback::HOVER_BORDER`；行档 `ui_token::list::RowRadius/RowInsetX/ContainerPadding/PaddedRowsHeight/ROW_SPACING/GRID_SPACING`。`SetWheelStepScale` 只缩放该列表的滚轮位移，不改键盘 PageUp/Down 翻页行数、不改全局 `qm_ui_scroll_step`——高行网格（皮肤列表）用来把「每格两行」降为「每格一行」。`SetDeferredItemFeedback` 让调用方在 `DoNextItem` 之后用**卡片矩形**调 `DrawItemFeedback`（多列网格的格子矩形里含行距与行内退，按格子画反馈会比卡片大一圈）；`SetFillViewportHeight` 让容器**始终占满调用方给的矩形**：条目不足一屏、或最后一行只剩半行，都不收高度（收高度会让面板底部留一条没画到的空档，截图画廊两种情形都撞上过）。**卡片尺寸只由列宽决定**：`QmResolveGalleryRowHeight(CellWidth, CaptionHeight, PreviewAspect)` 按「预览图固定宽高比 + 说明行固定高」算行高，窗口变宽卡片等比变大；面板高度只决定这一屏放得下几行，**末行可以只露一截**（滚动列表的正常形态），超出的内容交给滚动条。禁止按可用高度反推或均分行高去「铺满面板」——那会把卡片拉伸变形，一屏反而只放得下两行（实机反馈「为啥面板只允许两行」）。多列网格的**格间距取 `GRID_SPACING`（12，一档真正的间距）**，不要沿用行胶囊那半档 `ROW_SPACING`（2.5）——卡片是独立视觉件，半档缝会让整片网格贴成一整块；卡片内的文件夹图标先定**墨迹高**（预览区高度的 34%，夹在 18~64）再按 `QmIconInkFontSize` 反算字号，不能拿字号上限当尺寸（旧实现卡 26，大卡片里图标又小又空）。
@@ -511,9 +534,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.14 提示（Tooltip）
 
-- 定义：悬停后的补充说明，默认不常显、不占布局；配置项说明取配置描述。
+- 定义：悬停后的补充说明，默认不常显、不占布局；配置项默认使用配置描述。带文字的布尔开关由 `ui_switch_tip::Fallback`（`src/game/client/QmUi/UiSwitchTipPolicy.h`）过滤只复述标签或卡片标题的兜底说明；普通页不弹空提示，功能搜索仍显示命令名。机制说明仅在当前译文与标签逐字相同时省略。逐行开关优先显示临时接管原因，其次是提供额外信息的条目说明，最后取配置说明。筛选胶囊在输入趟绑定命令与标签。图标按钮保留动作提示。
 - 唯一实现：`ui_widget::Tooltip`（`src/game/client/QmUi/UiOverlays.h`）、`GameClient()->m_Tooltips.DoToolTip(...)` / `DoToolTipForRect(...)` / `DoToolTipForRectForced(...)` / `DoSmallToolTip(...)` / `DoSettingsToolTipForConfig(...)`（`CTooltips`，`src/game/client/ui.h`）；设置页按系统鼠标命中，游戏内虚拟光标由调用方完成命中后用 `DoToolTipForRectForced`。尺寸与颜色 `ui_token::tooltip::*`、`ui_token::motion::TOOLTIP_FADE`。
-- 禁止的反面写法：用 tooltip 承载必须常显的信息（应当用行尾说明）；自己画矩形加文字；把长句塞进 tooltip 而不给 `m_MaxWidth`。
+- 禁止的反面写法：用 tooltip 承载必须常显的信息（应当用行尾说明）；给悬浮提示单设背景色（背景复用 `ResolveConfiguredSecondaryPanelTheme().m_Surface`）；自己画矩形加文字；把长句塞进 tooltip 而不给 `m_MaxWidth`。
 
 ### 3.15 浮层骨架（Secondary panel）
 

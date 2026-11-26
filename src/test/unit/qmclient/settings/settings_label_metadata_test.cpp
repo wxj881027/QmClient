@@ -17,6 +17,19 @@ TEST(SettingsLabelMetadata, MainAndTipAreLocalizedIndependentlyWithoutChangingTh
 	EXPECT_EQ(Repeated.m_pTipId, Result.m_pTipId);
 }
 
+TEST(SettingsLabelMetadata, TemporarilyControlledCheckboxLeavesTooltipToTheRowUntilReleased)
+{
+	const auto Translate = [](const char *pSource) { return pSource; };
+	const auto Locked = ResolveSettingsLabelPresentation("tclient-fast-input", "fallback", Translate, false);
+	EXPECT_STREQ(Locked.m_pText, "Fast input");
+	EXPECT_EQ(Locked.m_pTip, nullptr);
+	EXPECT_EQ(Locked.m_pTipId, nullptr);
+	const auto Released = ResolveSettingsLabelPresentation("tclient-fast-input", "fallback", Translate);
+	EXPECT_STREQ(Released.m_pText, Locked.m_pText);
+	EXPECT_NE(Released.m_pTip, nullptr);
+	EXPECT_NE(Released.m_pTipId, nullptr);
+}
+
 TEST(SettingsLabelMetadata, UnregisteredUnitsNamesAndDynamicStatusesKeepTheirExactText)
 {
 	const char *pUnit = "距离（格）";

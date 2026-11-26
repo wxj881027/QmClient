@@ -762,6 +762,9 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == 表示オプションを調整します。混雑したサーバーに入る前に、投票を開いてレイアウトを確認してください。
 
+Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
+== ここでツールチップの文字サイズとバウンスアニメーションを調整します。背景はポップアップ層の色に従います。
+
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -797,9 +800,6 @@ After uploading again, use: reload or hot_reload
 
 Afterimage pop
 == 残像ポップ
-
-AGC, experimental
-== AGC、実験的
 
 Agree
 == 同意
@@ -885,6 +885,9 @@ Allow /rescue command to teleport out of freeze (only applies in initial config)
 Allow arbitrary game resolution when scaling (may cause issues on Windows)
 == スケーリング時に任意のゲーム解像度を許可（Windows で問題が発生する可能性あり）
 
+Allow direct pings by default for new favorites in the server browser info panel. Pinging reveals your IP to the server. LAN favorites always allow pings; in-game favorites ignore this setting.
+== サーバーブラウザーの情報欄で追加するお気に入りに直接 ping を許可します。ping するとサーバーに IP が伝わります。LAN からの登録は常に許可し、ゲーム内からの登録にはこの設定を使いません。
+
 Allow downloading community-created skins. Use cl_skin_community_download_url instead of cl_skin_download_url for download
 == コミュニティ作成スキンのダウンロードを許可。ダウンロードには cl_skin_community_download_url を cl_skin_download_url の代わりに使用
 
@@ -897,8 +900,8 @@ Allow Duplicate Entries
 Allow firing non-auto weapons while deep frozen
 == 深いフリーズ中に非自動武器の発射を許可
 
-Allow FTAPI auto-translate (may cause overload)
-== FTAPI 自動翻訳を許可（過負荷の可能性あり）
+Allow FTAPI to auto-translate received chat messages. Busy chats can overload the free service. Outgoing auto-translation is controlled separately.
+== 受信したチャットの FTAPI 自動翻訳を許可します。メッセージが多いと無料サービスに負荷がかかります。送信時の自動翻訳は別の設定です。
 
 Allow insecure HTTP protocol in addition to secure HTTPS. Primarily for testing.
 == 安全な HTTPS に加えて、安全でない HTTP プロトコルも許可。主にテスト用。
@@ -1086,9 +1089,6 @@ Apply a writable preset and edit first
 Apply Changes
 == 変更を適用
 
-Apply input early before next tick for prediction
-== 予測のために次の tick の前に早期に入力を適用
-
 Apply Qm recommended appearance
 == Qm 推奨の外観を適用
 
@@ -1206,6 +1206,9 @@ Assigned group
 Assigns commands and labels to the slots of the radial bind wheel.
 == 円形バインドホイールの各スロットにコマンドとラベルを割り当てます。
 
+At full entity overlay, draw supported moving blocks and freeze zones so they remain visible without map artwork.
+== エンティティ表示が 100% のときも、対応する移動ブロックや凍結エリアを描画します。
+
 Attempt to change your name when near finish
 == フィニッシュ付近で名前変更を試行
 
@@ -1262,9 +1265,6 @@ Auto
 
 auto
 == 自動
-
-Auto adjust prediction margin (fixed base margin when off)
-== 予測マージンを自動調整（オフ時は基本予測マージンを固定使用）
 
 Auto agree vote
 == 自動同意投票
@@ -1440,9 +1440,6 @@ Auto-screenshot on game end
 Auto-send emote and chat message when entering freeze
 == フリーズ進入時にエモートとチャットメッセージを自動送信
 
-Auto-switch to first unfrozen when both frozen
-== 本体とダミーの両方が凍結された場合、自動的に先に解凍された方に切り替え
-
 Auto-sync player camera
 == プレイヤーカメラの自動同期
 
@@ -1464,9 +1461,6 @@ Auto-translate outgoing messages
 Auto-translation mode (0=Trigger on common source languages only, 1=Always translate)
 == 自動翻訳モード（0=一般的なソース言語入力時のみトリガー、1=常に翻訳）
 
-Auto-unspec when unfrozen
-== フリーズ解除時に自動で観戦解除
-
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
@@ -1484,9 +1478,6 @@ Automatic demos, game-end screenshots and CSV exports, their file limits and sav
 
 Automatic effect LOD when crowded
 == 密集時にエフェクトを自動で軽量化
-
-Automatic gain control (0=off 1=on)
-== 自動ゲインコントロール（0=オフ 1=オン）
 
 Automatic game-end scoreboard screenshot
 == ゲーム終了時の自動スコアボードスクリーンショット
@@ -1536,9 +1527,6 @@ Automatically reply to muted players
 Automatically reply while the window is unfocused
 == ウィンドウが非アクティブの時に自動返信
 
-Automatically switch hammer/gun in Gores mode
-== Gores モードで自動ハンマー・ガン切り替え
-
 Automatically take game over screenshot
 == ゲームオーバー時に自動でスクリーンショットを撮影
 
@@ -1553,6 +1541,9 @@ Available rescue modes: auto, manual
 
 Available resolutions
 == 利用可能な解像度
+
+Average payload
+== 平均ペイロード
 
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 平均 %.*f   ↓ %.*f   ↑ %.*f
@@ -1878,11 +1869,11 @@ Blink the active local tee
 Block
 == ブロック
 
-Block client-initiated self-kill (K key / kill command)
-== クライアント発の自殺をブロック（K キー / kill コマンド）
-
 Block enemy chat
 == 敵対プレイヤーのチャットをブロック
+
+Block the K key and kill command in normal play. In fast practice, the practice reset takes priority.
+== 通常のプレイでは K キーと kill コマンドによる自滅を防ぎます。高速練習モードでは練習のリセットが優先されます。
 
 Block votes from blacklisted addresses
 == ブラックリストのアドレスからの投票をブロック
@@ -1989,11 +1980,20 @@ Brutal
 Bubble opacity
 == バブルの不透明度
 
+Buffer memory
+== バッファメモリ
+
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
 Built-in
 == 内蔵
+
+Button - Disabled
+== ボタン - 無効
+
+Button - Enabled
+== ボタン - 有効
 
 Button browser
 == ボタンブラウザ
@@ -2027,6 +2027,9 @@ By player name
 
 By row
 == 行ごと
+
+Bytes per update
+== 更新あたりのバイト数
 
 c = Player position
 == c = プレイヤー座標
@@ -2394,6 +2397,12 @@ Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
 == まず出力デバイスを確認し、ヘッドホン/スピーカーがまだオンラインであることを確認する
 
+Check to cap the client update rate at 480 Hz to save power, which may increase input latency. Uncheck to restore unlimited updates (0).
+== オンにすると省電力のため更新レートを 480 Hz に制限します。入力遅延が増える場合があります。オフで無制限（0）に戻ります。
+
+Check to set the background map name to %current%. Uncheck to clear the name.
+== オンにすると背景マップ名を %current% に設定します。オフにすると名前を空にします。
+
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == しきい値をいじる前にデバイスを確認しましょう。マイクが無音の多くは入力デバイスの選び間違いだけです。
 
@@ -2607,9 +2616,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 一覧で言語をクリックするとすぐに反映されます。左側の国旗が現在の選択を示します。
 
-Click a part on the right to edit its color, blend mode and strength.
-== 右側のパーツをクリックして、色、ブレンドモード、強度を調整します。
-
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 == HDFや左ジャンプなどの行をクリックして好きなキーを押すと割り当てられます。隣のゴミ箱アイコンでその割り当てを消せます。
 
@@ -2669,6 +2675,9 @@ Click to remove this player from your friends list.
 
 Click to select server. Double click to join your friend.
 == クリックでサーバー選択、ダブルクリックで友達のサーバーに参加。
+
+Click to select, double-click to tint. Drag to replace a part. Right-click to reset.
+== クリックで選択、ダブルクリックで着色。ドラッグでパーツを置換し、右クリックで元に戻します。
 
 Client
 == クライアント
@@ -3654,6 +3663,9 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
+Customize translate button and menu colors
+== 翻訳ボタンとメニューの色をカスタマイズ
+
 Customize vote display and interaction
 == Customize vote display and interaction
 
@@ -4155,9 +4167,6 @@ Disable clipping
 Disable fast practice mode
 == 高速練習モードを無効にする
 
-Disable Gores auto-switch when picking up extra weapon
-== 追加武器取得時に Gores 自動切り替えを無効化
-
 Disabled
 == 無効
 
@@ -4455,6 +4464,9 @@ Dragger laser outline color
 Dragger Outline Color
 == ドラッガー外枠の色
 
+Draw a ghost at the server position of other tees so you can compare it with their predicted position.
+== 他のティーのサーバー位置にゴーストを表示し、予測位置と見比べられるようにします。
+
 Draw a glow around tees colored by their race team
 == レースチームの色で Tee の外側グローを描画
 
@@ -4517,9 +4529,6 @@ Drift intensity
 
 Drift smoothness
 == ドリフトの滑らかさ
-
-Drop on right canvas to replace one part.
-== 右側キャンバスにドロップして部品を1つ置き換える。
 
 Droplet
 == しずく
@@ -5091,9 +5100,6 @@ Enable ghost
 Enable Gores mode
 == Gores モードを有効化
 
-Enable Gores mode (King of Gores helper tools)
-== Gores モードを有効化（King of Gores 支援ツールセット）
-
 Enable gun sound
 == ガンサウンドを有効化
 
@@ -5322,6 +5328,9 @@ Enable the outlines, choose color and thickness, then test on a map with many di
 Enable the pet, pick its skin and size, then move around to watch how it follows.
 == ペットを有効にし、スキンとサイズを選んでから動き回り、追従の様子を確認します。
 
+Enable the selected Gores helpers, such as hammer switching and fast input, while this mode is active.
+== Gores モード中、ハンマーの持ち替えや高速入力など、選択した補助機能を有効にします。
+
 Enable the war list to change this setting
 == この設定を変更するには敵対リストを有効にしてください
 
@@ -5351,9 +5360,6 @@ Enable visual markers for enemy list
 
 Enable voice
 == 音声を有効にする
-
-Enable voice activation (VAD)
-== 音声アクティビティ検出（VAD）を有効化
 
 Enable voice chat
 == ボイスチャットを有効化
@@ -5646,11 +5652,8 @@ Expand console
 Expanded personalization sections (format: stableId=1;stableId2=0;)
 == 展開済みの個別調整セクション（形式: stableId=1;stableId2=0;）
 
-Experimental
-== 実験的
-
-Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
-== 実験機能：往復プローブに応答がない場合、上り UDP ゲームパケットを繰り返し送信します。送信量は最大三倍になります。下りのパケット損失や遅れて届く重複入力による問題は残ります。KCP 使用時は無効です。
+Experimental: without KCP and with PingEx support, use main connection probe reply statistics to add copies to subsequent outgoing UDP packets. Upload traffic may triple; download loss and late duplicates can still cause problems.
+== 実験的機能。KCP が無効でサーバーが PingEx に対応している場合、メイン接続のプローブ応答統計に基づき、その後の送信 UDP パケットに複製を追加します。上り通信量は最大3倍になり、下りの損失や遅れて届く複製の影響は残ります。
 
 Export
 == エクスポート
@@ -5715,8 +5718,8 @@ Exported to %s
 Exporting chat images: %d
 == チャット画像をエクスポート中：%d
 
-Expose IP to servers by default when adding a favorite (last choice on the server info page)
-== お気に入り追加時に既定でサーバーへ IP を公開します（サーバー情報ページの前回の選択を記憶）
+Expose playback controls to the operating system
+== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == 外部コンソールパスワード。エコノミーを有効にするには設定が必要
@@ -6159,9 +6162,6 @@ Font weight:
 Fonts without CJK glyphs show fallback squares for Chinese text.
 == CJK 字形を持たないフォントでは、中国語のテキストが代替の四角で表示されます。
 
-For Gores
-== Gores 用
-
 for Gores
 == for Gores
 
@@ -6207,6 +6207,9 @@ Fraction of players needed to pass a vote
 Frags
 == フラグ数
 
+Frame rate
+== フレームレート
+
 Frame time
 == フレーム時間
 
@@ -6215,9 +6218,6 @@ Frames buffered between capture and encoding. Deeper queues absorb slow encoder 
 
 Frames drawn per second when V-Sync is off; 0 = unlimited
 == 垂直同期オフ時に毎秒描画するフレーム数の上限。0 = 無制限
-
-Frankenstein (drop parts on right)
-== フランケンシュタイン（パーツを右側にドロップ）
 
 Free move
 == 自由移動
@@ -6401,6 +6401,9 @@ Functions
 
 Game
 == ゲーム
+
+Game / predicted tick
+== ゲームティック / 予測ティック
 
 Game assets
 == ゲームアセット
@@ -6807,6 +6810,12 @@ Has unread news
 HDF
 == HDF
 
+Hear members of your voice group at any distance on the map. Other players keep their usual distance limit.
+== 同じボイスグループの相手はマップ内の距離に関係なく聞こえます。他のプレイヤーには通常の距離制限が適用されます。
+
+Hear players who transmit by voice activation. With this off, only speakers on your VAD allowlist can use it to reach you.
+== 音声検出で送信するプレイヤーの声を受信します。オフではこの方式の声は VAD 許可リストの相手だけ聞こえます。
+
 Heart
 == ハート
 
@@ -6821,9 +6830,6 @@ Hello from ui_widget::Modal
 
 Help: %s
 == ヘルプ：%s
-
-Helpful for Gores: allow negative internal certainty for more conservative prediction
-== Gores に役立つ：より保守的な予測のために内部確実性を負の値にする
 
 Hi!
 == やあ!
@@ -6975,9 +6981,6 @@ Hide the in-game HUD, chat and spectator overlays while recording. Camera switch
 Hide toast
 == トーストを隠す
 
-Hide typing emoji during input
-== 入力中はタイピング表情を表示しない
-
 Hide UI for focused gameplay
 == 集中プレイのためにUIを非表示
 
@@ -7002,14 +7005,14 @@ High particle counts and trails cost frame rate; lower "Particle count" if your 
 High quality, slow
 == 高画質、遅い
 
-Higher input latency
-== 入力遅延増加
-
 Highlight Color
 == ハイライト色
 
 Highlight console commands
 == コンソールのコマンドを強調表示
+
+Highlight frozen tees holding hammer or hook. For other players, this requires a teammate whose pre-input has been received. Enable the matching icons to see which input is held.
+== 凍結中にハンマーかフックを押し続けているティーを強調します。他のプレイヤーは先行入力を受信した味方だけが対象です。対応するアイコンで入力を見分けられます。
 
 Highlight game type
 == ゲームタイプをハイライト
@@ -7025,6 +7028,9 @@ Highlight ping value
 
 Highlight selected players in the game world
 == Highlight selected players in the game world
+
+Highlight the X coordinate when a teammate stays horizontally aligned with you or your dummy for the configured time.
+== チームメイトと自分またはダミーの横位置が設定時間そろうと、ネームプレートの X 座標を強調します。
 
 Highlighted message
 == ハイライトメッセージ
@@ -7140,6 +7146,9 @@ Horizontal position
 Horizontal speed × ramp
 == 水平速度 × 補正倍率
 
+Horizontal speed × ramp (%d to %d blocks/s)
+== 水平速度 × 速度倍率（%d～%d ブロック/秒）
+
 Hostname of DNSBL provider for IP verification
 == IP 検証用 DNSBL プロバイダーのホスト名
 
@@ -7148,6 +7157,9 @@ Hover feedback style: 0 = scale, 1 = border highlight
 
 Hover for tooltip
 == ホバーでツールチップ
+
+Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
+== ホバー中: %p   次のホバー先: %p   アクティブ: %p   前回: %p
 
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 == ホイールやドラッグで端を越えて押し込める距離（UI ピクセル）。0 で無効
@@ -7263,6 +7275,9 @@ If 1, current driver is in blocking error state.
 If a device disappears after unplugging headphones, reselect it or restart the client.
 == ヘッドホンを外した後にデバイスが消えた場合は、もう一度選択するかクライアントを再起動してください。
 
+If both tees are frozen and another player hammers the inactive tee awake first, switch control to it.
+== 両方のティーが凍っているとき、操作していない方が先に他のプレイヤーのハンマーで解凍されたら、操作をそちらに切り替えます。
+
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == チャットスコアがこの値を超えると、プレイヤーは sv_spam_mute_duration 秒間ミュートされます。
 
@@ -7271,6 +7286,9 @@ If lasers can hit you when shot and pull you to bounce origin (0 for all new map
 
 If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IME appearance" brings back the defaults.
 == バーがチャットを覆うなら、まず不透明度か IME のフォントサイズを下げてください。IME の外観をリセットで既定に戻ります。
+
+If the server allows event prediction, play predicted sounds and particles before its reply. A hammer hit can sound twice.
+== サーバーがイベント予測を許可している場合、応答を待たずに予測した音とパーティクルを再生します。ハンマーの打撃音が二重に鳴ることがあります。
 
 If the wheel feels crowded, remove unused slots in the editor card.
 == ホイールが混み合って見えるなら、エディターカードで使っていないスロットを削除してください。
@@ -7355,6 +7373,9 @@ Improved -%s
 
 Improved anti ping
 == 改善されたアンチピング
+
+In Always Show mode, holding the hook collision line key uses four custom colors when enabled. When disabled, only the main line is inverted; the end segment keeps its color.
+== フック衝突線を「常に表示」にして表示キーを押している間、オンなら設定した4色を使います。オフなら主線の色だけを反転し、先端部分の色は変えません。
 
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 == DDNet では、フリーズハートでプレイヤーが凍結したときに再生されます。他のモードでは体力回復アイテムの取得に使われる場合があります。
@@ -7845,9 +7866,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 Keep the feeling of the maximum cursor distance independent of resolution
 == 最大カーソル距離の感覚を解像度に依存させない
 
-Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
-== 暗い背景には明るい文字が見やすいです。既定の見た目に戻すにはヒントの外観をリセットを押します。
-
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 == チームカラーとは別の色にしてください。同じだと同クランの名前がチームパネルに溶け込み、読みにくくなります。
 
@@ -8085,9 +8103,6 @@ Last viewed client release notes
 Latency
 == レイテンシ
 
-Latency compensation
-== レイテンシ補正
-
 Latency Jitter
 == レイテンシジッター
 
@@ -8151,6 +8166,9 @@ Leave preview
 Leave solo split mode
 == ソロスプリットモードを終了
 
+Leave spectating when another player hammers your active tee awake. A thawing timer alone does not trigger this.
+== 操作中のティーが他のプレイヤーのハンマーで解凍されたときに観戦を終了します。自然解凍では発動しません。
+
 Leave the path empty to auto-detect; fill it in only when the status says "Steam not found".
 == パスを空にすると自動検出します。状態が Steam が見つかりませんと表示されたときだけ入力してください。
 
@@ -8159,9 +8177,6 @@ Leave the pose session
 
 Left jump
 == 左ジャンプ
-
-Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
-== 左クリックでフランケンシュタインパーツの色を変更。ドラッグでパーツを入れ替え。右クリックでリセット。
 
 Left/right channel width
 == 左右チャンネル幅
@@ -8637,6 +8652,9 @@ Manual target
 Map
 == マップ
 
+Map and environment
+== マップと環境
+
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 == マップブラウザの難易度カテゴリフィルタのビットマスク（ビット 0-14、map_vote_difficulty.h 参照）
 
@@ -8785,7 +8803,7 @@ Mark the end of a demo cut
 == デモカットの終了をマーク
 
 Mark the freeze check at the center and the four death checks around each Tee
-== Tee の中心のフリーズ判定点と四隅の死亡判定点を十字で表示
+== ティーの中心に凍結判定点、周囲に4つの死亡判定点を表示します。
 
 Markers
 == マーカー
@@ -8943,9 +8961,6 @@ Maximum undo steps in editor history (editor, envelope editor, and server settin
 may cause delay
 == 遅延が発生する可能性があります
 
-May overload the service
-== サービスに過負荷がかかる可能性あり
-
 Measure a fixed cold glyph batch with performance diagnostics enabled
 == パフォーマンス診断を有効にして固定のコールドグリフバッチを測定
 
@@ -8960,6 +8975,9 @@ Mention option color
 
 Menu accent panel opacity
 == メニューアクセントパネルの不透明度
+
+Menu background
+== メニュー背景
 
 Menu button hover
 == メニューボタンのホバー
@@ -8984,6 +9002,12 @@ Menu music
 
 Menu opacity (0-100)
 == メニュー不透明度（Menu opacity 0-100）
+
+Menu option - normal
+== メニューオプション - 通常
+
+Menu option - selected
+== メニューオプション - 選択中
 
 Menu panel color
 == メニューパネルの色
@@ -9041,9 +9065,6 @@ Milliseconds to apply quick input early
 
 Min size
 == 最小サイズ
-
-Mini debug
-== ミニデバッグ
 
 Mini features
 == ミニ機能
@@ -9486,12 +9507,6 @@ Nameplate X alignment hint duration window (ms)
 Nameplate X alignment hint highlight color
 == ネームプレート X 揃えヒントハイライト色
 
-Nameplate X alignment hint strict mode
-== ネームプレート X 揃えヒント厳格モード
-
-Nameplate X alignment hint with local player
-== ネームプレートにローカルプレイヤーの X 座標との位置合わせヒントを表示
-
 Nameplates
 == ネームプレート
 
@@ -9632,9 +9647,6 @@ No assets
 
 No assets available for composition.
 == 合成に利用可能なアセットがありません。
-
-No assets found.
-== アセットが見つかりません。
 
 No audio issues detected
 == オーディオの問題は検出されませんでした
@@ -10053,6 +10065,9 @@ Old single-segment hook collision line
 Oldschool
 == オールドスクール
 
+Omit the typing flag from both tees' outgoing input so other players do not see your typing bubble.
+== 本体とダミーのどちらも入力中の状態をサーバーへ送らず、他のプレイヤーから入力中の吹き出しが見えなくなります。
+
 On
 == オン
 
@@ -10419,6 +10434,9 @@ p = Ping latency
 Pack name
 == パック名
 
+packets
+== パケット
+
 Panel
 == パネル
 
@@ -10551,6 +10569,9 @@ Pause voice when window unfocused
 Pause/unpause game
 == ゲームを一時停止/再開
 
+Peak speed: %.2f blocks/s
+== ピーク速度: %.2f ブロック/秒
+
 Penalty in seconds for saving or swapping positions
 == 位置の保存または交換に対するペナルティ（秒単位）
 
@@ -10610,9 +10631,6 @@ Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 
 Phrase
 == フレーズ
-
-Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
-== ヒントの背景色と文字色を選び、ヒントの文字サイズをドラッグし、小さく弾む動きが欲しければヒントのバウンスアニメーションをオンにします。
 
 Pick a color preset or a custom color, then choose regular or bold weight.
 == プリセット色かカスタム色を選び、次にウェイトを標準か太字から選びます。
@@ -11133,9 +11151,6 @@ Practice: teleport the other tee to your cursor
 Practice: teleport yourself to your cursor
 == 練習：自分をカーソル位置にテレポート
 
-Pre-warm settings page on startup and menu idle
-== 起動時とメニューアイドル時に設定ページをプリロード
-
 Predict client movement
 == クライアントの移動を予測
 
@@ -11168,6 +11183,9 @@ Predict ninja path
 
 Predict other player's movement (only enabled if cl_antiping is set to 1) (1 = always on, 2 = interaction only, 3 = 2 and frozen tees always)
 == 他プレイヤーの移動を予測（cl_antiping が 1 の場合のみ有効）（1 = 常時、2 = インタラクション時のみ、3 = 2 + 凍結 Tee は常時）
+
+Predict other tees and projectiles locally to show movement sooner. Their positions may shift when server updates arrive.
+== 他のティーや弾の動きを手元で予測し、早めに表示します。サーバーから更新が届くと表示位置がずれることがあります。
 
 Predict weapon projectiles (only with cl_antiping 1)
 == 武器の発射物を予測（cl_antiping 1 の場合のみ）
@@ -11208,8 +11226,14 @@ Prediction margin
 Prediction margin when frozen
 == フリーズ時の予測マージン
 
+Prediction time
+== 予測時間
+
 Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 == 予測は正確さと応答性のトレードオフです。上り冗長化は送信量を 3 倍にします。「ゲームトラフィックを優先」は Windows でパケットに印を付けるだけで、QoS 対応ルーターがなければ効果ありません。
+
+Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
+== 起動時やメニューの待機中に設定画面を数フレームに分けて準備し、初めて開くときの引っかかりを減らします。
 
 Preparing chat export: %d%%
 == チャットのエクスポートを準備中：%d%%
@@ -11409,8 +11433,14 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 == フリーズチャットメッセージを送信する確率 (0-100%)
 
+Process UDP receive (estimated)
+== プロセスの UDP 受信（推定）
+
 Process UDP RX (est.)
 == プロセス UDP 受信（推定）
+
+Process UDP send (estimated)
+== プロセスの UDP 送信（推定）
 
 Process UDP TX (est.)
 == プロセス UDP 送信（推定）
@@ -11892,9 +11922,6 @@ Receive Rate
 Receive translation method
 == 受信メッセージの翻訳方式
 
-Receive VAD speakers
-== VAD 発話者を受信
-
 Receive voice from spectators/inactive players
 == 観戦中/非アクティブプレイヤーのボイスを受信
 
@@ -11946,14 +11973,8 @@ Redeem your sponsor code to unlock a custom title, shown in chat and on your nam
 Redeems a sponsor code, sets the custom title it unlocks and picks how that title looks in chat.
 == 認証コードを引き換え、解除されるカスタム称号を設定し、チャットでの見せ方を選びます。
 
-Reduce antiping and player prediction when frozen
-== フリーズ時にアンチピンとプレイヤー予測を軽減
-
 Reduce prediction while frozen
 == 凍結中に予測量を減らす
-
-Reduce visual latency
-== 視覚的な遅延を低減
 
 Reduced
 == 縮小
@@ -12312,11 +12333,11 @@ Repeat message
 Repeat the latest chat message
 == 最新のチャットメッセージを繰り返す
 
+Repeat the replacement character per UTF-8 byte in custom word lists or per character in the public list. When off, use it once per match.
+== 置換文字を、自作リストでは一致部分の UTF-8 バイト数だけ、公開リストでは文字数だけ繰り返します。オフなら一致部分ごとに 1 個だけ表示します。
+
 Replace all friends
 == フレンドをすべて置き換える
-
-Replace censored words with length-based chars
-== ブロックワードの長さに応じて複数文字で置換
 
 Replace mode
 == 置換モード
@@ -12329,6 +12350,9 @@ Replace non-friend names with ID
 
 Replace non-friend skins with default
 == 非フレンドスキンをデフォルトに置換
+
+Replace same-size parts in the target family.
+== 対象と同じ系統でサイズが一致するパーツをまとめて置き換えます。
 
 Replace selected variant
 == 選択したバリアントを置換
@@ -12410,6 +12434,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == KCP 対応クライアントにセッションアップグレードを要求（グレースケール中はフォールバックのためにオフのまま）
+
+Require matching X coordinates rounded to hundredths of a tile for the whole interval. Normal mode allows a difference of 0.03 tiles.
+== 判定時間中、タイル単位で小数第2位まで丸めた X 座標が一致すると強調します。通常は 0.03 タイルまでの差を許容します。
 
 Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
 == qm_graphics_trace が有効なとき、フォントを再走査して解決済みの Unicode フォントフェイスとグリフを照会
@@ -12509,6 +12536,12 @@ Reset to defaults
 
 Reset tooltip appearance
 == ツールチップの外観を初期化
+
+Reset tooltip appearance to restore the default font size and bounce animation.
+== ツールチップの外観をリセットすると、既定の文字サイズとバウンスアニメーションに戻ります。
+
+Reset translation colors
+== 翻訳の配色を初期化
 
 Reset tuning after each map change
 == マップ変更ごとにチューニングをリセット
@@ -12753,8 +12786,8 @@ Same as "vote no"
 Same clan color in scoreboard
 == スコアボードの同クラン色
 
-Same group full map listening
-== 同じグループ内でマップ全体の音声を聞く
+Same-size family
+== 同系・同サイズ
 
 Sans-serif
 == サンセリフ
@@ -12905,6 +12938,9 @@ Scale down Tee
 
 Scale max mouse distance to 1000 for better aim
 == より良い照準のためにマウスの最大距離を 1000 に拡大
+
+Scale the existing faded opacity of paused tees and their nameplates in water or freeze zones by this percentage. At 100% their usual fading is unchanged.
+== 水中や凍結エリアで一時停止中のティーとネームプレートの、観戦用に薄くした不透明度にこの割合を掛けます。100% なら元の薄さを保ちます。
 
 Scale uncertainty duration by ping (100=1.0x)
 == 不確実性の持続時間を ping で拡大縮小 (100=1.0 倍)
@@ -13161,9 +13197,6 @@ Select map
 Select map for the pose file
 == ポーズファイルのマップを選択
 
-Select several name plate blocks in the preview and move them together
-== プレビューで複数のネームプレートブロックを選び、まとめて移動します
-
 Select the country flag for each player
 == Select the country flag for each player
 
@@ -13172,9 +13205,6 @@ Selected %d
 
 Selected candidate %d/%d under cursor.
 == カーソル下の候補 %d/%d が選択されました。
-
-Selected part: %d
-== 選択中のパーツ：%d
 
 Selected text color
 == 選択文字色
@@ -13482,9 +13512,6 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 Sets player and dummy name, clan and identity information.
 == プレイヤーとダミーの名前、クラン、プロフィール情報を設定します。
 
-Sets the client update rate to 480 Hz (0 = unlimited)
-== クライアント更新レートを 480 Hz に設定します（0 = 無制限）
-
 Sets the position, size and text style of the status bar.
 == ステータスバーの位置、サイズ、文字スタイルを設定します。
 
@@ -13601,6 +13628,9 @@ Show %s group
 
 Show a distance link between main tee and dummy
 == メインのティーとダミーを距離線で結ぶ
+
+Show a fixed HUD reference with fractional coordinates for takeoff and double jumps near tile edges.
+== タイルの端での踏み切りと二段ジャンプの目安になる座標の小数部分を、固定の早見表として HUD に表示します。
 
 Show a ghost of your best time after crossing the start line
 == スタートライン通過後にベストタイムのゴーストを表示
@@ -13875,9 +13905,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == ネームプレートに国旗を表示
 
-Show FPS, prediction time, and performance graphs
-== FPS、予測時間、パフォーマンスグラフを表示
-
 Show freeze bar under frozen players indicating thaw time
 == 凍結プレイヤーの下に解凍時間を示すフリーズバーを表示
 
@@ -13923,9 +13950,6 @@ Show generated skin outline for other tees
 Show ghost
 == ゴーストを表示
 
-Show ghost at unpredictable position of other players
-== 他のプレイヤーの予測不可能な位置にゴーストを表示
-
 Show ghost direction
 == ゴーストの向きを表示
 
@@ -13955,9 +13979,6 @@ Show hazard borders, character check points and weapon ranges
 
 Show health, shields and ammo
 == 体力、シールド、弾薬を表示
-
-Show hint at random top-left/right of player when main or dummy is hammered awake
-== 本体またはダミーがハンマーで起こされたとき、該当プレイヤーのランダムな左上または右上にヒントを表示
 
 Show hitboxes for
 == 表示対象
@@ -14079,9 +14100,6 @@ Show IP addresses in rcon commands (1 = on, 0 = off)
 Show join team option
 == チーム参加を表示
 
-Show jump hint based on fractional part of position
-== 位置の小数部分に基づいてジャンプヒントを表示
-
 Show jumps indicator
 == ジャンプ回数インジケーターを表示
 
@@ -14153,9 +14171,6 @@ Show mention option
 
 Show moving tiles in entities
 == エンティティに移動タイルを表示
-
-Show moving tiles in entity layer
-== エンティティレイヤーに移動タイルを表示
 
 Show my titles locally
 == 自分の称号の表示対象
@@ -14295,6 +14310,9 @@ Show pending crash reports on startup
 Show per-character title waves locally
 == 称号の文字を自分の画面で波打たせる
 
+Show performance graphs.
+== パフォーマンスグラフを表示
+
 Show pet
 == ペットを表示
 
@@ -14346,14 +14364,8 @@ Show position and angle
 Show position and angle (mini debug)
 == 位置と角度を表示（ミニデバッグ）
 
-Show position and angle debug info
-== 位置と角度のデバッグ情報を表示
-
 Show practice timer
 == 練習タイマーを表示
-
-Show predicted position as ghost, original as unpredictable player
-== 予測位置をゴーストとして表示、元の位置を予測不可能なプレイヤーとして表示
 
 Show pressed keys
 == 押されたキーを表示
@@ -14426,6 +14438,9 @@ Show skin names in nameplate
 
 Show skin release date and author
 == スキンの公開日と作者を表示
+
+Show song info in top-left corner
+== 左上に曲情報を表示
 
 Show spectate option
 == 観戦項目を表示
@@ -14615,6 +14630,9 @@ Show X
 
 Show Y
 == Y を表示
+
+Show your coordinates and aim angle on the HUD, or those of the tee you are watching. Free view shows coordinates only.
+== HUD に自分または観戦中のティーの座標と照準角度を表示します。自由視点では座標のみ表示します。
 
 Show your current team
 == 現在のチームを表示
@@ -14910,9 +14928,6 @@ Slightly fast encode
 Slow down the demo
 == デモの速度を下げる
 
-Slower
-== 低速
-
 Slower +%s
 == 自己ベストより遅い +%s
 
@@ -14960,9 +14975,6 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == メニュー/エディターでのスムーズスクロールアニメーション時間（ms、0 = オフ）
-
-Smooth sudden prediction margin corrections caused by ping spikes
-== ping の急上昇による予測マージンの急な補正を滑らかにします
 
 Smooth the mouse-driven camera in live and demo free spectating
 == ゲームとデモの自由観戦でマウス操作のカメラを滑らかに移動
@@ -15165,9 +15177,6 @@ Spectated player and friends
 Spectator opacity
 == 観戦者の不透明度
 
-Spectator opacity (percent)
-== 観戦者の不透明度（パーセント）
-
 Spectators
 == 観戦者
 
@@ -15263,6 +15272,9 @@ Squishy Tee deformation duration
 
 Squishy Tee deformation intensity
 == Q 弾 Tee 変形強度
+
+Staging memory
+== ステージングメモリ
 
 Standalone
 == 単独表示
@@ -15462,6 +15474,9 @@ Store the current practice tee state as the respawn point
 Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
 == 現在の Tee の状態（位置、武器、ジャンプ、移動状態）を練習用リスポーン地点として保存します。
 
+Streamed memory
+== ストリームメモリ
+
 Streamer mode
 == ストリーマーモード
 
@@ -15659,6 +15674,9 @@ System default
 
 System graphics settings
 == システムのグラフィックス設定
+
+System media controls
+== システムメディアコントロール
 
 System message
 == システムメッセージ
@@ -15879,9 +15897,6 @@ Tee size
 Tee status bar
 == Tee ステータスバー
 
-Tee to Freeze
-== Tee 対 Freeze
-
 Tee to Tee
 == Tee 対 Tee
 
@@ -16068,6 +16083,9 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 Text is too long for the selected translation service.
 == テキストが選択した翻訳サービスの長さ制限を超えています。
 
+Texture memory
+== テクスチャメモリ
+
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == ご支援と信頼に感謝します。それが私に前進し続ける勇気を与えてくれます。
 
@@ -16157,9 +16175,6 @@ The selected button is not visible. Do you want to deselect it or edit its visib
 
 The selected button is overlapping with other buttons.
 == 選択したボタンが他のボタンと重なっています。
-
-The selected part stays highlighted while you adjust its color.
-== 色を調整している間、選択したパーツがハイライト表示されます。
 
 The server is running a non-standard tuning on a pure game type.
 == サーバーが純粋なゲームタイプで非標準のチューニングを実行しています。
@@ -16259,6 +16274,9 @@ This ID is not connected
 
 This is the master switch for all interface animations
 == すべてのインターフェースアニメーションの総合スイッチ
+
+This legacy switch is saved, but microphone capture currently uses only the manual mic volume.
+== 旧設定として保存されます。現在の録音には手動で設定したマイク音量だけが適用されます。
 
 This map path cannot be used.
 == このマップパスは使用できません。
@@ -16379,9 +16397,6 @@ Ticks after freeze before applying max prediction reduction
 
 Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 == 各セグメントの前に録画せずに再生する tick 数。エフェクトやチャットの状態を区間の開始に合わせます。50 tick が 1 秒です。
-
-tile
-== タイル
 
 Tile outlines
 == タイルのアウトライン
@@ -16689,9 +16704,6 @@ Too many translation tasks
 Toolbox page
 == ツールボックスページ
 
-Tooltip background color
-== ツールチップの背景色
-
 Tooltip bounce animation
 == ツールチップの弾むアニメーション
 
@@ -16700,9 +16712,6 @@ Tooltip font size
 
 Tooltip preview
 == ツールチップのプレビュー
-
-Tooltip text color
-== ツールチップの文字色
 
 Tooltips
 == ツールチップ
@@ -16715,6 +16724,9 @@ Top right
 
 Total
 == 合計
+
+Total bytes
+== 合計バイト数
 
 Total fonts:
 == フォント総数：
@@ -16782,6 +16794,9 @@ Translate outgoing messages to
 Translate received messages to
 == 受信メッセージの翻訳先
 
+Translate UI
+== UI を翻訳
+
 Translate:
 == 翻訳：
 
@@ -16842,6 +16857,9 @@ Translation service returned an invalid or incomplete translation.
 Translation Settings
 == 翻訳設定
 
+Transmit without holding the talk key when the microphone level reaches or exceeds the voice activation threshold.
+== マイク音量が音声検出のしきい値以上になると、通話キーを押さなくても送信します。
+
 transmits your player name to info.ddnet.org
 == プレイヤー名を info.ddnet.org に送信します
 
@@ -16865,9 +16883,6 @@ Try reselecting output device, confirm headphones/speakers are online
 
 Try to change name near finish
 == ゴール付近で名前を変更しようとする
-
-Try to predict other entities to reduce lag feeling at high latency
-== 他のエンティティを予測して高レイテンシ時のラグ感を軽減
 
 Try toggling voice or reconnecting to server
 == ボイスのオン/オフを切り替えるか、サーバーに再接続してみてください
@@ -16895,6 +16910,9 @@ Tune variable to value or show current value
 
 Tune zone (map / override)
 == 調整ゾーン（マップ / 上書き）
+
+Tuning parameter
+== 調整パラメーター
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 非力な環境ではオフにしてください。カードは即座に開き、スクロールも即時になります。カーソル形状は見た目だけで、3 種とも同じ文字枠に収まります。
@@ -16986,6 +17004,9 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
 == サウンドをオンにしてからデバイスを選びます。一覧は起動時にオーディオバックエンドから取得されます。
 
+Turning point (%d to %d blocks/s)
+== 転換点（%d～%d ブロック/秒）
+
 Turning this off only changes your display.
 == オフにしても自分の画面の表示だけが変わります。
 
@@ -17024,6 +17045,9 @@ Type a map name or pick one below
 
 Type a word; results filter as you type across cards and config names.
 == 単語を入力すると、カードと設定名を対象に入力に合わせて結果が絞り込まれます。
+
+Type ID
+== 種類 ID
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == 検索欄に入力するか、すべて、お気に入り、最近を切り替え、スキンをクリックすると適用され、プラスアイコンでキューに追加します。
@@ -17262,6 +17286,9 @@ Unknown status
 Unknown title style
 == 不明なタイトルスタイル
 
+Unknown UUID
+== 不明な UUID
+
 Unlimited
 == 無制限
 
@@ -17361,6 +17388,9 @@ Updated this configuration.
 Updated this phrase.
 == フレーズを更新しました。
 
+Updates
+== 更新回数
+
 Updates per second while the window is inactive; 0 = unlimited
 == ウィンドウが非アクティブのときの 1 秒あたりの更新回数。0 = 無制限
 
@@ -17453,9 +17483,6 @@ Use custom chat bubble colors
 
 Use custom colors
 == カスタムカラーを使用
-
-Use custom colors for the pressed hook collision line (0 = always invert)
-== フックキー押下時にカスタムカラーを使用（0 = 常に反転）
 
 Use custom skins instead of the ninja tee
 == ニンジャ Tee の代わりにカスタムスキンを使用
@@ -17565,9 +17592,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == 円の代わりに Tee アイコンを使用
 
-Use the custom colors below while the hook key is held
-== フックキー押下中は下のカスタムカラーを使用
-
 Use the mouse wheel on a hovered module to scale it by 5%
 == ホバーした HUD モジュール上でマウスホイールを使用すると 5% 単位で拡大縮小します
 
@@ -17589,6 +17613,9 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == インジケーターに敵対リストグループを使用
 
+Use your latest input in local prediction before the next tick so movement appears sooner.
+== 次のティックを待たずに最新の入力を手元の予測に反映し、動きを早く表示します。
+
 Uses the active action with the current aiming position.
 == 現在の照準位置でアクティブアクションを使用します。
 
@@ -17606,9 +17633,6 @@ VAD allow list (comma-separated)
 
 VAD release delay (ms)
 == VAD リリース遅延（ミリ秒）
-
-VAD threshold (percent)
-== VAD しきい値（パーセント）
 
 Valid
 == 有効
@@ -18057,6 +18081,12 @@ Wheel distance per tick; hold Alt for 3x
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == ホイールのスクロール感：0=オリジナル（1ティックごとにリセット）、1=スムーズ（速度を引き継ぐ）、2=スプリング
 
+When another player hammers your main tee or dummy awake, show a hint above the other local tee, randomly on the left or right, only if it is connected and alive.
+== 他のプレイヤーが本体かダミーをハンマーで解凍すると、もう一方が接続中で生存している場合に限り、その左上か右上にランダムに通知を表示します。
+
+When other players' ghosts are visible, draw the solid tee at the server position and the ghost at the predicted position.
+== 他のプレイヤーのゴーストを表示している間、ティー本体をサーバー位置に、ゴーストを予測位置に描きます。
+
 When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
 == レース中は「フリーズ弾とレーザー」をオンのままにして、「ハンマーとフックの範囲」と「発射物、爆発、通常レーザー」をオフにすると、迫ってくるフリーズの危険がより見やすくなります。
 
@@ -18137,6 +18167,9 @@ Which message to display on zone enter; use 0 for normal area
 
 Which message to display on zone leave; use 0 for normal area
 == ゾーン退出時に表示するメッセージ。通常エリアの場合は 0 を使用
+
+While your tee is frozen, gradually shorten prediction up to the configured limit so displayed movement stays closer to server updates.
+== 自分のティーが凍っている間は予測の先読み時間を設定した上限まで徐々に短くし、表示をサーバー位置に近づけます。
 
 Whisper
 == ウィスパー
@@ -18227,6 +18260,21 @@ Windowed borderless
 
 Windowed fullscreen
 == ウィンドウフルスクリーン
+
+With free movement enabled, select multiple nameplate elements in the preview and drag them together.
+== 自由移動を有効にすると、プレビューで複数のネームプレート要素を選んでまとめてドラッグできます。
+
+With Gores auto-switch on and extra weapons equipped, pressing fire briefly selects the hammer, then restores your weapon.
+== Gores の武器自動切替中に追加武器を持っている場合、発射を押すと一時的にハンマーに切り替わり、元の武器に戻ります。
+
+With improved smoothing, erratic movement keeps other tees near their server positions for longer. This can help in Gores but makes network jitter more visible.
+== 新しい平滑化方式で相手が頻繁に方向を変えた際、サーバー位置に近い表示を長く保ちます。Gores の救助時に役立ちますが、通信の揺らぎが目立つことがあります。
+
+With only hammer and pistol in Gores mode, return to the pistol after switching to the hammer.
+== Gores モードでハンマーとピストルだけを持っているとき、ハンマーに持ち替えた後にピストルへ自動で戻します。
+
+With SyncWeaponInput, adjust the prediction margin to network timing. When off, use the larger of the base margin and the enabled fast input lead. Without server support, always use 10 ms.
+== サーバーが SyncWeaponInput に対応していれば、通信状況に応じて予測マージンを調整します。オフなら基準値と有効な高速入力の先行時間の大きい方を使います。非対応なら常に 10 ms です。
 
 Word Filter
 == ワードフィルター
@@ -18659,9 +18707,6 @@ Zoom out
 
 Zoom to current mouse target
 == 現在のマウスターゲットにズーム
-
-⚠️ FTAPI is a free service. Excessive use may cause service suspension.
-== ⚠️ FTAPI は無料サービスです。過度に使用するとサービスが停止される可能性があります。
 
 [AntiPing: predict other players]
 All

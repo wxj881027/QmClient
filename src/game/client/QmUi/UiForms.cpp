@@ -225,8 +225,8 @@ namespace ui_widget
 		const float FontSize = Options.m_FontSize > 0.0f ? std::min(Options.m_FontSize, Rect.h * CUi::ms_FontmodHeight) :
 								   Rect.h * CUi::ms_FontmodHeight * ui_token::control::ICON_INK_RATIO;
 		const float BodySize = FontSize > 0.0f ? FontSize : ui_token::control::BodySizeFromScale(Ctx.m_UiScale);
-		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth, BodySize);
-		const bool ShowClear = Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
+		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth, BodySize, Options.m_MinTextWidth);
+		const bool ShowClear = Layout.m_ClearRect.w > 0.0f && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
 		const float ClearAlpha = Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
 		// 编辑框始终拿整块内容框：DoEditBox 自己按行高垂直居中，光标高度按字号算，
 		// 若把矩形收成「正文框」会把光标上沿裁掉 1~2px（选区同理）。PadY 只参与
@@ -352,7 +352,7 @@ namespace ui_widget
 		if(RenderOnly)
 			pInput->SetEmptyText(pPreviousPlaceholder);
 
-		if(Clearable && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
+		if(Layout.m_ClearRect.w > 0.0f && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
 		{
 			const CUIRect &ClearRect = Layout.m_ClearRect;
 			// 清除按钮跟随内容出现/消失；槽位始终保留，文字不因 × 出现而重排。
@@ -798,7 +798,6 @@ namespace ui_widget
 	{
 		if(Ctx.m_pUi == nullptr || Ctx.m_pUi->DrawingSuppressed())
 			return;
-		Ctx.m_pUi->DoConfigTooltip(pId, pHitRect != nullptr ? pHitRect : &Rect, pId);
 		if(Ctx.m_pUi->MeasurementOnly())
 			return;
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
@@ -919,6 +918,8 @@ namespace ui_widget
 		const bool Clicked = !Ctx.m_pUi->RenderOnly() && ProcessInput && Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) != 0;
 		if(Clicked)
 			*pValue = !*pValue;
+		if(!Ctx.m_pUi->DrawingSuppressed())
+			Ctx.m_pUi->DoConfigTooltip(pId, &Rect, pId);
 		DrawToggle(Ctx, pId, *pValue, Rect, true, Animate);
 		return Clicked;
 	}

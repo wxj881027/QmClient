@@ -186,6 +186,19 @@ struct CListboxItem
 	// 行内容区：胶囊行已经把 token 派生的左右内边距让出来，文字/图标排在这里；
 	// 未启用胶囊行时与 m_Rect 相同，旧调用点用 m_Rect 排版不受影响。
 	CUIRect m_ContentRect;
+	// 行尾动作占独立命中区，保留整行反馈与列表键盘导航。
+	CUIRect TrailingAction(float Size) const
+	{
+		const float Side = std::clamp(Size, 0.0f, std::max(0.0f, std::min(m_ContentRect.h, m_ContentRect.w)));
+		return {m_ContentRect.x + m_ContentRect.w - Side, m_ContentRect.y + (m_ContentRect.h - Side) * 0.5f, Side, Side};
+	}
+	CUIRect SelectionHitRect(float TrailingActionSize) const
+	{
+		CUIRect Hit = m_Rect;
+		if(TrailingActionSize > 0.0f)
+			Hit.w = std::clamp(TrailingAction(TrailingActionSize).x - Hit.x, 0.0f, Hit.w);
+		return Hit;
+	}
 	CUi *m_pUi = nullptr;
 	bool m_GaussianBlurSuppressed = false;
 
@@ -385,7 +398,7 @@ public:
 	void SuppressInitialSelectionScroll() { m_InitialScrollPending = false; }
 	void SkipItems(int Count);
 	// CornerRadius < 0 时按行类型取默认值：单列整行是胶囊，多列网格沿用旧的小圆角。
-	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = -1.0f, vec2 Offset = vec2(0.0f, 0.0f));
+	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = -1.0f, vec2 Offset = vec2(0.0f, 0.0f), float TrailingActionSize = 0.0f);
 	CListboxItem DoCustomRow(float Height, bool ScrollHere = false);
 	void ResetScroll()
 	{

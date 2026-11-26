@@ -1415,6 +1415,54 @@ turkish = "Skor tablosunda yetkilendirilmiş isim rengi"
 polish = "Kolor nazwy autoryzowanego gracza na tablicy wyników"
 
 [[message]]
+key = "Click to select, double-click to tint. Drag to replace a part. Right-click to reset."
+[message.translations]
+simplified_chinese = "单击选中，双击调色。拖动替换部件，右键重置。"
+traditional_chinese = "按一下選取，按兩下調色。拖曳替換部件，按右鍵重設。"
+japanese = "クリックで選択、ダブルクリックで着色。ドラッグでパーツを置換し、右クリックで元に戻します。"
+korean = "클릭하면 선택하고 두 번 클릭하면 색을 바꿉니다. 끌어서 부품을 교체하고 우클릭으로 초기화합니다."
+russian = "Щелчок выбирает деталь, двойной щелчок открывает палитру. Перетащите деталь для замены. Правая кнопка сбрасывает изменения."
+german = "Klicken zum Auswählen, doppelklicken zum Färben. Zum Ersetzen ziehen, zum Zurücksetzen rechtsklicken."
+spanish = "Haz clic para seleccionar y doble clic para teñir. Arrastra para reemplazar una pieza. Haz clic derecho para restablecerla."
+french = "Cliquez pour sélectionner, double-cliquez pour teinter. Faites glisser pour remplacer une pièce. Un clic droit la réinitialise."
+brazilian_portuguese = "Clique para selecionar e clique duas vezes para colorir. Arraste para substituir uma peça. Clique com o botão direito para restaurar."
+portuguese = "Clique para selecionar e faça duplo clique para colorir. Arraste para substituir uma peça. Clique com o botão direito para repor."
+turkish = "Seçmek için tıklayın, renklendirmek için çift tıklayın. Parçayı değiştirmek için sürükleyin, sıfırlamak için sağ tıklayın."
+polish = "Kliknij, aby wybrać. Kliknij dwukrotnie, aby zabarwić. Przeciągnij, aby zastąpić część. Prawy przycisk myszy przywraca ustawienia."
+
+[[message]]
+key = "Replace same-size parts in the target family."
+[message.translations]
+simplified_chinese = "一起替换目标部件同族中尺寸相同的部件。"
+traditional_chinese = "一併替換目標部件同族中尺寸相同的部件。"
+japanese = "対象と同じ系統でサイズが一致するパーツをまとめて置き換えます。"
+korean = "대상과 같은 계열에서 크기가 같은 부품을 함께 교체합니다."
+russian = "Заменить все детали того же размера в группе выбранной детали."
+german = "Alle gleich großen Teile der Zielgruppe ersetzen."
+spanish = "Reemplaza las piezas del mismo tamaño en el grupo de destino."
+french = "Remplace les pièces de même taille dans la famille cible."
+brazilian_portuguese = "Substitui as peças do mesmo tamanho no grupo de destino."
+portuguese = "Substitui as peças do mesmo tamanho no grupo de destino."
+turkish = "Hedef gruptaki aynı boyutlu parçaları birlikte değiştirir."
+polish = "Zastąp części tego samego rozmiaru w grupie docelowej."
+
+[[message]]
+key = "Same-size family"
+[message.translations]
+simplified_chinese = "同族同尺寸"
+traditional_chinese = "同族同尺寸"
+japanese = "同系・同サイズ"
+korean = "같은 계열·크기"
+russian = "Группа по размеру"
+german = "Gruppe gleicher Größe"
+spanish = "Grupo del mismo tamaño"
+french = "Groupe de même taille"
+brazilian_portuguese = "Grupo do mesmo tamanho"
+portuguese = "Grupo do mesmo tamanho"
+turkish = "Aynı boyut grubu"
+polish = "Grupa tego samego rozmiaru"
+
+[[message]]
 key = "auto"
 [message.translations]
 simplified_chinese = "自动"
@@ -1977,8 +2025,8 @@ polish = "Zanim umrę"
 [[message]]
 key = "Best-effort DSCP marking of the game connection; may be ignored by routers"
 [message.translations]
-simplified_chinese = "尽力为游戏连接打 DSCP 标记，路由器可能忽略"
-traditional_chinese = "盡力為遊戲連線打 DSCP 標記，路由器可能忽略"
+simplified_chinese = "在 Windows 上为本体和分身的出站游戏包标记优先级。路由器可以忽略标记，因此不保证降低延迟。"
+traditional_chinese = "在 Windows 上為本體和分身的出站遊戲包標記優先級。路由器可以忽略標記，因此不保證降低延遲。"
 japanese = "ゲーム接続に可能な範囲で DSCP マーキングを付けます（ルーターが無視する場合があります）"
 korean = "게임 연결에 DSCP 표시를 최대한 적용합니다(라우터가 무시할 수 있음)"
 russian = "По возможности помечать игровое соединение меткой DSCP; маршрутизаторы могут её игнорировать"
@@ -6599,22 +6647,6 @@ turkish = "Oyunda mutlak kontrolör nişan almayı etkinleştir"
 polish = "Włącz absolutne celowanie kontrolerem w grze"
 
 [[message]]
-key = "Enable antiping (more aggressive prediction)"
-[message.translations]
-simplified_chinese = "启用抗延迟，即更激进的预测"
-traditional_chinese = "啟用抗延遲，即更激進的預測"
-japanese = "アンチピング（より積極的な予測）を有効にする"
-korean = "안티핑 활성화 (더 공격적인 예측)"
-russian = "Включить антипинг (более агрессивное предсказание)"
-german = "Antiping aktivieren (aggressivere Vorhersage)"
-spanish = "Habilitar antiping (predicción más agresiva)"
-french = "Activer l'antiping (prédiction plus agressive)"
-brazilian_portuguese = "Habilitar antiping (predição mais agressiva)"
-portuguese = "Ativar antiping (predição mais agressiva)"
-turkish = "Antiping'i etkinleştir (daha agresif tahmin)"
-polish = "Włącz antyping (bardziej agresywna predykcja)"
-
-[[message]]
 key = "Enable antispoof for vanilla 0.6 clients"
 [message.translations]
 simplified_chinese = "为原版 0.6 客户端启用反欺骗"
@@ -7623,36 +7655,20 @@ turkish = "Çık ve kur"
 polish = "Wyjdź i zainstaluj"
 
 [[message]]
-key = "Experimental"
+key = "Experimental: without KCP and with PingEx support, use main connection probe reply statistics to add copies to subsequent outgoing UDP packets. Upload traffic may triple; download loss and late duplicates can still cause problems."
 [message.translations]
-simplified_chinese = "实验性"
-traditional_chinese = "實驗性"
-japanese = "実験的"
-korean = "실험적"
-russian = "экспериментально"
-german = "experimentell"
-spanish = "experimental"
-french = "expérimental"
-brazilian_portuguese = "experimental"
-portuguese = "experimental"
-turkish = "deneysel"
-polish = "eksperymentalne"
-
-[[message]]
-key = "Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."
-[message.translations]
-simplified_chinese = "实验功能：往返探针未获回复时重复发送上行 UDP 游戏包。上行流量最多增至三倍；下行丢包和晚到的重复输入仍可能造成问题。使用 KCP 时停用。"
-traditional_chinese = "實驗功能：往返探針未獲回覆時重複傳送上行 UDP 遊戲封包。上行流量最多增至三倍；下行丟包和晚到的重複輸入仍可能造成問題。使用 KCP 時停用。"
-japanese = "実験機能：往復プローブに応答がない場合、上り UDP ゲームパケットを繰り返し送信します。送信量は最大三倍になります。下りのパケット損失や遅れて届く重複入力による問題は残ります。KCP 使用時は無効です。"
-korean = "실험 기능: 왕복 탐침에 응답이 없으면 상향 UDP 게임 패킷을 반복 전송합니다. 업로드 트래픽은 최대 세 배가 되며, 하향 패킷 손실이나 늦게 도착한 중복 입력은 여전히 문제를 일으킬 수 있습니다. KCP 사용 시 비활성화됩니다."
-russian = "Экспериментальная функция: повторно отправляет исходящие игровые UDP-пакеты, если нет ответов на проверочные запросы. Исходящий трафик может утроиться; потеря входящих пакетов и запоздалые копии ввода всё ещё могут вызывать проблемы. При KCP отключена."
-german = "Experimentell: Sendet ausgehende UDP-Spielpakete mehrfach, wenn Prüfanfragen unbeantwortet bleiben. Der Upload kann sich verdreifachen; verlorene eingehende Pakete und verspätete Eingabekopien können weiterhin Probleme verursachen. Bei KCP deaktiviert."
-spanish = "Experimental: repite los paquetes UDP salientes del juego cuando las sondas de ida y vuelta no reciben respuesta. El tráfico de subida puede triplicarse; la pérdida de bajada y las entradas duplicadas tardías aún pueden causar problemas. Se desactiva con KCP."
-french = "Expérimental : répète les paquets UDP sortants du jeu lorsque les sondes aller-retour restent sans réponse. Le trafic montant peut tripler ; les pertes descendantes et les entrées dupliquées tardives peuvent toujours poser problème. Désactivé avec KCP."
-brazilian_portuguese = "Experimental: repete pacotes UDP de saída do jogo quando as sondagens de ida e volta ficam sem resposta. O tráfego de envio pode triplicar; perdas no recebimento e entradas duplicadas atrasadas ainda podem causar problemas. Desativado com KCP."
-portuguese = "Experimental: repete pacotes UDP enviados pelo jogo quando as sondagens de ida e volta ficam sem resposta. O tráfego de envio pode triplicar; perdas na receção e entradas duplicadas atrasadas ainda podem causar problemas. Desativado com KCP."
-turkish = "Deneysel: gidiş-dönüş yoklamaları yanıtsız kalırsa giden UDP oyun paketlerini tekrar gönderir. Yükleme trafiği üç katına çıkabilir; indirme kayıpları ve geç ulaşan yinelenmiş girdiler sorun çıkarmaya devam edebilir. KCP kullanılırken devre dışıdır."
-polish = "Eksperymentalnie powtarza wychodzące pakiety UDP gry, gdy sondy nie otrzymują odpowiedzi. Ruch wychodzący może wzrosnąć trzykrotnie; utrata pakietów przychodzących i opóźnione kopie wejścia nadal mogą powodować problemy. Wyłączone przy KCP."
+simplified_chinese = "实验性：未启用 KCP 且服务器支持 PingEx 时，按主连接的探测回复统计，为后续出站 UDP 包添加冗余副本。上传流量可能增至三倍；下行丢包和迟到的重复包仍可能造成问题。"
+traditional_chinese = "實驗性：未啟用 KCP 且伺服器支援 PingEx 時，依主連線的探測回覆統計，為後續送出的 UDP 封包增加副本。上傳流量可能增至三倍；下行掉包和遲到的重複封包仍可能造成問題。"
+japanese = "実験的機能。KCP が無効でサーバーが PingEx に対応している場合、メイン接続のプローブ応答統計に基づき、その後の送信 UDP パケットに複製を追加します。上り通信量は最大3倍になり、下りの損失や遅れて届く複製の影響は残ります。"
+korean = "실험 기능: KCP가 꺼져 있고 서버가 PingEx를 지원하면 주 연결의 탐사 응답 통계를 바탕으로 이후 송신 UDP 패킷에 복사본을 추가합니다. 업로드 트래픽이 세 배가 될 수 있으며 수신 손실과 늦게 도착하는 중복 패킷 문제는 남습니다."
+russian = "Экспериментально: без KCP и при поддержке PingEx статистика ответов на пробы основного соединения определяет число копий последующих исходящих UDP-пакетов. Исходящий трафик может утроиться; потери на приёме и запоздалые копии всё ещё могут мешать."
+german = "Experimentell: Ohne KCP und mit PingEx werden anhand der Antwortstatistik der Hauptverbindung Kopien späterer ausgehender UDP-Pakete gesendet. Der Upload kann sich verdreifachen; Empfangsverluste und verspätete Duplikate können weiterhin stören."
+spanish = "Experimental: sin KCP y con soporte para PingEx, usa las estadísticas de respuesta de la conexión principal para añadir copias a los siguientes paquetes UDP salientes. El tráfico de subida puede triplicarse; las pérdidas de bajada y los duplicados tardíos aún pueden causar problemas."
+french = "Expérimental : sans KCP et avec prise en charge de PingEx, utilise les statistiques de réponse aux sondes de la connexion principale pour ajouter des copies aux prochains paquets UDP sortants. Le trafic montant peut tripler ; les pertes en réception et les doublons tardifs restent possibles."
+brazilian_portuguese = "Experimental: sem KCP e com suporte a PingEx, usa as estatísticas de resposta das sondas da conexão principal para adicionar cópias aos próximos pacotes UDP enviados. O tráfego de upload pode triplicar; perdas na recepção e duplicatas atrasadas ainda podem causar problemas."
+portuguese = "Experimental: sem KCP e com suporte para PingEx, usa as estatísticas de resposta às sondas da ligação principal para acrescentar cópias aos próximos pacotes UDP enviados. O tráfego de envio pode triplicar; as perdas na receção e os duplicados tardios ainda podem causar problemas."
+turkish = "Deneysel: KCP kapalıyken ve PingEx destekleniyorsa ana bağlantının yoklama yanıt istatistiklerine göre sonraki giden UDP paketlerine kopyalar ekler. Gönderim trafiği üç katına çıkabilir; indirmedeki kayıplar ve geciken kopyalar hâlâ sorun yaratabilir."
+polish = "Eksperymentalne: bez KCP i przy obsłudze PingEx dodaje kopie do kolejnych wychodzących pakietów UDP na podstawie statystyk odpowiedzi na sondy głównego połączenia. Ruch wysyłany może wzrosnąć trzykrotnie; straty przy odbiorze i spóźnione duplikaty nadal mogą powodować problemy."
 
 [[message]]
 key = "Export"
@@ -9415,20 +9431,36 @@ turkish = "Yüksekten düşüğe"
 polish = "Od wysokiego do niskiego"
 
 [[message]]
-key = "Higher input latency"
+key = "Check to cap the client update rate at 480 Hz to save power, which may increase input latency. Uncheck to restore unlimited updates (0)."
 [message.translations]
-simplified_chinese = "增加输入延迟"
-traditional_chinese = "輸入延遲較高"
-japanese = "入力遅延増加"
-korean = "입력 지연 증가"
-russian = "более высокая задержка ввода"
-german = "höhere Eingabeverzögerung"
-spanish = "mayor latencia de entrada"
-french = "latence d'entrée plus élevée"
-brazilian_portuguese = "maior latência de entrada"
-portuguese = "maior latência de entrada"
-turkish = "daha yüksek giriş gecikmesi"
-polish = "wyższe opóźnienie wejścia"
+simplified_chinese = "勾选后将客户端更新率限制为 480 Hz 以省电，输入延迟可能增加。取消勾选恢复不限（0）。"
+traditional_chinese = "勾選後將用戶端更新率限制為 480 Hz 以省電，輸入延遲可能增加。取消勾選恢復不設限（0）。"
+japanese = "オンにすると省電力のため更新レートを 480 Hz に制限します。入力遅延が増える場合があります。オフで無制限（0）に戻ります。"
+korean = "켜면 절전을 위해 클라이언트 갱신율을 480 Hz로 제한하며 입력 지연이 늘 수 있습니다. 끄면 무제한(0)으로 돌아갑니다."
+russian = "При включении ограничивает частоту обновлений клиента до 480 Гц для экономии энергии, что может увеличить задержку ввода. При выключении снимает ограничение (0)."
+german = "Aktivieren begrenzt die Aktualisierungsrate des Clients auf 480 Hz, um Strom zu sparen. Die Eingabeverzögerung kann steigen. Deaktivieren hebt die Begrenzung auf (0)."
+spanish = "Marca la casilla para limitar las actualizaciones del cliente a 480 Hz y ahorrar energía; puede aumentar la latencia de entrada. Desmárcala para volver al modo sin límite (0)."
+french = "Cochez pour limiter les mises à jour du client à 480 Hz et économiser de l’énergie, au risque d’augmenter la latence de saisie. Décochez pour retirer la limite (0)."
+brazilian_portuguese = "Marque para limitar a taxa de atualização do cliente a 480 Hz e economizar energia. Isso pode aumentar a latência de entrada. Desmarque para voltar ao modo sem limite (0)."
+portuguese = "Marque para limitar a taxa de atualização do cliente a 480 Hz e poupar energia. A latência de entrada pode aumentar. Desmarque para voltar ao modo sem limite (0)."
+turkish = "İşaretlerseniz güç tasarrufu için istemci güncelleme hızı 480 Hz ile sınırlanır; girdi gecikmesi artabilir. İşareti kaldırınca sınır kalkar (0)."
+polish = "Zaznacz, aby ograniczyć częstotliwość aktualizacji klienta do 480 Hz i oszczędzać energię. Może to zwiększyć opóźnienie wejścia. Odznaczenie przywraca brak limitu (0)."
+
+[[message]]
+key = "Enable antiping (more aggressive prediction)"
+[message.translations]
+simplified_chinese = "启用抗延迟，即更激进的预测"
+traditional_chinese = "啟用抗延遲，即更激進的預測"
+japanese = "アンチピング（より積極的な予測）を有効にする"
+korean = "안티핑 활성화 (더 공격적인 예측)"
+russian = "Включить антипинг (более агрессивное предсказание)"
+german = "Antiping aktivieren (aggressivere Vorhersage)"
+spanish = "Habilitar antiping (predicción más agresiva)"
+french = "Activer l'antiping (prédiction plus agressive)"
+brazilian_portuguese = "Habilitar antiping (predição mais agressiva)"
+portuguese = "Ativar antiping (predição mais agressiva)"
+turkish = "Antiping'i etkinleştir (daha agresif tahmin)"
+polish = "Włącz antyping (bardziej agresywna predykcja)"
 
 [[message]]
 key = "Highlight Color"
@@ -10711,22 +10743,6 @@ turkish = "Lazer efekti iyileştirmesi"
 polish = "Ulepszenie efektu lasera"
 
 [[message]]
-key = "Latency compensation"
-[message.translations]
-simplified_chinese = "AntiPing"
-traditional_chinese = "AntiPing"
-japanese = "レイテンシ補正"
-korean = "지연 시간 보정"
-russian = "компенсация задержки"
-german = "Latenzkompensation"
-spanish = "compensación de latencia"
-french = "compensation de latence"
-brazilian_portuguese = "compensação de latência"
-portuguese = "compensação de latência"
-turkish = "gecikme telafisi"
-polish = "kompensacja opóźnienia"
-
-[[message]]
 key = "Later"
 [message.translations]
 simplified_chinese = "稍后"
@@ -11173,6 +11189,22 @@ brazilian_portuguese = "Alvo manual"
 portuguese = "Alvo manual"
 turkish = "Manuel hedef"
 polish = "Ręczny cel"
+
+[[message]]
+key = "Map and environment"
+[message.translations]
+simplified_chinese = "地图与环境"
+traditional_chinese = "地圖與環境"
+japanese = "マップと環境"
+korean = "맵 및 환경"
+russian = "Карта и окружение"
+german = "Karte und Umgebung"
+spanish = "Mapa y entorno"
+french = "Carte et environnement"
+brazilian_portuguese = "Mapa e ambiente"
+portuguese = "Mapa e ambiente"
+turkish = "Harita ve çevre"
+polish = "Mapa i otoczenie"
 
 [[message]]
 key = "Map browser color"
@@ -14855,26 +14887,10 @@ turkish = "Olayları tahmin et (deneysel)"
 polish = "Przewiduj zdarzenia (eksperymentalne)"
 
 [[message]]
-key = "Predict events (sounds, particles)"
-[message.translations]
-simplified_chinese = "预测事件（声音、粒子）"
-traditional_chinese = "預測事件（聲音、粒子）"
-japanese = "イベント（サウンド、パーティクル）を予測"
-korean = "이벤트 예측 (소리, 파티클)"
-russian = "Прогнозировать события (звуки, частицы)"
-german = "Ereignisse vorhersagen (Sounds, Partikel)"
-spanish = "Predecir eventos (sonidos, partículas)"
-french = "Prédire les événements (sons, particules)"
-brazilian_portuguese = "Prever eventos (sons, partículas)"
-portuguese = "Prever eventos (sons, partículas)"
-turkish = "Olayları tahmin et (sesler, parçacıklar)"
-polish = "Przewiduj zdarzenia (dźwięki, cząsteczki)"
-
-[[message]]
 key = "Predict fire and show predicted weapon physics (requires cl_antiping_grenade 1 and cl_antiping_weapons 1)"
 [message.translations]
-simplified_chinese = "预测开火并显示武器物理预测（需 cl_antiping_grenade 1 与 cl_antiping_weapons 1）"
-traditional_chinese = "預測開火並顯示武器物理預測（需 cl_antiping_grenade 1 與 cl_antiping_weapons 1）"
+simplified_chinese = "同时开启武器和榴弹轨迹预测后，提前显示开火及武器的预测效果。"
+traditional_chinese = "同時開啟武器和榴彈軌跡預測後，提前顯示開火及武器的預測效果。"
 japanese = "発射を予測し、予測された武器物理を表示（cl_antiping_grenade 1 と cl_antiping_weapons 1 が必要）"
 korean = "발사 예측 및 예측된 무기 물리 표시 (cl_antiping_grenade 1 및 cl_antiping_weapons 1 필요)"
 russian = "Прогнозировать стрельбу и показывать прогнозируемую физику оружия (требуется cl_antiping_grenade 1 и cl_antiping_weapons 1)"
@@ -14905,8 +14921,8 @@ polish = "Przewiduj kafelki zamrożenia (0 = wył., 1 = wł., 2 = częściowe (p
 [[message]]
 key = "Predict grenade trajectory (only with cl_antiping 1)"
 [message.translations]
-simplified_chinese = "预测榴弹轨迹（仅在 cl_antiping 为 1 时）"
-traditional_chinese = "預測榴彈軌跡（僅在 cl_antiping 為 1 時）"
+simplified_chinese = "开启延迟补偿后，在服务器下一次更新前推算榴弹的飞行轨迹。"
+traditional_chinese = "開啟延遲補償後，在伺服器下一次更新前推算榴彈的飛行軌跡。"
 japanese = "グレネードの軌道を予測（cl_antiping 1 の場合のみ）"
 korean = "유탄 궤적 예측 (cl_antiping 1에서만)"
 russian = "Прогнозировать траекторию гранатомёта (только с cl_antiping 1)"
@@ -14921,8 +14937,8 @@ polish = "Przewiduj trajektorię granatu (tylko z cl_antiping 1)"
 [[message]]
 key = "Predict other player's movement (only enabled if cl_antiping is set to 1) (1 = always on, 2 = interaction only, 3 = 2 and frozen tees always)"
 [message.translations]
-simplified_chinese = "预测其他玩家的移动（仅在 cl_antiping 设为 1 时启用）（1 = 始终开启，2 = 仅交互时，3 = 2 且始终预测冻结 Tee）"
-traditional_chinese = "預測其他玩家的移動（僅在 cl_antiping 設為 1 時啟用）（1 = 始終開啟，2 = 僅互動時，3 = 2 且始終預測凍結 Tee）"
+simplified_chinese = "开启延迟补偿后，可始终预测其他玩家，或仅在有交互时预测。选择“交互”后还可让冻结玩家始终参与预测。"
+traditional_chinese = "開啟延遲補償後，可始終預測其他玩家，或僅在有交互時預測。選擇“交互”後還可讓凍結玩家始終參與預測。"
 japanese = "他プレイヤーの移動を予測（cl_antiping が 1 の場合のみ有効）（1 = 常時、2 = インタラクション時のみ、3 = 2 + 凍結 Tee は常時）"
 korean = "다른 플레이어의 움직임 예측(cl_antiping이 1일 때만 활성화)(1 = 항상 켜기, 2 = 상호작용 중에만, 3 = 2 및 얼어 있는 Tee는 항상 예측)"
 russian = "Предсказывать движение других игроков (включается только при cl_antiping = 1) (1 = всегда, 2 = только при взаимодействии, 3 = режим 2 и всегда для замороженных Tee)"
@@ -14937,8 +14953,8 @@ polish = "Przewiduj ruch innych graczy (włączone tylko gdy cl_antiping ma wart
 [[message]]
 key = "Predict weapon projectiles (only with cl_antiping 1)"
 [message.translations]
-simplified_chinese = "预测武器投射物（仅在 cl_antiping 为 1 时生效）"
-traditional_chinese = "預測武器投射物（僅在 cl_antiping 為 1 時生效）"
+simplified_chinese = "开启延迟补偿后，在本地提前模拟武器发射的弹体，开火后更早看到弹道。"
+traditional_chinese = "開啟延遲補償後，在本機提前模擬武器發射的彈體，開火後更早看到彈道。"
 japanese = "武器の発射物を予測（cl_antiping 1 の場合のみ）"
 korean = "무기 발사체 예측 (cl_antiping 1에서만)"
 russian = "Прогнозировать снаряды оружия (только с cl_antiping 1)"
@@ -17351,20 +17367,20 @@ turkish = "Bir ön ayar seçip oyuncuya veya dummy’ye uygula"
 polish = "Wybierz preset, a następnie zastosuj do gracza lub dummy"
 
 [[message]]
-key = "Select several name plate blocks in the preview and move them together"
+key = "With free movement enabled, select multiple nameplate elements in the preview and drag them together."
 [message.translations]
-simplified_chinese = "在预览中选中多个名牌方块后整组移动"
-traditional_chinese = "在預覽中選取多個名牌方塊後整組移動"
-japanese = "プレビューで複数のネームプレートブロックを選び、まとめて移動します"
-korean = "미리보기에서 여러 네임플레이트 블록을 선택해 함께 이동합니다"
-russian = "Выберите несколько блоков таблички в предпросмотре и двигайте их вместе"
-german = "Mehrere Namensschild-Blöcke in der Vorschau auswählen und gemeinsam verschieben"
-spanish = "Selecciona varios bloques de la placa en la vista previa y muévelos juntos"
-french = "Sélectionnez plusieurs blocs du panneau dans l'aperçu et déplacez-les ensemble"
-brazilian_portuguese = "Selecione vários blocos da placa na prévia e mova-os juntos"
-portuguese = "Selecione vários blocos da placa na pré-visualização e mova-os juntos"
-turkish = "Önizlemede birkaç isim plakası bloğu seçip birlikte taşıyın"
-polish = "Zaznacz kilka bloków tabliczki w podglądzie i przesuwaj je razem"
+simplified_chinese = "开启自由移动后，可在预览中多选名牌元素，一起拖动。"
+traditional_chinese = "開啟自由移動後，可在預覽中多選名牌元素，一起拖曳。"
+japanese = "自由移動を有効にすると、プレビューで複数のネームプレート要素を選んでまとめてドラッグできます。"
+korean = "자유 이동을 켜면 미리보기에서 이름표 요소를 여러 개 선택해 함께 끌 수 있습니다."
+russian = "При включённом свободном перемещении можно выбрать несколько элементов таблички имени в предпросмотре и перетащить их вместе."
+german = "Bei aktivierter freier Bewegung kannst du mehrere Namensschild-Elemente in der Vorschau auswählen und gemeinsam ziehen."
+spanish = "Con el movimiento libre activado, puedes seleccionar varios elementos de la placa de nombre en la vista previa y arrastrarlos juntos."
+french = "Lorsque le déplacement libre est activé, sélectionnez plusieurs éléments de la plaque de nom dans l’aperçu pour les faire glisser ensemble."
+brazilian_portuguese = "Com o movimento livre ativado, selecione vários elementos da placa de nome na prévia e arraste todos juntos."
+portuguese = "Com o movimento livre ativado, selecione vários elementos da placa de nome na pré-visualização e arraste-os em conjunto."
+turkish = "Serbest taşıma açıkken önizlemede birden fazla isim etiketi öğesini seçip birlikte sürükleyebilirsiniz."
+polish = "Po włączeniu swobodnego przesuwania możesz zaznaczyć kilka elementów tabliczki z nazwą w podglądzie i przeciągnąć je razem."
 
 [[message]]
 key = "Select this preset to edit it"
@@ -17831,22 +17847,6 @@ turkish = "Arayüzün ne kadar hareket göstereceğini (geçişler, kart girişi
 polish = "Określa ilość animacji interfejsu (przejścia, wejście kart, animacje przestawiania, odczucie przewijania) oraz kształt kursora we wszystkich polach wprowadzania."
 
 [[message]]
-key = "Sets the client update rate to 480 Hz (0 = unlimited)"
-[message.translations]
-simplified_chinese = "把客户端更新频率设为 480 Hz（0 = 不限）"
-traditional_chinese = "將用戶端更新頻率設為 480 Hz（0 = 不限）"
-japanese = "クライアント更新レートを 480 Hz に設定します（0 = 無制限）"
-korean = "클라이언트 업데이트 속도를 480 Hz로 설정합니다 (0 = 무제한)"
-russian = "Устанавливает частоту обновления клиента на 480 Гц (0 = без ограничения)"
-german = "Setzt die Client-Aktualisierungsrate auf 480 Hz (0 = unbegrenzt)"
-spanish = "Ajusta la tasa de actualización del cliente a 480 Hz (0 = sin límite)"
-french = "Règle la fréquence de mise à jour du client à 480 Hz (0 = illimité)"
-brazilian_portuguese = "Define a taxa de atualização do cliente em 480 Hz (0 = sem limite)"
-portuguese = "Define a taxa de atualização do cliente em 480 Hz (0 = sem limite)"
-turkish = "İstemci güncelleme hızını 480 Hz olarak ayarlar (0 = sınırsız)"
-polish = "Ustawia częstotliwość aktualizacji klienta na 480 Hz (0 = bez ograniczeń)"
-
-[[message]]
 key = "Settings card background"
 [message.translations]
 simplified_chinese = "设置卡片背景"
@@ -17913,8 +17913,8 @@ polish = "Wspólny układ z kukłą"
 [[message]]
 key = "Share name plate offsets between own tee and dummy (0=separate)"
 [message.translations]
-simplified_chinese = "本体与分身共用同一套名牌偏移（0=分开）"
-traditional_chinese = "本體與分身共用同一套名牌偏移（0=分開）"
+simplified_chinese = "本体和分身共用名牌元素的位置偏移。关闭后可以分别调整两套布局。"
+traditional_chinese = "本體和分身共用名牌元素的位置偏移。關閉後可以分別調整兩套配置。"
 japanese = "本体とダミーでネームプレートのオフセットを共有（0=別々）"
 korean = "본체와 더미가 네임플레이트 오프셋 공유(0=별도)"
 russian = "Общие смещения таблички для своего ти и дубликата (0 = раздельно)"
@@ -20487,22 +20487,6 @@ turkish = "Menü/düzenleyicide yumuşak kaydırma animasyonu süresi (ms, 0=kap
 polish = "Czas trwania płynnej animacji przewijania w menu/edytorze (ms, 0 = wył.)"
 
 [[message]]
-key = "Smooth sudden prediction margin corrections caused by ping spikes"
-[message.translations]
-simplified_chinese = "平滑由网络抖动引起的预测余量突变"
-traditional_chinese = "平滑由網路抖動引起的預測餘量突變"
-japanese = "ping の急上昇による予測マージンの急な補正を滑らかにします"
-korean = "핑 급증으로 생기는 예측 여유의 급격한 보정을 부드럽게 합니다"
-russian = "Сглаживает резкие правки запаса предсказания из-за скачков пинга"
-german = "Glättet plötzliche Korrekturen der Vorhersage-Marge durch Ping-Spitzen"
-spanish = "Suaviza las correcciones repentinas del margen de predicción por picos de ping"
-french = "Lisse les corrections soudaines de la marge de prédiction dues aux pics de ping"
-brazilian_portuguese = "Suaviza as correções repentinas da margem de predição causadas por picos de ping"
-portuguese = "Suaviza as correções repentinas da margem de previsão causadas por picos de ping"
-turkish = "Ping sıçramalarının yol açtığı ani tahmin payı düzeltmelerini yumuşatır"
-polish = "Wygładza nagłe korekty marginesu predykcji wywołane skokami pingu"
-
-[[message]]
 key = "Smooth zoom animation time in editor (in ms, 0=off)"
 [message.translations]
 simplified_chinese = "编辑器中平滑缩放动画的时间（毫秒）（0 表示关闭）"
@@ -22407,22 +22391,6 @@ turkish = "Tuşları yorumlamadan önce çevir, klavye düzenine saygı göster"
 polish = "Tłumacz klawisze przed ich interpretacją, respektuj układ klawiatury"
 
 [[message]]
-key = "Try to predict other entities to reduce lag feeling at high latency"
-[message.translations]
-simplified_chinese = "尝试预测其他实体来降低高延迟带来的卡顿感"
-traditional_chinese = "嘗試預測其他實體來降低高延遲帶來的卡頓感"
-japanese = "他のエンティティを予測して高レイテンシ時のラグ感を軽減"
-korean = "높은 지연 시간에서 끊김 현상을 줄이기 위해 다른 엔티티 예측 시도"
-russian = "Попытаться предсказать другие сущности для уменьшения ощущения задержки при высокой задержке"
-german = "Versuche, andere Entitäten vorherzusagen, um das Gefühl von Verzögerung bei hoher Latenz zu reduzieren"
-spanish = "Intentar predecir otras entidades para reducir la sensación de retraso con alta latencia"
-french = "Essayer de prédire les autres entités pour réduire la sensation de latence à haute latence"
-brazilian_portuguese = "Tentar prever outras entidades para reduzir sensação de lag em alta latência"
-portuguese = "Tentar prever outras entidades para reduzir a sensação de lag com alta latência"
-turkish = "Yüksek gecikmede gecikme hissini azaltmak için diğer varlıkları tahmin etmeyi dene"
-polish = "Spróbuj przewidzieć inne encje, aby zmniejszyć opóźnienia przy wysokim ping"
-
-[[message]]
 key = "Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell."
 [message.translations]
 simplified_chinese = "机器较弱时关掉动效，卡片会立刻展开、滚动手感也随之关闭。光标形状只是外观：三种样式都占同一个字符格。"
@@ -23013,6 +22981,22 @@ brazilian_portuguese = "Usar mapa atual como fundo"
 portuguese = "Usar mapa atual como fundo"
 turkish = "Geçerli haritayı arka plan olarak kullan"
 polish = "Użyj bieżącej mapy jako tła encji"
+
+[[message]]
+key = "Check to set the background map name to %current%. Uncheck to clear the name."
+[message.translations]
+simplified_chinese = "勾选后将背景地图名设为 %current%；取消勾选会清空背景地图名。"
+traditional_chinese = "勾選後將背景地圖名稱設為 %current%；取消勾選會清空背景地圖名稱。"
+japanese = "オンにすると背景マップ名を %current% に設定します。オフにすると名前を空にします。"
+korean = "켜면 배경 맵 이름을 %current%로 설정합니다. 끄면 배경 맵 이름을 지웁니다."
+russian = "При включении задаёт имя фоновой карты %current%. При выключении очищает имя."
+german = "Aktivieren setzt den Namen der Hintergrundkarte auf %current%. Deaktivieren leert den Namen."
+spanish = "Marca la casilla para poner %current% como nombre del mapa de fondo. Al desmarcarla, se borra el nombre."
+french = "Cochez pour donner à la carte de fond le nom %current%. Décochez pour effacer ce nom."
+brazilian_portuguese = "Marque para definir o nome do mapa de fundo como %current%. Desmarque para limpar o nome."
+portuguese = "Marque para definir o nome do mapa de fundo como %current%. Desmarque para apagar o nome."
+turkish = "İşaretlerseniz arka plan haritasının adı %current% olur. İşareti kaldırınca harita adı temizlenir."
+polish = "Zaznaczenie ustawia nazwę mapy tła na %current%. Odznaczenie czyści nazwę."
 
 [[message]]
 key = "Use custom UI icon color"
@@ -24987,3 +24971,51 @@ brazilian_portuguese = "Tradução para português brasileiro pela comunidade DD
 portuguese = "Tradução portuguesa pela equipa DDNet e contribuidores QmClient"
 turkish = "Çeviri DDNet Ekibi ve QmClient Katkıda Bulunanları tarafından sağlanmaktadır"
 polish = "Tłumaczenie angielskie przez zespół DDNet"
+
+[[message]]
+key = "If the server allows event prediction, play predicted sounds and particles before its reply. A hammer hit can sound twice."
+[message.translations]
+simplified_chinese = "服务器允许事件预测时，提前播放预测的音效和粒子效果。一次锤击可能响两次。"
+traditional_chinese = "伺服器允許事件預測時，提前播放預測的音效與粒子效果。一次錘擊可能會響兩次。"
+japanese = "サーバーがイベント予測を許可している場合、応答を待たずに予測した音とパーティクルを再生します。ハンマーの打撃音が二重に鳴ることがあります。"
+korean = "서버에서 이벤트 예측을 허용하면 응답을 기다리지 않고 예측한 소리와 입자 효과를 재생합니다. 망치 타격음이 두 번 들릴 수 있습니다."
+russian = "Если сервер разрешает предсказание событий, воспроизводит звуки и частицы до ответа сервера. Звук удара молотком может прозвучать дважды."
+german = "Erlaubt der Server Ereignisvorhersage, werden vorhergesagte Geräusche und Partikel vor seiner Antwort abgespielt. Ein Hammerschlag kann zweimal zu hören sein."
+spanish = "Si el servidor permite predecir eventos, reproduce sonidos y partículas antes de recibir su respuesta. Un martillazo puede oírse dos veces."
+french = "Si le serveur autorise la prédiction des événements, joue les sons et affiche les particules prédits avant sa réponse. Un coup de marteau peut s’entendre deux fois."
+brazilian_portuguese = "Se o servidor permitir a previsão de eventos, reproduz os sons e as partículas previstos antes da resposta. Uma martelada pode ser ouvida duas vezes."
+portuguese = "Se o servidor permitir a previsão de eventos, reproduz os sons e as partículas previstos antes da resposta. Uma martelada pode ouvir-se duas vezes."
+turkish = "Sunucu olay tahminine izin veriyorsa yanıt gelmeden tahmin edilen sesleri ve parçacık efektlerini oynatır. Bir çekiç darbesi iki kez duyulabilir."
+polish = "Jeśli serwer zezwala na przewidywanie zdarzeń, odtwarza przewidziane dźwięki i efekty cząsteczkowe przed odpowiedzią. Jedno uderzenie młotkiem może być słyszalne dwukrotnie."
+
+[[message]]
+key = "Predict events (sounds, particles)"
+[message.translations]
+simplified_chinese = "预测事件（声音、粒子）"
+traditional_chinese = "預測事件（聲音、粒子）"
+japanese = "イベント（サウンド、パーティクル）を予測"
+korean = "이벤트 예측 (소리, 파티클)"
+russian = "Прогнозировать события (звуки, частицы)"
+german = "Ereignisse vorhersagen (Sounds, Partikel)"
+spanish = "Predecir eventos (sonidos, partículas)"
+french = "Prédire les événements (sons, particules)"
+brazilian_portuguese = "Prever eventos (sons, partículas)"
+portuguese = "Prever eventos (sons, partículas)"
+turkish = "Olayları tahmin et (sesler, parçacıklar)"
+polish = "Przewiduj zdarzenia (dźwięki, cząsteczki)"
+
+[[message]]
+key = "Predict other tees and projectiles locally to show movement sooner. Their positions may shift when server updates arrive."
+[message.translations]
+simplified_chinese = "按下面选中的项目提前显示其他玩家或弹道的位置。服务器更新到达时，画面可能出现位置修正。"
+traditional_chinese = "按下面選中的項目提前顯示其他玩家或彈道的位置。伺服器更新到達時，畫面可能出現位置修正。"
+japanese = "他のティーや弾の動きを手元で予測し、早めに表示します。サーバーから更新が届くと表示位置がずれることがあります。"
+korean = "다른 티와 투사체의 움직임을 미리 계산해 보여 줍니다. 서버 정보가 도착하면 위치가 달라질 수 있습니다."
+russian = "Клиент заранее показывает движение других игроков и снарядов. После обновления с сервера их положение может измениться."
+german = "Sagt die Bewegung anderer Tees und Geschosse lokal voraus. Bei einer Serveraktualisierung kann ihre Position springen."
+spanish = "Anticipa el movimiento de otros tees y proyectiles. Su posición puede cambiar al recibir datos del servidor."
+french = "Anticipe localement les déplacements des autres tees et des projectiles. Leur position peut changer à la réception des données du serveur."
+brazilian_portuguese = "Antecipa localmente o movimento dos outros tees e dos projéteis. A posição pode mudar quando chegam dados do servidor."
+portuguese = "Antecipa localmente o movimento dos outros tees e dos projéteis. A posição pode mudar quando chegam dados do servidor."
+turkish = "Diğer teelerin ve mermilerin hareketini yerel olarak öngörüp erken gösterir. Sunucudan güncelleme gelince konumları değişebilir."
+polish = "Przewiduje lokalnie ruch innych tee i pocisków. Po otrzymaniu danych z serwera ich pozycja może się zmienić."

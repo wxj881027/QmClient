@@ -6,6 +6,8 @@ How the Tee is drawn on screen: skin outlines, a custom-color hue cycle, emote s
 
 The outline traces the Tee silhouette so you can spot yourself in a crowd; "Skin outline for self and dummy" and "Skin outline for other players" are separate switches. The hue cycle makes a custom-colored Tee drift slowly around the color wheel at an adjustable speed; when the skin itself has no custom color, ticking it changes nothing, and it has no effect while TClient rainbow Tee is on. The emote shadow puts a shadow layer under the emote bubble; "Emoticon projectile duration" decides how long a locally fired emote keeps flying through the air.
 
+Enable colored frozen skins to set the darkening and keep skin-colored feet. The katana has a separate switch. For white feet on custom-colored skins, enable the white-feet option and enter the source skin name (default `x_ninja`).
+
 ## How to tune it
 
 | Width / opacity | Look | Fits |

@@ -7485,3 +7485,35 @@ brazilian_portuguese = "Estas opções são independentes. Ative apenas os recur
 portuguese = "Estas opções são independentes. Ative apenas as funcionalidades que utiliza para manter o chat e a tabela de pontuação limpos."
 turkish = "Bu seçenekler birbirinden bağımsızdır. Yalnızca kullandığınız özellikleri açarak sohbeti ve puan tablosunu sade tutabilirsiniz."
 polish = "Te opcje są niezależne. Włączaj tylko używane funkcje, aby czat i tabela wyników pozostały przejrzyste."
+
+[[message]]
+key = "Adjust the tooltip font size and bounce animation here. The background follows the popup layer color."
+[message.translations]
+simplified_chinese = "在这里调整气泡字号和弹跳动画；背景色跟随弹层颜色。"
+traditional_chinese = "在這裡調整氣泡字號和彈跳動畫；背景色跟隨彈層顏色。"
+japanese = "ここでツールチップの文字サイズとバウンスアニメーションを調整します。背景はポップアップ層の色に従います。"
+korean = "여기서 툴팁 글자 크기와 튕김 애니메이션을 조정합니다. 배경은 팝업 레이어 색을 따릅니다."
+russian = "Здесь настраиваются размер шрифта и анимация подсказки. Фон берётся из цвета слоя всплывающих окон."
+german = "Hier lassen sich Schriftgröße und Federn-Animation der Tooltips einstellen. Der Hintergrund folgt der Farbe der Popup-Ebene."
+spanish = "Aquí se ajustan el tamaño de letra y la animación de rebote de las ayudas. El fondo sigue el color de la capa de ventanas emergentes."
+french = "Ajustez ici la taille de police et l’animation de rebond des infobulles. Le fond suit la couleur de la couche des fenêtres contextuelles."
+brazilian_portuguese = "Ajuste aqui o tamanho da fonte e a animação de salto das dicas. O fundo segue a cor da camada de pop-ups."
+portuguese = "Ajuste aqui o tamanho da fonte e a animação de salto das dicas. O fundo segue a cor da camada de pop-ups."
+turkish = "Araç ipucu yazı boyutunu ve zıplama animasyonunu burada ayarlayın. Arka plan, açılır katman rengini izler."
+polish = "Tutaj dostosujesz rozmiar czcionki i animację odbicia podpowiedzi. Tło podąża za kolorem warstwy wyskakujących okien."
+
+[[message]]
+key = "Reset tooltip appearance to restore the default font size and bounce animation."
+[message.translations]
+simplified_chinese = "重置气泡外观可恢复默认字号和弹跳动画。"
+traditional_chinese = "重設氣泡外觀可恢復預設字號和彈跳動畫。"
+japanese = "ツールチップの外観をリセットすると、既定の文字サイズとバウンスアニメーションに戻ります。"
+korean = "툴팁 외관을 초기화하면 기본 글자 크기와 튕김 애니메이션이 복원됩니다."
+russian = "Сброс оформления подсказки возвращает стандартный размер шрифта и анимацию."
+german = "Das Zurücksetzen der Tooltip-Darstellung stellt die Standardschriftgröße und die Federn-Animation wieder her."
+spanish = "Restablecer la apariencia de las ayudas recupera el tamaño de letra y la animación de rebote predeterminados."
+french = "Réinitialiser l’apparence des infobulles rétablit la taille de police et l’animation de rebond par défaut."
+brazilian_portuguese = "Restaurar a aparência das dicas volta ao tamanho de fonte e à animação de salto padrão."
+portuguese = "Repor o aspeto das dicas restaura o tamanho de letra e a animação de salto predefinidos."
+turkish = "Araç ipucu görünümünü sıfırlamak, varsayılan yazı boyutunu ve zıplama animasyonunu geri getirir."
+polish = "Przywrócenie wyglądu podpowiedzi przywraca domyślny rozmiar czcionki i animację odbicia."

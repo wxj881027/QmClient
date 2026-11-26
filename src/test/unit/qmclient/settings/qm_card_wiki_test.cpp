@@ -22,6 +22,7 @@ TEST(CardWikiTest, EveryEntryCarriesIdAndThreeReadableSections)
 		const SCardWikiCopy *pCopy = CardWikiCopyAt(Index);
 		ASSERT_NE(pCopy, nullptr);
 		ASSERT_NE(pCopy->m_pStableId, nullptr);
+		SCOPED_TRACE(pCopy->m_pStableId);
 		EXPECT_FALSE(pCopy->m_pStableId[0] == '\0') << "entry " << Index << " has an empty stableId";
 		EXPECT_TRUE(SeenIds.insert(pCopy->m_pStableId).second) << "duplicate stableId: " << pCopy->m_pStableId;
 		ASSERT_NE(pCopy->m_pWhat, nullptr);

@@ -1454,6 +1454,9 @@ public:
 			SystemMessage += aSourceHint;
 		}
 
+		if(str_find(pText, qm_translate::CHAT_MENTION_TOKEN_PREFIX))
+			SystemMessage += "\nKeep every [[QM_PLAYER_...]] placeholder exactly as written and include each one once in the translation.";
+
 		// 字符串交给生产 JSON writer 转义，避免固定缓冲区截断提示词和 UTF-8。
 		const std::string Model = QuoteJsonString(GetLlmModel(m_Provider));
 		const std::string System = QuoteJsonString(SystemMessage.c_str());

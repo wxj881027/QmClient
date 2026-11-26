@@ -77,7 +77,6 @@ namespace qm_ui_test
 		bool ServerCapAnyPlayerFlag() const override { throw std::logic_error("unexpected UI client boundary call"); }
 		int GetPredictionTime() override { throw std::logic_error("unexpected UI client boundary call"); }
 		int GetPredictionTick() override { throw std::logic_error("unexpected UI client boundary call"); }
-		EPredictionMarginState PredictionMarginState() const override { throw std::logic_error("unexpected UI client boundary call"); }
 		float PingMs() const override { throw std::logic_error("unexpected UI client boundary call"); }
 		float PredictionLeadMs() const override { throw std::logic_error("unexpected UI client boundary call"); }
 		float PredictionMarginMs() const override { throw std::logic_error("unexpected UI client boundary call"); }
