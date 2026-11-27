@@ -602,10 +602,19 @@ void CGameClient::OnConsoleInit()
 	m_pConfig = m_pConfigManager->Values();
 	m_pInput = Kernel()->RequestInterface<IInput>();
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
-	m_pConsole->Register("qm_pref", "i[0|1] ?i[20-400]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
-		const int ThresholdMs = pResult->NumArguments() > 1 ? pResult->GetInteger(1) : CConfig::ms_QmPerfDebugThresholdMs;
+	m_pConsole->Register("qm_pref", "?i[0|1] ?i[20-400]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
+		IConsole *pConsole = static_cast<IConsole *>(pUserData);
+		if(pResult->NumArguments() == 0)
+		{
+			// 不带参数就是查询：打印当前开关和阈值，而不是甩一条 Usage。
+			char aLine[96];
+			str_format(aLine, sizeof(aLine), "qm_pref %d %d", static_cast<int>(QmPerfEnabled()), g_Config.m_QmPerfDebugThresholdMs);
+			pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "qm_pref", aLine);
+			return;
+		}
+		const int ThresholdMs = pResult->NumArguments() > 1 ? pResult->GetInteger(1) : g_Config.m_QmPerfDebugThresholdMs;
 		if(!QmApplyPerfPreferences(pResult->GetInteger(0), ThresholdMs))
-			static_cast<IConsole *>(pUserData)->Print(IConsole::OUTPUT_LEVEL_STANDARD, "qm_pref", Localize("Use qm_pref <0|1> [20-400] (milliseconds)")); }, m_pConsole, "Use qm_pref <0|1> [20-400] (milliseconds)");
+			pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "qm_pref", Localize("Use qm_pref <0|1> [20-400] (milliseconds)")); }, m_pConsole, "Use qm_pref <0|1> [20-400] (milliseconds)");
 	m_pConfigManager->RegisterCallback([](IConfigManager *pConfigManager, void *) {
 		if(!QmPerfEnabled() && g_Config.m_QmPerfDebugThresholdMs == CConfig::ms_QmPerfDebugThresholdMs)
 			return;
