@@ -143,7 +143,7 @@ enforce = "prompt_only"
         expected_terms = {
             "Grenade": ("榴弹枪", "pattern"),
             "Pistol": ("手枪", "exact"),
-            "Hook": ("钩索", "exact"),
+            "Hook": ("钩子", "exact"),
             "Scoreboard": ("计分板", "exact"),
             "Console": ("控制台", "exact"),
             "Demo": ("回放", "prompt_only"),

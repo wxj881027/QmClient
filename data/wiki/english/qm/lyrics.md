@@ -23,4 +23,3 @@ Lyrics follow the song's timeline — the line being sung is the line shown. Of 
 ## Related
 
 - [Dynamic Island](qm:dynamic_island)
-- [System media control](qm:system_media_controls)

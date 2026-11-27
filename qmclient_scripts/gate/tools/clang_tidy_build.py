@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 """QmClient clang-tidy 独立工具。
 
-三个环境变量控制扫描范围与判据：
+环境变量控制扫描范围与判据：
 
 - `CLANG_TIDY_CHANGED_ONLY=1`：只扫本次改动涉及的翻译单元（PR / merge queue 用）。
   改动里出现头文件、构建脚本或 `.clang-tidy` 本身时自动退回全量——头文件会被
@@ -10,6 +10,9 @@
 - `CLANG_TIDY_DIFF_BASE`：增量比较的基准（默认 `origin/master`）。
 - `CLANG_TIDY_RATCHET=0`：关掉扫完之后的防回潮判断（默认开启，见
   `clang_tidy_ratchet.py`）。
+- `CLANG_TIDY_UPDATE_BASELINE=1`：全量扫描后更新诊断基线。
+- `CLANG_TIDY_BASELINE`：指定基线文件路径（默认
+  `qmclient_scripts/gate/clang_tidy_baseline.json`）。
 """
 
 import json

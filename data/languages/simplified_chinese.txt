@@ -28,9 +28,6 @@
 "Advanced options" adds category filters and colors; join, version, rules and help texts still stay in chat.
 == 高级选项里能加类别过滤和颜色；进服、版本、规则和帮助类文字仍然留在聊天里。
 
-"Button - Enabled" only shows while automatic outgoing translation is on; "Reset translation colors" undoes your changes.
-== 按钮 - 启用只在自动翻译发送内容开启时显示；重置翻译颜色会撤销你的修改。
-
 "Copy all" only copies the filtered rows, so clear the search first if you want your whole list.
 == 复制全部只会复制筛选后的行，想复制完整列表请先清空搜索。
 
@@ -167,19 +164,19 @@
 == %s 请求与你交换。请等待 %s 秒后输入 /swap %s 完成
 
 %s is full. Waiting for a slot...
-== %s is full. Waiting for a slot...
+== %s 已满员，正在等待空位……
 
 %s joined this server
 == %s 好友进入本服
 
 %s moved to %s. Following in %d seconds...
-== %s moved to %s. Following in %d seconds...
+== %s 已转移到 %s，%d 秒后跟随……
 
 %s not found
 == 未找到 %s
 
 %s requires a password. Connect manually to enter it.
-== %s requires a password. Connect manually to enter it.
+== %s 需要密码，请手动连接并输入密码。
 
 %s translating to %s
 == %s 正在翻译为 %s
@@ -789,6 +786,9 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == 调整显示选项，进拥挤的服务器前先开一个投票查看布局。
 
+Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
+== 在这里调整气泡字号和弹跳动画；背景色跟随弹层颜色。
+
 Adjust trails rendered behind Tees
 == 调整 Tee 身后的轨迹效果
 
@@ -1007,9 +1007,6 @@ Angle:
 
 Angular gradient
 == 角度渐变
-
-Animate country flags
-== 国旗入场动画
 
 Animated title style id
 == 头衔动态风格 ID
@@ -1419,6 +1416,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 Auto weapon switch
 == 自动切锤
 
+Auto-accept team invites
+== 自动接受组队邀请
+
 Auto-accept team invites by sending /team <n>
 == 通过发送 /team <n> 自动接受组队邀请
 
@@ -1559,6 +1559,9 @@ Automatically re-join team 0 after finish (only if unlocked).
 
 Automatically record demos
 == 自动录制回放
+
+Automatically record performance diagnostics on startup
+== 启动时自动记录性能诊断
 
 Automatically record replays
 == 自动录制回放
@@ -1724,6 +1727,15 @@ Background Draw
 
 Background draw
 == 背景绘制
+
+Background frame rate
+== 后台帧率
+
+Background frame rate limit
+== 后台帧率上限
+
+Background frame rate: 0=follow display refresh rate, 1=custom cl_refresh_rate_inactive, 2=unlimited
+== 后台帧率：0=跟随显示器刷新率，1=自定义 cl_refresh_rate_inactive，2=不限
 
 Background image in menu
 == 菜单中的背景图
@@ -2049,12 +2061,6 @@ Built-in
 Built-in cfg is empty - nothing was installed
 == 内置 cfg 为空，没有写入任何内容。
 
-Button - Disabled
-== 按钮 - 未启用
-
-Button - Enabled
-== 按钮 - 已启用
-
 Button browser
 == 按键浏览器
 
@@ -2194,13 +2200,13 @@ Cannot open word list file. Previous words remain active.
 == 无法打开词表文件，继续使用上次成功加载的词条。
 
 Cannot prepare word list. Previous words remain active.
-== Cannot prepare word list. Previous words remain active.
+== 无法准备词表，继续使用上次成功加载的词条。
 
 Cannot read complete word list file. Previous words remain active.
 == 无法完整读取词表文件，继续使用上次成功加载的词条。
 
 Cannot read the wiki file
-== Cannot read the wiki file
+== 无法读取 Wiki 文件
 
 Cannot remove the wiki file
 == 无法删除 Wiki 文件
@@ -2393,9 +2399,6 @@ Chat export cancelled
 
 Chat export failed
 == 聊天记录导出失败
-
-Chat fade smooth time (milliseconds)
-== 聊天消息淡出过渡时长（毫秒）
 
 Chat font size
 == 聊天字体大小
@@ -2909,9 +2912,6 @@ Colors for chat command and emoji completion
 
 Colors of the hook collision line, in case of a possible collision with:
 == 钩子辅助线颜色（瞄准以下目标时）：
-
-Colors of the translate button in the chat input and of the language menu that button opens.
-== 聊天输入框里翻译按钮的颜色，以及该按钮打开的语言菜单的颜色。
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 == 为计分板各行着色：已认证玩家、同战队玩家、好友，以及好友列表中的战队成员。
@@ -3487,7 +3487,7 @@ Could not add this entry.
 == 无法添加此条目。
 
 Could not apply %s. The console could not parse the value.
-== Could not apply %s. The console could not parse the value.
+== 无法应用 %s，控制台无法解析该值。
 
 Could not back up configuration files.
 == 无法备份配置文件。
@@ -3779,9 +3779,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == 自定义位置跳跃提示
-
-Customize translate button and menu colors
-== 自定义翻译按钮和菜单颜色
 
 Customize vote display and interaction
 == 自定义投票显示和交互
@@ -5154,9 +5151,6 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 启用背景 3D 粒子拖尾
 
-Enable bounce-in entrance animation when country flags finish loading
-== 国旗图标加载完成时播放弹跳入场动画
-
 Enable camera drift
 == 启用镜头漂移
 
@@ -5312,9 +5306,6 @@ Enable Kugou Music hook integration
 
 Enable Kugou Music lyrics
 == 启用 酷狗音乐 歌词
-
-Enable left swipe offset on chat fade
-== 聊天消息淡出时启用左滑偏移
 
 Enable LLM thinking mode (may increase response time)
 == 请求支持推理的模型在翻译前进行思考，译文可能更晚返回。具体效果取决于所用模型和服务端。
@@ -5866,7 +5857,7 @@ Export failed
 == 导出失败
 
 Export failed. Could not compose %d edited slot(s).
-== 导出失败。有 %d 个已编辑的部件无法合成。
+== 导出失败：无法合成 %d 个已编辑槽位。
 
 Export name contains invalid characters.
 == 导出名称包含无效字符。
@@ -5915,9 +5906,6 @@ Exported to %s
 
 Exporting chat images: %d
 == 正在导出聊天图片：%d
-
-Expose playback controls to the operating system
-== 向操作系统提供播放控制
 
 External console password. Must be set to enable economy.
 == 外部控制台密码。需要设置此选项才能启用经济。
@@ -6328,7 +6316,10 @@ Follow
 == 跟随
 
 Follow a player across servers for this session
-== Follow a player across servers for this session
+== 本次会话中跨服务器跟随玩家
+
+Follow display
+== 跟随显示器
 
 Follow graphics setting
 == 跟随图形设置
@@ -6361,7 +6352,7 @@ Following %s across servers
 == 正在跨服跟随 %s
 
 Following %s to %s
-== Following %s to %s
+== 正在跟随 %s 前往 %s
 
 Following: %s
 == 正在跟随：%s
@@ -6498,11 +6489,17 @@ Freeze projectiles and lasers
 Freeze stars
 == 显示冻结效果的星星动画
 
+Freeze tile color
+== 冻结块颜色
+
 Freeze tile outline color
 == 冻结图块轮廓颜色
 
 Freeze tile outline width
 == 冻结块的描边宽度
+
+Freeze/deep freeze tile entity tint color
+== 冻结/深度冻结块实体着色
 
 Frequently asked questions
 == 常见问题
@@ -6826,7 +6823,7 @@ Glow range
 == 辉光范围
 
 Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
-== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== 字形栅格化：0=仅同步，1=后台 CPU 工作线程预取，2=后台 GPU 覆盖预取（可见文本始终同步）
 
 Go back one marker
 == 返回上一个标记
@@ -7006,7 +7003,7 @@ Hammer and gun switching made for Gores (KOG) servers, with optional Axiom login
 == 为 Gores（KOG）服务器设计的锤子与枪切换，可选 Axiom 登录和快速输入。
 
 Hammer and hook range
-== 锤击与钩索范围
+== 锤击与钩子范围
 
 Hammer hit
 == 锤子命中
@@ -7169,9 +7166,6 @@ Hide non-friend names/clans and show client ID
 
 Hide other players' ghosts when frozen
 == 自己被冻结时隐藏其他玩家的幽灵
-
-Hide own chat bubble (only when authenticated in remote console)
-== 登录远程控制台（rcon）后，本体和分身输入聊天时不向服务器报告打字状态，其他玩家看不到打字气泡。
 
 Hide player messages
 == 隐藏玩家消息
@@ -8136,9 +8130,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 Keep the feeling of the maximum cursor distance independent of resolution
 == 让最大光标距离的手感不受分辨率影响
 
-Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
-== 深色背景配浅色文字最好读；想恢复推荐样式就点重置提示外观。
-
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 == 这些颜色要和队伍颜色区分开，否则同战队名字会融进队伍面板里，变得难以辨认。
 
@@ -8561,9 +8552,6 @@ Links and gestures
 
 Links open in the system browser.
 == 链接会在系统浏览器中打开。
-
-Links the music playing on your system with the system media controls, and can show its title in the top-left HUD.
-== 把系统正在播放的音乐接入系统媒体控件，并可将其标题显示在左上角 HUD 中。
 
 Links to related project and community websites.
 == 指向相关项目与社区网站的链接。
@@ -9298,7 +9286,7 @@ may cause delay
 == 可能会产生延迟
 
 Measure a fixed cold glyph batch with performance diagnostics enabled
-== Measure a fixed cold glyph batch with performance diagnostics enabled
+== 在启用性能诊断的情况下测量固定的冷字形批次
 
 Medium
 == 中
@@ -9311,9 +9299,6 @@ Mention option color
 
 Menu accent panel opacity
 == 菜单强调面板透明度
-
-Menu background
-== 菜单背景
 
 Menu button hover
 == 菜单按钮悬停
@@ -9338,12 +9323,6 @@ Menu music
 
 Menu opacity (0-100)
 == 菜单不透明度（0-100）
-
-Menu option - normal
-== 菜单选项 - 普通
-
-Menu option - selected
-== 菜单选项 - 选中
 
 Menu panel color
 == 菜单面板颜色
@@ -10356,9 +10335,6 @@ Note
 Note:
 == 备注：
 
-Nothing appears until a media app is playing; use the buttons to check which app the system reports.
-== 没有媒体应用播放时不会显示任何内容；可用这些按钮确认系统上报的是哪个应用。
-
 Nothing hookable
 == 未瞄准可钩物体
 
@@ -10486,7 +10462,7 @@ Old files are deleted once the save limit is reached, so copy any demo you want 
 == 保存数量到上限后会删除旧文件，想留的录像记得另存。姿势截图像素预算不在这里，它是 .poses 文件渲染弹窗里的出图选项。
 
 Old single-segment hook collision line
-== 旧版单段钩索碰撞线
+== 旧版单段钩子辅助线
 
 Oldschool
 == 传统
@@ -11078,9 +11054,6 @@ Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 
 Phrase
 == 语录
-
-Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
-== 分别选提示背景色和提示文字色，拖动提示字号滑条，想要弹出时的小回弹就保持提示回弹动画开启。
 
 Pick a color preset or a custom color, then choose regular or bold weight.
 == 选择预设颜色或自定义颜色，再选择常规或粗体。
@@ -13023,8 +12996,8 @@ Reset to defaults
 Reset tooltip appearance
 == 恢复气泡默认外观
 
-Reset translation colors
-== 恢复翻译默认颜色
+Reset tooltip appearance to restore the default font size and bounce animation.
+== 重置气泡外观可恢复默认字号和弹跳动画。
 
 Reset tuning after each map change
 == 每次地图更改后是否重置调整
@@ -13934,9 +13907,6 @@ Server-side ghost opacity during fast practice (%)
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 设置背景颜色和背景不透明度，再设文字颜色、选中文字颜色与选中背景颜色；下方会实时预览。
-
-Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
-== 按钮部分设置按钮 - 禁用与按钮 - 启用，弹出菜单部分设置菜单背景和两行菜单选项。
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == 把显示方式设为按键显示或一直显示，再按需开启手枪辅助线和预测忍者路径，并调整颜色、线宽和透明度。
@@ -14966,9 +14936,6 @@ Show skin names in nameplate
 
 Show skin release date and author
 == 显示皮肤发布日期和作者
-
-Show song info in top-left corner
-== 在左上角显示歌曲信息
 
 Show spectate option
 == 显示旁观选项
@@ -16236,9 +16203,6 @@ System default
 System graphics settings
 == 系统图形设置
 
-System media controls
-== 系统媒体控制
-
 System message
 == 系统消息
 
@@ -16827,6 +16791,9 @@ There's an unsaved map in the editor, you might want to save it.
 These effects are cosmetic and can cost a little performance on weaker GPUs.
 == 这些特效只是观感，较弱显卡上会多占一点性能。
 
+These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered.
+== 这些选项彼此独立，只开启会用到的功能，聊天和计分板会更清爽。
+
 These options only change prediction on your client; what other players see is not affected.
 == 这些选项只改变你客户端的预测，不影响其他玩家看到的画面。
 
@@ -16946,9 +16913,6 @@ Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its m
 
 Tick "Enable 3D background particles", pick a "Particle type", then set "Particle count", "Particle speed" and "Particle color".
 == 勾选启用 3D 背景粒子，选择粒子类型，然后设置粒子数量、粒子速度和粒子颜色。
-
-Tick "Enable system media control", then "Show song info in top-left corner"; the Previous, Play/Pause and Next buttons drive the track.
-== 勾选启用系统媒体控件，再勾选在左上角显示歌曲信息；上一首、播放/暂停和下一首按钮可控制曲目。
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 勾选启用语音，打开高级选项选择输入设备和输出设备；说话时自动取消静音能让你空出静音键。
@@ -17313,9 +17277,6 @@ Too many translation tasks
 Toolbox page
 == 工具箱页面
 
-Tooltip background color
-== 提示气泡背景颜色
-
 Tooltip bounce animation
 == 提示气泡回弹动画
 
@@ -17324,9 +17285,6 @@ Tooltip font size
 
 Tooltip preview
 == 提示气泡预览
-
-Tooltip text color
-== 提示气泡文字颜色
 
 Tooltips
 == 提示气泡
@@ -17409,9 +17367,6 @@ Translate outgoing messages to
 Translate received messages to
 == 收到消息译为
 
-Translate UI
-== 翻译 UI
-
 Translate:
 == 翻译：
 
@@ -17430,29 +17385,11 @@ Translated text size
 Translating to %s...
 == 正在翻译为 %s……
 
-Translation button active color
-== 翻译按钮开启时的颜色
-
-Translation button cancel color
-== 翻译按钮取消时的颜色
-
 Translation canceled because the sender changed
 == 发送者已改变，翻译已取消
 
-Translation color alpha migration completed flag
-== 翻译颜色透明度迁移已完成标记
-
 Translation diagnostics
 == 翻译诊断
-
-Translation menu background color
-== 翻译菜单背景颜色
-
-Translation menu normal color
-== 翻译菜单正常颜色
-
-Translation menu selected color
-== 翻译菜单选中时颜色
 
 Translation model was not found. Check the model name.
 == 未找到翻译模型，请检查模型名称。
@@ -17738,9 +17675,6 @@ UI motion level
 
 UI mouse sens.
 == 鼠标灵敏度（界面）
-
-UI rounded corner segments (even numbers recommended)
-== UI 圆角分段数（建议使用偶数）
 
 UI scale
 == UI 大小
@@ -18042,6 +17976,9 @@ Updated this phrase.
 Updates
 == 更新次数
 
+Updates per second while the window is inactive; 0 = unlimited
+== 窗口处于非活动状态时每秒的更新次数；0 = 不限
+
 Updating preview…
 == 正在更新预览…
 
@@ -18216,8 +18153,8 @@ Use procedural ring pipeline
 Use public word filter
 == 使用公共屏蔽词
 
-Use qm_pref <0|1> [20-400] (milliseconds)
-== 用法：qm_pref <0|1> [20-400]（毫秒）
+Use qm_perf <0|1>
+== 用法：qm_perf <0|1>
 
 Use server defaults
 == 使用服务默认值
@@ -18769,7 +18706,7 @@ When other players' ghosts are visible, draw the solid tee at the server positio
 == 显示他人影子时，实体角色画在服务器位置，影子画在本地预测位置。
 
 When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
-== 跑图时可以保留「冻结子弹与激光」，关掉「锤击与钩索范围」和「子弹、爆炸与普通激光」，这样更容易看清迎面而来的冰弹和冰激光。
+== 跑图时可以保留「冻结子弹与激光」，关掉「锤击与钩子范围」和「子弹、爆炸与普通激光」，这样更容易看清迎面而来的冰弹和冰激光。
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已启用 TClient 彩虹 Tee 时，本功能不会生效。
@@ -20332,7 +20269,7 @@ Copy the current collaboration room code.
 
 [Editor]
 Could not generate the quad art image.
-== Could not generate the quad art image.
+== 无法生成四边形图像。
 
 [Editor]
 Could not generate the tile art image.
@@ -20740,7 +20677,7 @@ Drawing tools
 
 [Editor]
 Drawing tools require the active physics layers.
-== Drawing tools require the active physics layers.
+== 绘图工具需要启用物理层。
 
 [Editor]
 Duplicate
@@ -21208,7 +21145,7 @@ Failed to write image to file '%s'.
 
 [Editor]
 Failed to write sound to file '%s'.
-== Failed to write sound to file '%s'.
+== 无法将声音写入文件“%s”。
 
 [Editor]
 Falloff
@@ -21980,11 +21917,11 @@ No
 
 [Editor]
 No image selected.
-== No image selected.
+== 未选择图像。
 
 [Editor]
 No sound selected.
-== No sound selected.
+== 未选择声音。
 
 [Editor]
 No tile layer selected
@@ -22488,7 +22425,7 @@ Saving failed: Could not move temporary map file '%s' to '%s'.
 
 [Editor]
 Saving failed: Could not prepare or queue the map.
-== Saving failed: Could not prepare or queue the map.
+== 保存失败：无法准备或排队保存地图。
 
 [Editor]
 Saving failed: Could not replace map file '%s'; the previous version was restored or kept at '%s'.
@@ -22496,7 +22433,7 @@ Saving failed: Could not replace map file '%s'; the previous version was restore
 
 [Editor]
 Saving failed: Could not write map file '%s'.
-== Saving failed: Could not write map file '%s'.
+== 保存失败：无法写入地图文件“%s”。
 
 [Editor]
 saving to '%s'...
@@ -23012,7 +22949,7 @@ Sync interrupted: connection failed
 
 [Editor]
 Sync interrupted: the map was loaded, but the editor could not refresh it
-== Sync interrupted: the map was loaded, but the editor could not refresh it
+== 同步已中断：地图已加载，但编辑器无法刷新它
 
 [Editor]
 Sync interrupted: the room does not exist or has expired
@@ -23116,11 +23053,11 @@ The client only supports 64 images but more would be needed to add the selected 
 
 [Editor]
 The drawing is too large. Split it into smaller strokes.
-== The drawing is too large. Split it into smaller strokes.
+== 绘图过大，请拆分为更小的笔画。
 
 [Editor]
 The drawing preview is too large to display.
-== The drawing preview is too large to display.
+== 绘图预览过大，无法显示。
 
 [Editor]
 The file '%s' already exists.\n\nAre you sure that you want to overwrite it?
@@ -23128,11 +23065,11 @@ The file '%s' already exists.\n\nAre you sure that you want to overwrite it?
 
 [Editor]
 The file path is too long.
-== The file path is too long.
+== 文件路径过长。
 
 [Editor]
 The game and physics layers must have matching dimensions before they can be extended.
-== The game and physics layers must have matching dimensions before they can be extended.
+== 扩展前，游戏层和物理层的尺寸必须一致。
 
 [Editor]
 The map contains unsaved data, you might want to save it before you create a new map.\n\nContinue anyway?
@@ -23156,11 +23093,11 @@ The name of the selected envelope.
 
 [Editor]
 The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
-== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+== 四边形图像过大，请增大图像像素尺寸或减小四边形像素尺寸。
 
 [Editor]
 The requested tile layer dimensions are too large.
-== The requested tile layer dimensions are too large.
+== 请求的图块层尺寸过大。
 
 [Editor]
 The room is full; up to 4 people can collaborate

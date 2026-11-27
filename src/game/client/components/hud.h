@@ -526,6 +526,8 @@ class CHud : public CComponent
 
 	void RenderScoreHud();
 	int m_LastLocalClientId = -1;
+	// 上一帧实际画出的比分条宽度；HUD 编辑器选框按它伸缩，首帧未测量时退回旧宽度。
+	float m_ScoreHudEditorWidth = 0.0f;
 
 	void RenderSpectatorHud();
 	void RenderWarmupTimer();

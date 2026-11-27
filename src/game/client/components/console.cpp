@@ -946,7 +946,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		if(m_Type == CONSOLETYPE_LOCAL && !m_ChatExportMode && m_pGameConsole->Input()->AltIsPressed() &&
 			Event.m_Key >= KEY_1 && Event.m_Key <= KEY_5 && !m_pGameConsole->Input()->HasComposition())
 		{
-			SetLogFilterMask(QmSelectConsoleLogFilterCategory(LogFilterCategoryForButton(Event.m_Key - KEY_1)));
+			SetLogFilterMask(QmToggleConsoleLogFilterCategory(m_LogFilterMask, LogFilterCategoryForButton(Event.m_Key - KEY_1)));
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
@@ -1247,7 +1247,7 @@ bool CGameConsole::CInstance::MatchesLogFilter(const CBacklogEntry *pEntry) cons
 
 void CGameConsole::CInstance::SetLogFilterMask(int Mask)
 {
-	// 空掩码会让控制台一行不剩，用户也没有可点的按钮能走出来，因此不保留这个状态。
+	// 空掩码表示四类全部排除；顶栏按钮仍保留，用户可以逐类恢复或点「全部」。
 	const int Normalized = QmNormalizeConsoleLogFilterMask(Mask);
 	if(m_LogFilterMask == Normalized)
 		return;
@@ -2021,9 +2021,11 @@ void CGameConsole::OnRender()
 		Localize("All"), Localize("Players"), Localize("System"), Localize("Commands"), Localize("Binds")};
 	constexpr float FilterSpacing = 4.0f;
 	constexpr float FilterPadding = 6.0f;
-	float FilterWidth = 0.0f;
+	const float CategoryIndicatorWidth = FontSize + 4.0f;
+	std::array<float, CInstance::LOG_FILTER_BUTTON_COUNT> aFilterWidths{};
 	for(int i = 0; LocalConsole && i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
-		FilterWidth = maximum(FilterWidth, TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f);
+		aFilterWidths[i] = TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f +
+				   (i != 0 ? CategoryIndicatorWidth : 0.0f);
 	enum class EToolbarAction
 	{
 		SEARCH,
@@ -2091,14 +2093,14 @@ void CGameConsole::OnRender()
 		if(aFilterPresence[i] > 0.001f)
 		{
 			CurrentFilterWidth += QmConsoleUi::ToolbarFlowGap(FilterSpacing, HasVisibleFilter, aFilterPresence[i]);
-			CurrentFilterWidth += FilterWidth * aFilterPresence[i];
+			CurrentFilterWidth += aFilterWidths[i] * aFilterPresence[i];
 			HasVisibleFilter = true;
 		}
 		if(FilterTargetPresent)
 		{
 			if(HasPresentFilter)
 				TargetFilterWidth += FilterSpacing;
-			TargetFilterWidth += FilterWidth;
+			TargetFilterWidth += aFilterWidths[i];
 			HasPresentFilter = true;
 		}
 	}
@@ -2593,7 +2595,7 @@ void CGameConsole::OnRender()
 		// 静止态先把偏移吸到整行，再推进：滚动停下后正文不再带亚行余量，避免闪。
 		if(!pConsole->m_ScrollbarDragging && !pConsole->m_Selection.IsDragging() && !Scroll.Animating())
 			Scroll.SnapToNearestLine();
-		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight, VisibleBacklogLines));
+		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt, LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight, VisibleBacklogLines));
 		const float SubLine = ScrollFrame.m_SubLine;
 		const int MaxScroll = maximum(0, TotalBacklogLines - VisibleBacklogLines);
 		pConsole->m_BacklogCurLine = std::clamp(ScrollFrame.m_Line, 0, MaxScroll);
@@ -2610,7 +2612,7 @@ void CGameConsole::OnRender()
 			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogTextBottom + SubLine, LineHeight));
 		if(CanSelectLog && pConsole->m_MouseIsPress)
 		{
-			const int ScrollLines = pConsole->m_Selection.AutoScroll(pConsole->m_MouseRelease.y, LogTop, LogBottom, LineHeight, Client()->RenderFrameTime());
+			const int ScrollLines = pConsole->m_Selection.AutoScroll(pConsole->m_MouseRelease.y, LogTop, LogBottom, LineHeight, GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt);
 			// 拖选到边缘时的自动滚动按"跟手拖动"推进：每帧把这一帧算出的行数直接落到位移上，
 			// 既不经过弹簧（拖选要贴着指针走），又和滑块拖动共用同一份越界与夹取逻辑。
 			if(ScrollLines != 0)
@@ -2959,10 +2961,10 @@ void CGameConsole::OnRender()
 		const int LineEnd = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + pConsole->m_LinesRendered : 0;
 		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd,
 			Scroll.Following() ? Localize("Following") : Localize("Locked"));
-		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0, float Presence = 1.0f) {
+		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0, float Presence = 1.0f, float IndicatorWidth = 0.0f) {
 			return QmConsoleUi::Button(Ui(), Rect, pLabel, maximum(1.0f, FontSize * Scale), Selected,
 				m_ButtonPressPosition, ButtonMousePosition, pConsole->m_MouseIsPress, ButtonReleased, !SettingsOpen && m_ConsoleState == CONSOLE_OPEN,
-				0.0f, LocalConsole ? &Palette : nullptr, AnimationKey, Presence);
+				IndicatorWidth, LocalConsole ? &Palette : nullptr, AnimationKey, Presence);
 		};
 		const float FilterScale = Toolbar.m_FilterScale;
 		if(LocalConsole)
@@ -2975,15 +2977,16 @@ void CGameConsole::OnRender()
 				const int Category = CInstance::LogFilterCategoryForButton(i);
 				if(aFilterPresence[i] > 0.001f)
 					FilterX += QmConsoleUi::ToolbarFlowGap(FilterSpacing * FilterScale, HasVisibleFilter, aFilterPresence[i]);
-				const float Width = FilterWidth * FilterScale * aFilterPresence[i];
+				const float Width = aFilterWidths[i] * FilterScale * aFilterPresence[i];
 				if(aFilterPresence[i] > 0.001f)
 				{
 					const CUIRect Button = {FilterX, 3.0f, Width, FontSize + 10.0f};
 					const bool Clicked = ToolbarButton(Button, apFilterLabels[i], FilterScale,
 						QmConsoleLogFilterButtonActive(pConsole->m_LogFilterMask, Category),
-						ConsoleToolbarNodeKey("qm_console_toolbar_filter_selected", i), aFilterPresence[i]);
+						ConsoleToolbarNodeKey("qm_console_toolbar_filter_selected", i), aFilterPresence[i],
+						Category != QM_CONSOLE_LOG_CATEGORY_ALL ? CategoryIndicatorWidth * FilterScale : 0.0f);
 					if(Clicked && FilterTargetPresent)
-						pConsole->SetLogFilterMask(QmSelectConsoleLogFilterCategory(Category));
+						pConsole->SetLogFilterMask(QmToggleConsoleLogFilterCategory(pConsole->m_LogFilterMask, Category));
 					FilterX += Width;
 					HasVisibleFilter = true;
 				}

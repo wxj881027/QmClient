@@ -23,6 +23,7 @@
 #include <game/client/QmUi/QmCardOrderModel.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
@@ -96,7 +97,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 	static CLineInput s_StatusScheme(g_Config.m_QmStatusBarScheme, sizeof(g_Config.m_QmStatusBarScheme));
 	const int StatusBarCodeCount = (int)GameClient()->m_StatusBar.m_vpStatusItemTypes.size();
 	const int StatusBarItemCount = (int)GameClient()->m_StatusBar.m_StatusBarItems.size();
-	const float StatusBarPreviewHeight = LineSize + RowSpacing * 2.0f;
+	const float StatusBarPreviewHeight = LineSize + RowSpacing * ui_token::tclient::statusbar::PREVIEW_ROW_GAP_COUNT;
 
 	auto GetStatusBarEditorLabel = [](const CStatusItem *pItem) {
 		return str_comp(pItem->m_aName, "Space") == 0 ? pItem->m_aName : pItem->m_aDisplayName;
@@ -108,7 +109,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 		const int PreviewCount = MaxItems > 0 ? minimum(TotalCount, MaxItems) : TotalCount;
 		if(TotalCount <= 0 || PreviewCount <= 0)
 		{
-			PreviewRect.Margin(10.0f, &PreviewRect);
+			PreviewRect.Margin(ui_token::tclient::statusbar::PREVIEW_MARGIN, &PreviewRect);
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-empty-preview", &PreviewRect, Localize("No status bar items"), FontSize, TEXTALIGN_ML);
 			return;
 		}
@@ -147,7 +148,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 		}
 		const char *const *apCodes = s_vCodes.data();
 		CUIRect Label;
-		if(View.w > 360.0f)
+		if(View.w > ui_token::tclient::statusbar::WIDE_LAYOUT_MIN_WIDTH)
 		{
 			CUIRect LeftCodes, RightCodes;
 			View.VSplitMid(&LeftCodes, &RightCodes, RowSpacing);
@@ -284,10 +285,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 		if(HasScheme)
 		{
 			CUIRect SchemeLabel, SchemeInput, ApplyButton;
-			const float SchemeLabelWidth = std::min(StatusScheme.w * 0.28f, LineSize * 5.0f);
+			const float SchemeLabelWidth = std::min(StatusScheme.w * ui_token::tclient::statusbar::SCHEME_LABEL_MAX_RATIO, LineSize * ui_token::tclient::statusbar::SCHEME_LABEL_MIN_ROWS);
 			StatusScheme.VSplitLeft(SchemeLabelWidth, &SchemeLabel, &StatusScheme);
 			StatusScheme.VSplitLeft(RowSpacing, nullptr, &StatusScheme);
-			const float ApplyWidth = std::min(StatusScheme.w * 0.30f, std::max(LineSize * 2.5f, StatusScheme.w * 0.18f));
+			const float ApplyWidth = std::min(StatusScheme.w * ui_token::tclient::statusbar::APPLY_MAX_RATIO, std::max(LineSize * ui_token::tclient::statusbar::APPLY_MIN_ROWS, StatusScheme.w * ui_token::tclient::statusbar::APPLY_MIN_RATIO));
 			StatusScheme.VSplitRight(ApplyWidth, &SchemeInput, &ApplyButton);
 			SchemeInput.VSplitRight(RowSpacing, &SchemeInput, nullptr);
 			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &s_ApplyButton, "tclient-statusbar-apply-scheme", Localize("Apply"), 0, &ApplyButton) && !ReadOnly && !Ui()->RenderOnly())
@@ -409,25 +410,25 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 					{
 						CUIRect FullHeightItemButton = StatusItemButton;
 						FullHeightItemButton.y = 0.0f;
-						FullHeightItemButton.h = 10000.0f;
+						FullHeightItemButton.h = ui_token::tclient::statusbar::FULL_HEIGHT;
 						if(Ui()->MouseInside(&FullHeightItemButton))
 						{
 							std::swap(s_pItemButtons[i], s_pItemButtons[HotStatusIndex]);
 							std::swap(GameClient()->m_StatusBar.m_StatusBarItems[i], GameClient()->m_StatusBar.m_StatusBarItems[HotStatusIndex]);
 							s_SelectedItem = -2;
 							s_ItemSwaps[HotStatusIndex].m_InitialPosition = vec2(StatusItemButton.x, StatusItemButton.y);
-							s_ItemSwaps[HotStatusIndex].m_Duration = 0.15f;
+							s_ItemSwaps[HotStatusIndex].m_Duration = ui_token::tclient::statusbar::ITEM_SWAP_SEC;
 							s_ItemSwaps[i].m_InitialPosition = vec2(s_ActivePos.x, s_ActivePos.y);
-							s_ItemSwaps[i].m_Duration = 0.15f;
+							s_ItemSwaps[i].m_Duration = ui_token::tclient::statusbar::ITEM_SWAP_SEC;
 							GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_QmStatusBarScheme);
 						}
 					}
 					if(!ReadOnly)
 					{
-						s_ItemSwaps[i].m_Duration = std::max(0.0f, s_ItemSwaps[i].m_Duration - Client()->RenderFrameTime());
+						s_ItemSwaps[i].m_Duration = std::max(0.0f, s_ItemSwaps[i].m_Duration - GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt);
 						if(s_ItemSwaps[i].m_Duration > 0.0f)
 						{
-							const float Progress = std::pow(2.0, -5.0 * (1.0 - s_ItemSwaps[i].m_Duration / 0.15f));
+							const float Progress = std::pow(ui_token::tclient::statusbar::ITEM_SWAP_BASE, -ui_token::tclient::statusbar::ITEM_SWAP_STEEPNESS * (1.0 - s_ItemSwaps[i].m_Duration / ui_token::tclient::statusbar::ITEM_SWAP_SEC));
 							TempItemButton.x = mix(TempItemButton.x, s_ItemSwaps[i].m_InitialPosition.x, Progress);
 						}
 					}

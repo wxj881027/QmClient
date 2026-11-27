@@ -30,11 +30,6 @@ bool qm_card_catalog::QmCardRenderHook::RenderQmVisualCheckbox(CMenus *pMenus, C
 	return pMenus->RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, pId, pTextId, pText, pValue);
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmVisualTranslateUiContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing)
-{
-	pMenus->RenderQmVisualTranslateUiContent(Content, LineHeight, BodySize, LineSpacing);
-}
-
 void qm_card_catalog::QmCardRenderHook::RenderQmVisualStreamerContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing)
 {
 	pMenus->RenderQmVisualStreamerContent(Content, LineHeight, LineSpacing);
@@ -203,11 +198,6 @@ void qm_card_catalog::QmCardRenderHook::RenderQmHudNotificationsAdvancedContent(
 void qm_card_catalog::QmCardRenderHook::RenderQmHudVoiceContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmHudVoiceContent(Content, Metrics, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
-}
-
-void qm_card_catalog::QmCardRenderHook::RenderQmHudSystemMediaControlsContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
-{
-	pMenus->RenderQmHudSystemMediaControlsContent(Content, LineHeight, BodySize, LineSpacing, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }
 
 void qm_card_catalog::QmCardRenderHook::RenderQmHudLyricsContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly)

@@ -175,6 +175,25 @@ CUiScopedGaussianBlurSuppression::~CUiScopedGaussianBlurSuppression()
 		m_pUi->EndGaussianBlurSuppression();
 }
 
+CUiScopedPointerInputSuppression::CUiScopedPointerInputSuppression(CUi *pUi) :
+	CUiScopedPointerInputSuppression(pUi, true)
+{
+}
+
+CUiScopedPointerInputSuppression::CUiScopedPointerInputSuppression(CUi *pUi, bool Active) :
+	m_pUi(pUi),
+	m_Active(Active)
+{
+	if(m_pUi != nullptr && m_Active)
+		m_pUi->BeginPointerInputSuppression();
+}
+
+CUiScopedPointerInputSuppression::~CUiScopedPointerInputSuppression()
+{
+	if(m_pUi != nullptr && m_Active)
+		m_pUi->EndPointerInputSuppression();
+}
+
 void CUIElement::SUIElementRect::Reset()
 {
 	m_UIRectQuadContainer = -1;
@@ -1145,6 +1164,10 @@ bool CUi::MouseInside(const CUIRect *pRect) const
 
 bool CUi::UnderlyingPointerInputBlocked() const
 {
+	// 内容过渡趟读取的是动画中的临时矩形，任何按下/释放都不应在那里结算。
+	if(m_PointerInputSuppressDepth > 0)
+		return true;
+
 	if(m_PopupInputDepth > 0)
 		return false;
 
@@ -1739,6 +1762,17 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 {
 	if(RenderOnly())
 		return 0;
+	// 过渡趟内命中不在动画中的临时矩形上结算：本控件若还留着按下状态，
+	// 直接释放，不能等过渡结束后在目标位置补发一次点击。
+	if(PointerInputSuppressed())
+	{
+		if(m_pActiveItem == pId)
+		{
+			SetActiveItem(nullptr);
+			m_ActiveButtonLogicButton = -1;
+		}
+		return 0;
+	}
 	// 同一帧内只允许一个按钮激活。触摸按下后页面立刻切换时（例如游戏内点「设置」
 	// 打开设置页），原位置下方的另一个按钮会在同一帧读到同一次按下/抬起，
 	// 造成「点设置却退出游戏」这类双重点击。
@@ -1951,7 +1985,7 @@ void CUi::DoSmoothScrollLogic(float *pScrollOffset, float *pScrollOffsetChange, 
 	// smooth scrolling
 	if(*pScrollOffsetChange)
 	{
-		const float Delta = *pScrollOffsetChange * std::clamp(Client()->RenderFrameTime() * ScrollSpeed, 0.0f, 1.0f);
+		const float Delta = *pScrollOffsetChange * std::clamp(QmUiRenderDeltaSeconds(Client()->RenderFrameTime()) * ScrollSpeed, 0.0f, 1.0f);
 		*pScrollOffset += Delta;
 		*pScrollOffsetChange -= Delta;
 	}

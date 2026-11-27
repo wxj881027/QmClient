@@ -46,6 +46,7 @@
 #include <game/client/components/qmclient/browser_score.h>
 #include <game/client/components/qmclient/browser_selection.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
+#include <game/client/components/qmclient/browser_workspace_route.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/favorite_map_note_input.h>
 #include <game/client/components/qmclient/favorite_map_vote.h>
@@ -2375,13 +2376,17 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 			ApplyUiSwitchOffset(AnimatedTabContents, TransitionStrength, s_FilterTabDirection, false, 0.08f, 24.0f, 120.0f);
 		}
 
-		if(s_ActiveTab == FILTERTAB_COUNTRIES)
+		// 内容按动画中的偏移绘制时只允许绘制：命中与按钮状态必须在目标位置结算。
 		{
-			RenderServerbrowserCountriesFilter(AnimatedTabContents);
-		}
-		else if(s_ActiveTab == FILTERTAB_TYPES)
-		{
-			RenderServerbrowserTypesFilter(AnimatedTabContents);
+			CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), TransitionActive);
+			if(s_ActiveTab == FILTERTAB_COUNTRIES)
+			{
+				RenderServerbrowserCountriesFilter(AnimatedTabContents);
+			}
+			else if(s_ActiveTab == FILTERTAB_TYPES)
+			{
+				RenderServerbrowserTypesFilter(AnimatedTabContents);
+			}
 		}
 
 		if(TransitionActive)
@@ -3855,8 +3860,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 				const IUiContext Context = ui_widget::ControlContext(Ui());
 				const auto DoAction = [&](const CUIRect &IconRect, const void *pId, EQmIcon Icon, const char *pGlyph, int Checked, const char *pTooltip, const ui_widget::SIconButtonIconDraw *pDraw = nullptr) {
-					const CUIRect Hit = Actions.HitRect(IconRect);
-					const bool Pressed = ui_widget::DoIconButton(Context, pId, Icon, pGlyph, Checked, IconRect, Actions.ACTION_BUTTON_FLAGS, IGraphics::CORNER_ALL, true, std::nullopt, false, true, &Hit, pDraw) != 0;
+					const CUIRect Hit = decltype(Actions)::HitRect(IconRect);
+					const bool Pressed = ui_widget::DoIconButton(Context, pId, Icon, pGlyph, Checked, IconRect, decltype(Actions)::ACTION_BUTTON_FLAGS, IGraphics::CORNER_ALL, true, std::nullopt, false, true, &Hit, pDraw) != 0;
 					GameClient()->m_Tooltips.DoToolTip(pId, &IconRect, pTooltip);
 					if(Pressed)
 						ButtonResult = 0;
@@ -4746,16 +4751,16 @@ int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int Curr
 	m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2,
 		[this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
 
-	char aaTabLabels[4][128];
-	str_format(aaTabLabels[0], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Favorite map"), (int)GameClient()->m_TClient.GetFavoriteMaps().size());
-	str_format(aaTabLabels[1], sizeof(aaTabLabels[1]), "%s (%d)", Localize("Map play history"), (int)GameClient()->m_TClient.GetMapHistory().Entries().size());
-	str_format(aaTabLabels[2], sizeof(aaTabLabels[2]), "%s (%d)", Localize("Local saves"), (int)m_LocalSaveDisplay.Entries().size());
-	str_format(aaTabLabels[3], sizeof(aaTabLabels[3]), "%s", Localize("Statistics"));
-	const char *apTabLabels[4] = {aaTabLabels[0], aaTabLabels[1], aaTabLabels[2], aaTabLabels[3]};
+	char aaTabLabels[QmBrowserWorkspace::TAB_COUNT][128];
+	str_format(aaTabLabels[QmBrowserWorkspace::TAB_FAVORITES], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Favorite map"), (int)GameClient()->m_TClient.GetFavoriteMaps().size());
+	str_format(aaTabLabels[QmBrowserWorkspace::TAB_HISTORY], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Map play history"), (int)GameClient()->m_TClient.GetMapHistory().Entries().size());
+	str_format(aaTabLabels[QmBrowserWorkspace::TAB_SAVES], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Local saves"), (int)m_LocalSaveDisplay.Entries().size());
+	str_format(aaTabLabels[QmBrowserWorkspace::TAB_STATISTICS], sizeof(aaTabLabels[0]), "%s", Localize("Statistics"));
+	const char *apTabLabels[QmBrowserWorkspace::TAB_COUNT] = {aaTabLabels[0], aaTabLabels[1], aaTabLabels[2], aaTabLabels[3]};
 	// 胶囊滑块配色按浏览器面板表面自适应，两个页面都用同一档面板色。
 	const ui_widget::SCapsuleTabBarStyle TabStyle = CapsuleTabBarStyleFor(BrowserPanelColor(0.68f));
-	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, 4, CurrentTab, Segments, Rounding, &TabStyle, FontSize);
-	if(NewTab == 3)
+	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, QmBrowserWorkspace::TAB_COUNT, CurrentTab, Segments, Rounding, &TabStyle, FontSize);
+	if(NewTab == QmBrowserWorkspace::TAB_STATISTICS)
 		SetMenuPage(PAGE_STATS);
 	else if(NewTab != CurrentTab)
 		s_FavoriteMapsWorkspaceTab = NewTab;
@@ -5426,20 +5431,24 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 		ApplyUiSwitchOffset(ToolBox, TransitionStrength, s_ToolboxDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
-	switch(g_Config.m_UiToolboxPage)
 	{
-	case UI_TOOLBOX_PAGE_FILTERS:
-		RenderServerbrowserFilters(ToolBox);
-		break;
-	case UI_TOOLBOX_PAGE_INFO:
-		RenderServerbrowserInfo(ToolBox);
-		break;
-	case UI_TOOLBOX_PAGE_FRIENDS:
-		RenderServerbrowserFriends(ToolBox);
-		break;
-	default:
-		RenderServerbrowserFilters(ToolBox);
-		break;
+		// 内容按动画中的偏移绘制时只允许绘制：命中与按钮状态必须在目标位置结算。
+		CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), TransitionActive);
+		switch(g_Config.m_UiToolboxPage)
+		{
+		case UI_TOOLBOX_PAGE_FILTERS:
+			RenderServerbrowserFilters(ToolBox);
+			break;
+		case UI_TOOLBOX_PAGE_INFO:
+			RenderServerbrowserInfo(ToolBox);
+			break;
+		case UI_TOOLBOX_PAGE_FRIENDS:
+			RenderServerbrowserFriends(ToolBox);
+			break;
+		default:
+			RenderServerbrowserFilters(ToolBox);
+			break;
+		}
 	}
 
 	if(TransitionActive)

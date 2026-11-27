@@ -8965,11 +8965,18 @@ public:
 			{
 				dbg_msg("vulkan", "got resize event.");
 			}
-			m_CanvasWidth = (uint32_t)pCommand->m_Width;
-			m_CanvasHeight = (uint32_t)pCommand->m_Height;
+			// 尺寸没变就不要整链重建：启动时窗口尺寸会被重复下发一次，
+			// 每次白白丢掉 30ms 左右的交换链重建。
+			const uint32_t NewWidth = (uint32_t)pCommand->m_Width;
+			const uint32_t NewHeight = (uint32_t)pCommand->m_Height;
+			if(m_CanvasWidth != NewWidth || m_CanvasHeight != NewHeight)
+			{
+				m_CanvasWidth = NewWidth;
+				m_CanvasHeight = NewHeight;
 #ifndef CONF_PLATFORM_MACOS
-			m_RecreateSwapChain = true;
+				m_RecreateSwapChain = true;
 #endif
+			}
 		}
 		else
 		{
@@ -9014,11 +9021,14 @@ public:
 		{
 			dbg_msg("vulkan", "queueing swap chain recreation because multi sampling was changed");
 		}
-		m_RecreateSwapChain = true;
-
 		const auto Selected = vulkan_swapchain::SelectSampleCount(m_MaxMultiSample, pCommand->m_RequestedMultiSamplingCount);
 		const uint32_t MSCount = Selected == VK_SAMPLE_COUNT_1_BIT ? 0 : static_cast<uint32_t>(Selected);
-		m_NextMultiSamplingCount = MSCount;
+		// 采样数没变就跳过重建，避免重复应用同一档 FSAA 时多建一次交换链。
+		if(MSCount != m_MultiSamplingCount || m_NextMultiSamplingCount != std::numeric_limits<uint32_t>::max())
+		{
+			m_RecreateSwapChain = true;
+			m_NextMultiSamplingCount = MSCount;
+		}
 
 		*pCommand->m_pRetMultiSamplingCount = MSCount;
 		*pCommand->m_pRetOk = true;

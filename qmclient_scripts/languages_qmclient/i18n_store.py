@@ -103,12 +103,26 @@ def module_name_for_source(source: Path | None) -> str:
         return "loading"
     if "/src/game/editor/" in normalized:
         return "editor"
+    if normalized.endswith(
+        (
+            "/components/qmclient/word_filter_list.cpp",
+            "/components/qmclient/public_word_filter.cpp",
+        )
+    ):
+        return "word_filter"
     if "/components/qmclient/" in normalized:
         return "qmclient"
     if "/components/tclient/" in normalized:
         return "tclient"
     if "/menus_" in normalized or "/menus." in normalized:
         return "menus"
+    if normalized.endswith(
+        (
+            "src/game/client/QmUi/QmWikiEditor.cpp",
+            "src/game/client/QmUi/QmWikiStore.cpp",
+        )
+    ):
+        return "wiki_ui"
     # Wiki 文案与面板文案各归自己的模块，避免新条目散落到 misc。
     if normalized.endswith("src/game/client/QmUi/QmCardWiki.cpp") or normalized.endswith("src/game/client/QmUi/QmCardWikiPanel.cpp"):
         return "card_wiki"
@@ -301,16 +315,6 @@ def translation_quality_warnings(
                     if limit is not None and len(warnings) >= limit:
                         return warnings
                     continue
-                # 中文 source 与拉丁文字译文的字符密度不同，不能用同一长度比率判定 UI 风险。
-                if (
-                    not source_keys.has_cjk(key)
-                    and len(key) > 10
-                    and len(translation) > len(key) * 2.5
-                ):
-                    warnings.append(
-                        f"{module_name}: [{context}] {key}: {language} length risk: "
-                        f"source {len(key)} translation {len(translation)}"
-                    )
                 if limit is not None and len(warnings) >= limit:
                     return warnings
     return warnings

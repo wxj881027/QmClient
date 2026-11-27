@@ -50,3 +50,31 @@ TEST(IosRuntime, SocketBreakageIsOnlyDetectedFromIosEpipeFailures)
 	EXPECT_NE(SendBody.find("#if defined(CONF_PLATFORM_IOS)"), std::string::npos);
 	EXPECT_NE(SendBody.find("priv_net_udp_send_failed(sock, addr);"), std::string::npos);
 }
+
+TEST(IosRuntime, ResumeRecreatesSocketsBeforeRestoringMainAndDummyConnections)
+{
+	const std::string ClientSource = ReadTestSourceFile("src/engine/client/client.cpp");
+	const std::string ClientHeader = ReadTestSourceFile("src/engine/client/client.h");
+	const std::string NetworkHeader = ReadTestSourceFile("src/engine/shared/network.h");
+	const std::string RecoveryHeader = ReadTestSourceFile("src/engine/client/ios_socket_recovery.h");
+	const std::string RecreateBody = ExtractFunctionBody(ClientSource, "void CClient::RecreateBrokenSockets()");
+	const std::string RestoreBody = ExtractFunctionBody(RecoveryHeader, "bool RestoreIosSockets(");
+
+	ASSERT_FALSE(RecreateBody.empty());
+	ASSERT_FALSE(RestoreBody.empty());
+	EXPECT_NE(NetworkHeader.find("bool SocketIsBroken() const"), std::string::npos);
+	EXPECT_NE(ClientHeader.find("bool m_DummyReconnectOnResume = false;"), std::string::npos);
+	EXPECT_NE(ClientHeader.find("bool ResetSocket();"), std::string::npos);
+	EXPECT_NE(ClientHeader.find("void RecreateBrokenSockets();"), std::string::npos);
+	EXPECT_NE(RecreateBody.find("NetClient.SocketIsBroken()"), std::string::npos);
+	// 恢复顺序集中在公共模板里：先断开，再关 socket、重建，最后才恢复主/分身连接。
+	EXPECT_NE(RecreateBody.find("RestoreIosSockets(*this, m_aNetClient,"), std::string::npos);
+	EXPECT_NE(RestoreBody.find("DisconnectInternal();"), std::string::npos);
+	EXPECT_NE(RestoreBody.find("Socket.Close();"), std::string::npos);
+	const size_t ResetResult = RestoreBody.find("if(!Client.ResetSocket())");
+	ASSERT_NE(ResetResult, std::string::npos);
+	EXPECT_GT(RestoreBody.find("LoadDDNetInfo();"), ResetResult);
+	EXPECT_GT(RestoreBody.find("ConnectInternal(pReconnectAddress);"), ResetResult);
+	EXPECT_NE(ClientSource.find("else if(m_DummyReconnectOnResume)"), std::string::npos);
+	EXPECT_NE(ClientSource.find("RecreateBrokenSockets();"), std::string::npos);
+}

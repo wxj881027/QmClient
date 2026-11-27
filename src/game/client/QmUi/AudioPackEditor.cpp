@@ -656,9 +656,9 @@ void CMenus::RenderAudioPackEditorContent(CUIRect MainView, const IUiContext &Ct
 		static ui_widget::SSettingsActionGroupState s_ActionGroup;
 		const char *apLabels[] = {Localize("Preview selected file"), Localize("Replace selected variant")};
 		const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_ActionGroup, TakeRow(Area, Line), apLabels, 2, Metrics);
-		if(DoSettingsButton_Menu(SETTINGS_SOUND, -1, -1, &s_PlaySelected, "sound-audio-pack-editor-preview-selected", apLabels[0], 0, &Actions.m_aButtons[0], Metrics))
+		if(DoSettingsButton_Menu(SETTINGS_SOUND, -1, -1, &s_PlaySelected, "sound-audio-pack-editor-preview-selected", apLabels[0], 0, Actions.m_aButtons.data(), Metrics))
 			AudioPackEditorPreviewSource(pCandidate, false);
-		Replace = DoSettingsButton_Menu(SETTINGS_SOUND, -1, -1, &s_Replace, "sound-audio-pack-editor-export-selected", apLabels[1], 0, &Actions.m_aButtons[1], Metrics);
+		Replace = DoSettingsButton_Menu(SETTINGS_SOUND, -1, -1, &s_Replace, "sound-audio-pack-editor-export-selected", apLabels[1], 0, Actions.m_aButtons.data() + 1, Metrics);
 	});
 	if(Activated || Replace)
 		AudioPackEditorReplaceVariant(Slot, pCandidate);

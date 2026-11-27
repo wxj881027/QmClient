@@ -18,7 +18,12 @@ const char *CMenus::DoSettingsMenuLabel(int, int, int, const char *, const CUIRe
 	UnexpectedMenuBoundary();
 }
 
-int CMenus::DoSettingsButton_CheckBox(int, int, int, const void *, const char *, const char *, int, const CUIRect *)
+int CMenus::DoSettingsButton_CheckBox(int, int, int, const void *, const char *, const char *, int, const CUIRect *, const SLabelProperties &, bool, float, bool, const void *)
+{
+	UnexpectedMenuBoundary();
+}
+
+bool CMenus::IsSettingsPageActive() const
 {
 	UnexpectedMenuBoundary();
 }

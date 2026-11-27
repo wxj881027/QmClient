@@ -105,16 +105,22 @@ TEST(QmConsoleLogFilter, FilterMaskSelectsCategories)
 	}
 }
 
-TEST(QmConsoleLogFilter, EmptyMaskFallsBackToAllCategories)
+TEST(QmConsoleLogFilter, EmptyMaskExcludesEveryCategory)
 {
-	// 空值和旧的多选状态都回到全部分类
-	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(0), QM_CONSOLE_LOG_CATEGORY_ALL);
-	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(QM_CONSOLE_LOG_CATEGORY_PLAYER | QM_CONSOLE_LOG_CATEGORY_SYSTEM), QM_CONSOLE_LOG_CATEGORY_ALL);
-	EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_BINDS, 0));
+	// 四类全部排除是合法状态：日志为空，但顶栏按钮仍然可以恢复。
+	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(0), 0);
+	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(QM_CONSOLE_LOG_CATEGORY_PLAYER | QM_CONSOLE_LOG_CATEGORY_SYSTEM),
+		QM_CONSOLE_LOG_CATEGORY_PLAYER | QM_CONSOLE_LOG_CATEGORY_SYSTEM);
+	for(const int Category : {QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
+	{
+		EXPECT_FALSE(QmConsoleLogCategoryPassesFilter(Category, 0));
+		EXPECT_FALSE(QmConsoleLogFilterButtonActive(0, Category));
+	}
+	EXPECT_FALSE(QmConsoleLogFilterButtonActive(0, QM_CONSOLE_LOG_CATEGORY_ALL));
 
 	// 非法位被清掉
 	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(0x7F), QM_CONSOLE_LOG_CATEGORY_ALL);
-	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(1 << 20), QM_CONSOLE_LOG_CATEGORY_ALL);
+	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(1 << 20), 0);
 	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(QM_CONSOLE_LOG_CATEGORY_PLAYER | (1 << 20)), QM_CONSOLE_LOG_CATEGORY_PLAYER);
 }
 
@@ -123,28 +129,58 @@ TEST(QmConsoleLogFilter, AllButtonIsSelectedOnlyWhenEveryCategoryIsEnabled)
 	EXPECT_FALSE(QmConsoleLogFilterButtonActive(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_ALL));
 	EXPECT_TRUE(QmConsoleLogFilterButtonActive(QM_CONSOLE_LOG_CATEGORY_ALL, QM_CONSOLE_LOG_CATEGORY_ALL));
 	EXPECT_TRUE(QmConsoleLogFilterButtonActive(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_PLAYER));
+	EXPECT_TRUE(QmConsoleLogFilterButtonActive(
+		QM_CONSOLE_LOG_CATEGORY_PLAYER | QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_PLAYER));
+	EXPECT_FALSE(QmConsoleLogFilterButtonActive(QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_PLAYER));
 }
 
-TEST(QmConsoleLogFilter, SelectingCategoryShowsOnlyThatCategory)
+TEST(QmConsoleLogFilter, TogglingCategoryExcludesAndRestoresOnlyThatCategory)
 {
-	for(const int Category : {QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
+	const int ExcludedPlayer = QmToggleConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_ALL, QM_CONSOLE_LOG_CATEGORY_PLAYER);
+	EXPECT_EQ(ExcludedPlayer, QM_CONSOLE_LOG_CATEGORY_SYSTEM | QM_CONSOLE_LOG_CATEGORY_COMMAND | QM_CONSOLE_LOG_CATEGORY_BINDS);
+	EXPECT_FALSE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_PLAYER, ExcludedPlayer));
+	for(const int Category : {QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
 	{
-		const int Mask = QmSelectConsoleLogFilterCategory(Category);
-		EXPECT_TRUE(QmConsoleLogFilterButtonActive(Mask, Category));
-		EXPECT_FALSE(QmConsoleLogFilterButtonActive(Mask, QM_CONSOLE_LOG_CATEGORY_ALL));
-		for(const int Other : {QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
-			EXPECT_EQ(QmConsoleLogCategoryPassesFilter(Other, Mask), Other == Category);
-		EXPECT_EQ(QmSelectConsoleLogFilterCategory(Category), Mask);
+		EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(Category, ExcludedPlayer));
+		EXPECT_TRUE(QmConsoleLogFilterButtonActive(ExcludedPlayer, Category));
 	}
+	EXPECT_FALSE(QmConsoleLogFilterButtonActive(ExcludedPlayer, QM_CONSOLE_LOG_CATEGORY_PLAYER));
+	EXPECT_FALSE(QmConsoleLogFilterButtonActive(ExcludedPlayer, QM_CONSOLE_LOG_CATEGORY_ALL));
+
+	EXPECT_EQ(QmToggleConsoleLogFilterCategory(ExcludedPlayer, QM_CONSOLE_LOG_CATEGORY_PLAYER), QM_CONSOLE_LOG_CATEGORY_ALL);
 }
 
-TEST(QmConsoleLogFilter, SelectingAllShowsEveryCategory)
+TEST(QmConsoleLogFilter, MultipleCategoryTogglesKeepEarlierExclusions)
 {
-	const int Mask = QmSelectConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_ALL);
-	EXPECT_TRUE(QmConsoleLogFilterButtonActive(Mask, QM_CONSOLE_LOG_CATEGORY_ALL));
+	const int ExcludedPlayer = QmToggleConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_ALL, QM_CONSOLE_LOG_CATEGORY_PLAYER);
+	const int ExcludedPlayerAndBinds = QmToggleConsoleLogFilterCategory(ExcludedPlayer, QM_CONSOLE_LOG_CATEGORY_BINDS);
+	EXPECT_EQ(ExcludedPlayerAndBinds, QM_CONSOLE_LOG_CATEGORY_SYSTEM | QM_CONSOLE_LOG_CATEGORY_COMMAND);
+	EXPECT_FALSE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_PLAYER, ExcludedPlayerAndBinds));
+	EXPECT_FALSE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_BINDS, ExcludedPlayerAndBinds));
+	EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_SYSTEM, ExcludedPlayerAndBinds));
+	EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_COMMAND, ExcludedPlayerAndBinds));
+	EXPECT_FALSE(QmConsoleLogFilterButtonActive(ExcludedPlayerAndBinds, QM_CONSOLE_LOG_CATEGORY_ALL));
+}
+
+TEST(QmConsoleLogFilter, AllButtonRestoresEveryExcludedCategory)
+{
+	const int ExcludedPlayerAndBinds = QmToggleConsoleLogFilterCategory(
+		QmToggleConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_ALL, QM_CONSOLE_LOG_CATEGORY_PLAYER),
+		QM_CONSOLE_LOG_CATEGORY_BINDS);
+	const int Restored = QmToggleConsoleLogFilterCategory(ExcludedPlayerAndBinds, QM_CONSOLE_LOG_CATEGORY_ALL);
+	EXPECT_EQ(Restored, QM_CONSOLE_LOG_CATEGORY_ALL);
+	EXPECT_EQ(QmToggleConsoleLogFilterCategory(Restored, QM_CONSOLE_LOG_CATEGORY_ALL), QM_CONSOLE_LOG_CATEGORY_ALL);
+	EXPECT_TRUE(QmConsoleLogFilterButtonActive(Restored, QM_CONSOLE_LOG_CATEGORY_ALL));
+}
+
+TEST(QmConsoleLogFilter, TurningOffLastCategoryKeepsEmptyStateRecoverable)
+{
+	int Mask = QM_CONSOLE_LOG_CATEGORY_ALL;
 	for(const int Category : {QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
-	{
-		EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(Category, Mask));
-		EXPECT_FALSE(QmConsoleLogFilterButtonActive(Mask, Category));
-	}
+		Mask = QmToggleConsoleLogFilterCategory(Mask, Category);
+	EXPECT_EQ(Mask, 0);
+
+	// 空状态下任一分类按钮或「全部」都可恢复。
+	EXPECT_EQ(QmToggleConsoleLogFilterCategory(Mask, QM_CONSOLE_LOG_CATEGORY_PLAYER), QM_CONSOLE_LOG_CATEGORY_PLAYER);
+	EXPECT_EQ(QmToggleConsoleLogFilterCategory(Mask, QM_CONSOLE_LOG_CATEGORY_ALL), QM_CONSOLE_LOG_CATEGORY_ALL);
 }

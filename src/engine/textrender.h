@@ -528,6 +528,22 @@ struct SQmTextRuntimeBudgetSnapshot
 	uint64_t m_Frame = 0;
 };
 
+// 单字形后台预热结果。只有队列满需要保留游标重试；RETRY 是图集预留
+// 不足或作业溢出后的瞬时失败，必须推进游标交给可见绘制兜底，否则一个
+// 失败字形会永久卡住后续所有图标字号。
+enum class EQmGlyphQueueResult
+{
+	QUEUED_OR_READY,
+	UNSUPPORTED,
+	RETRY,
+	REJECTED,
+};
+
+constexpr bool QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult Result)
+{
+	return Result != EQmGlyphQueueResult::REJECTED;
+}
+
 class ITextRender : public IInterface
 {
 	MACRO_INTERFACE("textrender")
@@ -631,11 +647,24 @@ public:
 	// 字形光栅化幂等且可中断，菜单可在构建文本容器前分帧调用，避免一次容器
 	// 创建触发 100+ 新字形导致单帧 20–30ms 尖峰。
 	virtual void QmPrewarmGlyph(int Chr, int FontSize) {}
+	// QmClient: 单字形后台预热（图标等不经过菜单文本计划的路径）。
+	virtual EQmGlyphQueueResult QmQueueGlyphForPrewarm(int Chr, int FontSize) { return EQmGlyphQueueResult::REJECTED; }
 	// QmClient: 后台字形预热是否可用；可见文本始终同步构建，不受此开关影响。
 	virtual bool QmGlyphWorkerEnabled() const { return false; }
+	// 启动加载阶段允许字形 worker 使用更多并发；只影响后台预热的提交节流。
+	virtual void QmSetGlyphPrewarmBurst(bool Burst) {}
 	// 返回 true 表示这段文本的字形已经全部可同步构建容器；false 时不可用
 	// 缺失字形的容器顶替可见页，必须下一帧重试。
-	virtual bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs) { return true; }
+	// pNewlyQueued 返回主线程本次新排入 worker 的 distinct 字形数；
+	// pAllScheduled 表示这段文本的每个字形都已 ready/unsupported/queued，且没有 retry/reject。
+	virtual bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs, int *pNewlyQueued = nullptr, bool *pAllScheduled = nullptr)
+	{
+		if(pNewlyQueued != nullptr)
+			*pNewlyQueued = 0;
+		if(pAllScheduled != nullptr)
+			*pAllScheduled = true;
+		return true;
+	}
 	virtual int QmGlyphWorkerPendingCount() const { return 0; }
 	virtual int QmGlyphWorkerActiveCount() const { return 0; }
 	// QmClient: 空闲帧预热“最近缺失字形”（菜单关闭时调用），返回本次实际预热数量。

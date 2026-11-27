@@ -20,10 +20,15 @@ TEST(QmMonitoringTextPlanContract, SettingsStableTextPrebuildCompletesTargetPlan
 	ASSERT_FALSE(CountBody.empty());
 	ASSERT_FALSE(LogBody.empty());
 	EXPECT_NE(Header.find("int CountMissingSettingsMenuTextPlanItems() const;"), std::string::npos);
+	EXPECT_NE(Header.find("int CountMissingSettingsMenuTextPoolItems();"), std::string::npos);
 	EXPECT_NE(CountBody.find("m_vSettingsMenuTextPrebuildPlan"), std::string::npos);
 	EXPECT_EQ(CountBody.find("BuildSettingsMenuTextPlan(vItems);"), std::string::npos);
-	EXPECT_NE(PrebuildBody.find("m_SettingsMenuTextLastPrebuildStats.m_Remaining = CountMissingSettingsMenuTextPlanItems();"), std::string::npos);
+	EXPECT_NE(PrebuildBody.find("m_SettingsMenuTextLastPrebuildStats.m_CursorRemaining = CountMissingSettingsMenuTextPlanItems();"), std::string::npos);
+	EXPECT_NE(PrebuildBody.find("m_SettingsMenuTextLastPrebuildStats.m_PoolMissing = SampleMissingSettingsMenuTextPoolItems(false);"), std::string::npos);
+	EXPECT_NE(PrebuildBody.find("m_SettingsMenuTextLastPrebuildStats.m_Remaining = m_SettingsMenuTextLastPrebuildStats.m_PoolMissing >= 0 ?"), std::string::npos);
 	EXPECT_NE(LogBody.find("const int RemainingMissing = m_SettingsMenuTextLastPrebuildStats.m_Remaining;"), std::string::npos);
+	EXPECT_NE(LogBody.find("const int PoolMissing = m_SettingsMenuTextLastPrebuildStats.m_PoolMissing;"), std::string::npos);
+	EXPECT_NE(LogBody.find("skip_reason=%s"), std::string::npos);
 	EXPECT_EQ(LogBody.find("const int RemainingMissing = CountMissingSettingsMenuTextPlanItems();"), std::string::npos);
 	EXPECT_EQ(CountBody.find("for(const SMenuTextPlanItem &Item : m_vSettingsMenuTextPrebuildPlan)"), std::string::npos);
 	EXPECT_NE(CountBody.find("m_SettingsMenuTextPlanCollectionComplete"), std::string::npos);

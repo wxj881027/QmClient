@@ -33,6 +33,7 @@
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/dummy_miniview_render.h>
+#include <game/client/components/qmclient/local_time_format.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/player_state_hud_bounds.h>
@@ -1402,7 +1403,10 @@ void CHud::RenderScoreHud()
 	// render small score hud
 	if(!(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
 	{
-		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::ScoreHud, {m_Width - 150.0f, 229.0f, 150.0f, 56.0f});
+		// 选框宽度跟随内容：分数位数、名次位数和旗帜/人物占位变化时都从左缘伸缩，
+		// 不再用固定 150 宽的框把左侧空出来。
+		const float EditorWidth = m_ScoreHudEditorWidth > 0.0f ? m_ScoreHudEditorWidth : 150.0f;
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::ScoreHud, {m_Width - EditorWidth, 229.0f, EditorWidth, 56.0f});
 		const int ScoreHudCorners = HudEditorScope.m_Corners;
 		float StartY = 229.0f; // the height of this display is 56, so EndY is 285
 
@@ -1442,8 +1446,10 @@ void CHud::RenderScoreHud()
 			float ScoreWidthMax = maximum(maximum(m_aScoreInfo[0].m_ScoreTextWidth, m_aScoreInfo[1].m_ScoreTextWidth), s_TextWidth100);
 			float Split = 3.0f;
 			float ImageSize = (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) ? 16.0f : Split;
+			m_ScoreHudEditorWidth = QmScoreHudTeamBoxRect(m_Width, 229.0f, ScoreWidthMax, ImageSize, 56.0f).w;
 			for(int t = 0; t < 2; t++)
 			{
+				const CUIRect TeamBox = QmScoreHudTeamBoxRect(m_Width, StartY + t * 20, ScoreWidthMax, ImageSize, ScoreSingleBoxHeight);
 				// draw box
 				if(RecreateRect)
 				{
@@ -1453,12 +1459,12 @@ void CHud::RenderScoreHud()
 						Graphics()->SetColor(0.975f, 0.17f, 0.17f, 0.3f);
 					else
 						Graphics()->SetColor(0.17f, 0.46f, 0.975f, 0.3f);
-					m_aScoreInfo[t].m_RoundRectQuadContainerIndex = Graphics()->CreateRectQuadContainer(m_Width - ScoreWidthMax - ImageSize - 2 * Split, StartY + t * 20, ScoreWidthMax + ImageSize + 2 * Split, ScoreSingleBoxHeight, 5.0f, ScoreHudCorners);
+					m_aScoreInfo[t].m_RoundRectQuadContainerIndex = Graphics()->CreateRectQuadContainer(TeamBox.x, TeamBox.y, TeamBox.w, TeamBox.h, 5.0f, ScoreHudCorners);
 					m_aScoreInfo[t].m_RoundRectCorners = ScoreHudCorners;
 				}
 				if(m_aScoreInfo[t].m_RoundRectQuadContainerIndex != -1)
 				{
-					Ui()->RenderGaussianBlur({m_Width - ScoreWidthMax - ImageSize - 2 * Split, StartY + t * 20, ScoreWidthMax + ImageSize + 2 * Split, ScoreSingleBoxHeight}, 1.0f, ScoreHudCorners, 5.0f);
+					Ui()->RenderGaussianBlur({TeamBox.x, TeamBox.y, TeamBox.w, TeamBox.h}, 1.0f, ScoreHudCorners, 5.0f);
 					Graphics()->TextureClear();
 					Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 					Graphics()->RenderQuadContainer(m_aScoreInfo[t].m_RoundRectQuadContainerIndex, -1);
@@ -1504,10 +1510,10 @@ void CHud::RenderScoreHud()
 						{
 							str_copy(m_aScoreInfo[t].m_aPlayerNameText, pName);
 
-							float w = TextRender()->TextWidth(8.0f, pName, -1, -1.0f);
+							const float NameWidth = TextRender()->TextWidth(8.0f, pName, -1, -1.0f);
 
 							CTextCursor Cursor;
-							Cursor.SetPosition(vec2(minimum(m_Width - w - 1.0f, m_Width - ScoreWidthMax - ImageSize - 2 * Split), StartY + (t + 1) * 20.0f - 2.0f));
+							Cursor.SetPosition(vec2(QmScoreHudNameX(TeamBox.x, TeamBox.w, NameWidth, m_Width), StartY + (t + 1) * 20.0f - 2.0f));
 							Cursor.m_FontSize = 8.0f;
 							TextRender()->RecreateTextContainer(m_aScoreInfo[t].m_OptionalNameTextContainerIndex, &Cursor, pName);
 						}
@@ -1621,6 +1627,7 @@ void CHud::RenderScoreHud()
 			float ScoreWidthMax = maximum(maximum(m_aScoreInfo[0].m_ScoreTextWidth, m_aScoreInfo[1].m_ScoreTextWidth), s_TextWidth10);
 			float Split = 3.0f;
 			const auto ScoreLayout = QmScoreHudLayout(m_Width, ScoreWidthMax, maximum(m_aScoreInfo[0].m_RankTextWidth, m_aScoreInfo[1].m_RankTextWidth), ScoreSingleBoxHeight);
+			m_ScoreHudEditorWidth = ScoreLayout.m_BoxWidth;
 
 			for(int t = 0; t < 2; t++)
 			{
@@ -1672,8 +1679,9 @@ void CHud::RenderScoreHud()
 						{
 							str_copy(m_aScoreInfo[t].m_aPlayerNameText, pName);
 
+							const float NameWidth = TextRender()->TextWidth(8.0f, pName, -1, -1.0f);
 							CTextCursor Cursor;
-							Cursor.SetPosition(vec2(minimum(m_Width - TextRender()->TextWidth(8.0f, pName) - 1.0f, ScoreLayout.m_BoxLeft), StartY + (t + 1) * 20.0f - 2.0f));
+							Cursor.SetPosition(vec2(QmScoreHudNameX(ScoreLayout.m_BoxLeft, ScoreLayout.m_BoxWidth, NameWidth, m_Width), StartY + (t + 1) * 20.0f - 2.0f));
 							Cursor.m_FontSize = 8.0f;
 							TextRender()->RecreateTextContainer(m_aScoreInfo[t].m_OptionalNameTextContainerIndex, &Cursor, pName);
 						}
@@ -2920,7 +2928,7 @@ void CHud::RenderFollowSwitchCountdowns()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-	const float Delta = Client()->RenderFrameTime();
+	const float Delta = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 	// Preserve the previous ring's outer footprint while adopting the satellite proportions.
 	constexpr float SatelliteRadius = 9.0f + 2.5f * 0.5f;
 	constexpr float RingRadius = SatelliteRadius * MEDIA_ISLAND_SATELLITE_RING_RADIUS_SCALE;
@@ -3029,7 +3037,7 @@ void CHud::UpdateHookCountdownTracker()
 		Input.m_HookDurationSeconds = GameClient()->m_aTuning[Connection].m_HookDuration;
 		Input.m_EndlessHook = Local.m_IsPredictedLocal ? Local.m_Predicted.m_EndlessHook : Local.m_EndlessHook;
 	}
-	m_HookCountdownRing.Update(Input, Client()->RenderFrameTime());
+	m_HookCountdownRing.Update(Input, GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt);
 }
 
 void CHud::RenderFollowHookCountdown()
@@ -3513,7 +3521,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 	str_format(aSpectatorBuf, sizeof(aSpectatorBuf), "%d", ShowSpectator ? SpectatorCount : std::max(0, m_MediaIslandAnimState.m_SpectatorDisplayCount));
 
 	char aTimeBuf[16];
-	str_timestamp_format(aTimeBuf, sizeof(aTimeBuf), "%H:%M");
+	QmFormatLocalTime(aTimeBuf, sizeof(aTimeBuf), g_Config.m_QmShowLocalTimeSeconds != 0);
 	if(aTimeBuf[0] == '\0')
 		str_copy(aTimeBuf, "00:00", sizeof(aTimeBuf));
 
@@ -3984,7 +3992,7 @@ void CHud::RenderMediaIsland()
 	str_format(aSpectatorBuf, sizeof(aSpectatorBuf), "%d", std::max(0, AnimState.m_SpectatorDisplayCount));
 
 	char aTimeBuf[16];
-	str_timestamp_format(aTimeBuf, sizeof(aTimeBuf), "%H:%M");
+	QmFormatLocalTime(aTimeBuf, sizeof(aTimeBuf), g_Config.m_QmShowLocalTimeSeconds != 0);
 	if(aTimeBuf[0] == '\0')
 		str_copy(aTimeBuf, "00:00", sizeof(aTimeBuf));
 
@@ -5011,7 +5019,7 @@ void CHud::RenderMediaIsland()
 		const bool HasProgress = Preview || GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
 		const float TargetProgress = Preview ? 0.426f : GameClient()->m_TClient.GetGoresMapProgress(DummyIndex);
 		const int ProgressClientId = Preview ? -1 : GameClient()->m_TClient.GetGoresMapProgressClientId(DummyIndex);
-		const float Progress = m_aIslandMapProgress[DummyIndex].Update(HasProgress, TargetProgress, Client()->RenderFrameTime(), ProgressClientId);
+		const float Progress = m_aIslandMapProgress[DummyIndex].Update(HasProgress, TargetProgress, GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt, ProgressClientId);
 		const float RowY = IslandY + ProgressRows.m_ProgressY;
 		const float RowHeight = std::min(BottomRowLineHeight, std::max(0.0f, IslandY + AnimatedIslandHeight - BottomRowPaddingY - RowY));
 		const float ProgressAlpha = EntranceContentAlpha * (ProgressRows.m_ProgressInHeader ? 1.0f : BottomAlpha);
@@ -5666,9 +5674,8 @@ void CHud::RenderSpectatorCount()
 		const float BoxWidth = IconWidth + 3.0f + TextWidth + 10.0f;
 
 		const float TimeAnchorX = (m_Width / 7.0f) * 3.0f;
-		const bool Seconds = g_Config.m_QmShowLocalTimeSeconds; // TClient
 		char aTimeStr[16];
-		str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
+		QmFormatLocalTime(aTimeStr, sizeof(aTimeStr), g_Config.m_QmShowLocalTimeSeconds != 0);
 		const float TimeWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
 		const float TimeLeft = TimeAnchorX - (TimeWidth + 15.0f);
 		StartX = TimeLeft - 5.0f - BoxWidth;
@@ -6533,7 +6540,7 @@ void CHud::RenderMapProgressBar()
 	auto &ProgressState = m_aMapProgress[DummyIndex];
 	const bool ProgressWasInitialized = ProgressState.IsTracking(ProgressClientId);
 	const float PreviousDisplayedProgress = ProgressState.Displayed();
-	const float DisplayedProgress = ProgressState.Update(HasProgress, TargetProgress, Client()->RenderFrameTime(), ProgressClientId);
+	const float DisplayedProgress = ProgressState.Update(HasProgress, TargetProgress, GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt, ProgressClientId);
 	const bool ProgressIncreased = ProgressWasInitialized && DisplayedProgress > PreviousDisplayedProgress + 0.000001f;
 	const ColorRGBA ConfiguredColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPlayerStatsMapProgressColor, true));
 	const ColorRGBA FillColor = ColorRGBA(ConfiguredColor.r, ConfiguredColor.g, ConfiguredColor.b, std::clamp(maximum(ConfiguredColor.a, 0.65f), 0.0f, 1.0f));
@@ -6691,16 +6698,17 @@ void CHud::RenderLocalTime(float x)
 	{
 		m_LocalTimeV2AnimState.Reset();
 
-		char aTimeStr[6];
-		str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
-		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, {x - 30.0f, 0.0f, 25.0f, 12.5f});
-		const CUIRect LocalTimeRect{x - 30.0f, 0.0f, 25.0f, 12.5f};
+		char aTimeStr[16];
+		QmFormatLocalTime(aTimeStr, sizeof(aTimeStr), g_Config.m_QmShowLocalTimeSeconds != 0);
+		const float TextWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
+		const CUIRect LocalTimeRect{x - (TextWidth + 15.0f), 0.0f, TextWidth + 10.0f, 12.5f};
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, LocalTimeRect);
 		Ui()->RenderGaussianBlur(LocalTimeRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 		SRoundedSurfaceParams LocalTimeSurface;
 		LocalTimeSurface.m_Radius = ui_token::radius::BASE;
 		LocalTimeSurface.m_Corners = HudEditorScope.m_Corners;
 		DrawRoundedSurface(Ui(), LocalTimeRect, ui_token::color::SURFACE_GLASS, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), LocalTimeSurface);
-		TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
+		TextRender()->Text(x - (TextWidth + 10.0f), (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
@@ -6712,10 +6720,8 @@ void CHud::RenderLocalTime(float x)
 	else
 		m_LocalTimeV2AnimState.Reset();
 
-	const bool Seconds = g_Config.m_QmShowLocalTimeSeconds; // TClient
-
 	char aTimeStr[16];
-	str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
+	QmFormatLocalTime(aTimeStr, sizeof(aTimeStr), g_Config.m_QmShowLocalTimeSeconds != 0);
 	const float TextWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
 
 	if(!UseV2LocalTime)

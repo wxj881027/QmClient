@@ -166,6 +166,11 @@ namespace qm_card_registry
 	// 三张预测卡已从 TClient 页迁到 DDNet 页的「网络补偿」子页签（tab=ddnet-prediction），
 	// 把旧存档里仍记在 tclient 下的位置恢复到默认归属。
 	bool RepairLegacyPredictionCardTabs(qm_card_order::CModel &Model);
+	// 实体层调整卡已从视觉页移入 DDNet 页，恢复仍保存在 visual 下的卡片。
+	bool RepairLegacyEntityOverlayTab(qm_card_order::CModel &Model);
+	// 页面只从注册表当前默认 tab 派生卡片定义；任何记在其它 tab 上的旧存档都不会被构建。
+	// 先跑具体迁移保留既定列序，再由本函数把剩余错页卡片兜底迁回默认 placement。
+	bool RepairMisplacedCardTabs(qm_card_order::CModel &Model);
 	bool IsTClientMainCardsLegacyLeft(const qm_card_order::CModel &Model);
 	bool MoveTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model);
 	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, int SerializedSize);

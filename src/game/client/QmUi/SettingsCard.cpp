@@ -19,9 +19,11 @@
 #include <base/system.h>
 
 #include <engine/graphics.h>
+#include <engine/shared/config.h>
 #include <engine/textrender.h>
 
 #include <game/client/components/menus.h>
+#include <game/client/components/settings_runtime_cache.h>
 #include <game/client/components/tooltips.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>
@@ -50,7 +52,10 @@ namespace
 			// 卡片 stable ID 跨设置页唯一；公开的设置文字池入口同时处理预布局收集与渲染。
 			char aTextId[256];
 			str_format(aTextId, sizeof(aTextId), "settings-card-%s:%s", Subtitle ? "subtitle" : "title", Spec.m_pStableId);
-			Ctx.m_pMenus->DoSettingsMenuLabel(-1, -1, -1, aTextId, &Rect, pText, Size, TEXTALIGN_ML, Props);
+			// 页归属取当前设置页，而不是 -1：可见页预热按 page/tab 过滤，-1 会让卡片
+			// 标题永远落在可见计划之外，首屏只能同步重建。卡片 stable ID 本身跨页唯一，
+			// 加上页号后缓存键仍然稳定。
+			Ctx.m_pMenus->DoSettingsMenuLabel(SettingsCanonicalPage(g_Config.m_UiSettingsPage), -1, -1, aTextId, &Rect, pText, Size, TEXTALIGN_ML, Props);
 		});
 	}
 

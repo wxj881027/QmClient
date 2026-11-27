@@ -82,7 +82,7 @@ void CUiEffects::OnShutdown()
 
 void CUiEffects::OnRender()
 {
-	const float TimePassed = Client()->RenderFrameTime();
+	const float TimePassed = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 	m_Time += TimePassed;
 
 	if(m_ScreenshotAnimation.m_Active)

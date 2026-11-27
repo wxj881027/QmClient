@@ -152,3 +152,32 @@ TEST_F(GlyphRenderRetry, RepeatedFailureNotificationDoesNotDelayRetry)
 	m_Retry.Failed(900ms);
 	EXPECT_TRUE(m_Retry.BeginRetry(1s));
 }
+
+TEST(GlyphMeasurementState, RenderedGlyphKeepsAtlasEntryAfterMeasurement)
+{
+	// 预建/worker 已把字形写入图集；纯测量必须复用该度量，不能再光栅化。
+	EXPECT_FALSE(QmMeasurementNeedsGlyphMetrics(EQmGlyphState::RENDERED));
+	EXPECT_EQ(QmGlyphStateAfterMeasurement(EQmGlyphState::RENDERED), EQmGlyphState::RENDERED);
+}
+
+TEST(GlyphMeasurementState, MeasurementFillsUnrenderedGlyphs)
+{
+	EXPECT_TRUE(QmMeasurementNeedsGlyphMetrics(EQmGlyphState::UNINITIALIZED));
+	EXPECT_TRUE(QmMeasurementNeedsGlyphMetrics(EQmGlyphState::RETRY));
+	EXPECT_EQ(QmGlyphStateAfterMeasurement(EQmGlyphState::UNINITIALIZED), EQmGlyphState::MEASURED);
+	EXPECT_EQ(QmGlyphStateAfterMeasurement(EQmGlyphState::RETRY), EQmGlyphState::MEASURED);
+}
+
+TEST(GlyphMeasurementState, QueuedGlyphStaysQueuedForWorkerResult)
+{
+	// 后台任务在飞时测量可以补度量，但不能把状态改成 MEASURED，
+	// 否则结果发布与去重都不再认得这个字形。
+	EXPECT_TRUE(QmMeasurementNeedsGlyphMetrics(EQmGlyphState::QUEUED));
+	EXPECT_EQ(QmGlyphStateAfterMeasurement(EQmGlyphState::QUEUED), EQmGlyphState::QUEUED);
+}
+
+TEST(GlyphMeasurementState, MeasuredAndErrorDoNotReload)
+{
+	EXPECT_FALSE(QmMeasurementNeedsGlyphMetrics(EQmGlyphState::MEASURED));
+	EXPECT_FALSE(QmMeasurementNeedsGlyphMetrics(EQmGlyphState::ERROR));
+}

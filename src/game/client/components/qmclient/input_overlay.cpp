@@ -15,6 +15,7 @@
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 
+#include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
@@ -238,7 +239,7 @@ void CInputOverlay::OnRender()
 			m_HasConfigModifiedTime = true;
 		}
 	}
-	m_ConfigCheckTimer += Client()->RenderFrameTime();
+	m_ConfigCheckTimer += QmUiRenderDeltaSeconds(Client()->RenderFrameTime());
 	if(m_ConfigCheckTimer >= 0.5f && !m_pFileTimeJob)
 	{
 		m_ConfigCheckTimer = 0.0f;
@@ -338,7 +339,7 @@ void CInputOverlay::OnRender()
 	const CUIRect OverlayRect = {OriginX, OriginY, std::max(CanvasW, 1.0f), std::max(CanvasH, 1.0f)};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::InputOverlay, OverlayRect);
 
-	m_Time += Client()->RenderFrameTime();
+	m_Time += QmUiRenderDeltaSeconds(Client()->RenderFrameTime());
 
 	if(m_ConfigMode == EConfigMode::OBS)
 	{

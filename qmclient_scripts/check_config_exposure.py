@@ -9,6 +9,7 @@
       internal     —— 代码内部状态（迁移标记、统计计数等），不需要入口；
       pending-ui   —— 应当补设置页入口，属于待办债务；
       console-only —— 只有控制台/配置文件入口、刻意不做设置页的配置（例如需要正则校验的输入）。
+      in-context   —— 已有就地入口（取色器/控制台/计分板内部按钮），设置页不再重复。
   - 上游配置（cl_/br_/ed_ 等）只做盘点，不阻断。
   - 基线里已接线的条目、以及指向已删除配置的条目都会判为过期，避免基线腐化成假清单。
 
@@ -58,7 +59,8 @@ REQUIRES_EXPOSURE_PREFIXES = ("qm_",)
 CATEGORY_INTERNAL = "internal"
 CATEGORY_PENDING_UI = "pending-ui"
 CATEGORY_CONSOLE_ONLY = "console-only"
-BASELINE_CATEGORIES = (CATEGORY_INTERNAL, CATEGORY_PENDING_UI, CATEGORY_CONSOLE_ONLY)
+CATEGORY_IN_CONTEXT = "in-context"
+BASELINE_CATEGORIES = (CATEGORY_INTERNAL, CATEGORY_PENDING_UI, CATEGORY_CONSOLE_ONLY, CATEGORY_IN_CONTEXT)
 # 一眼可判的代码内部状态：迁移标记、布局/配置版本号、统计计数、渲染管线开关。
 INTERNAL_NAME_PATTERNS = (
 	re.compile(r"_migrated$"),
@@ -257,9 +259,10 @@ def _category_of(audit_result: SAudit, name: str) -> str:
 def _print_owned(audit_result: SAudit, list_internal: bool) -> None:
 	pending = [var for var in audit_result.unexposed_owned if _category_of(audit_result, var.name) == CATEGORY_PENDING_UI]
 	internal = [var for var in audit_result.unexposed_owned if _category_of(audit_result, var.name) == CATEGORY_INTERNAL]
+	in_context = [var for var in audit_result.unexposed_owned if _category_of(audit_result, var.name) == CATEGORY_IN_CONTEXT]
 	unregistered = audit_result.unregistered
 
-	print(f"Qm 自有配置未接线：{len(audit_result.unexposed_owned)} 项（待补入口 {len(pending)} · 内部状态 {len(internal)} · 未登记 {len(unregistered)}）")
+	print(f"Qm 自有配置未接线：{len(audit_result.unexposed_owned)} 项（待补入口 {len(pending)} · 内部状态 {len(internal)} · 就地入口 {len(in_context)} · 未登记 {len(unregistered)}）")
 	if pending:
 		print("\n待补设置页入口（pending-ui）：")
 		for var in pending:
@@ -275,6 +278,11 @@ def _print_owned(audit_result: SAudit, list_internal: bool) -> None:
 			note = audit_result.baseline[var.name].note
 			print(f"  {var.name:<48} {var.header:<32} {note}".rstrip())
 	if list_internal:
+		if in_context:
+			print("\n已有就地入口（in-context，设置页不再重复）：")
+			for var in in_context:
+				note = audit_result.baseline[var.name].note
+				print(f"  {var.name:<48} {var.header:<32} {note}".rstrip())
 		console_only = sorted(name for name, entry in audit_result.baseline.items() if entry.category == CATEGORY_CONSOLE_ONLY)
 		if console_only:
 			print("\n仅控制台入口（console-only，刻意不做设置页）：")
@@ -291,7 +299,7 @@ def _print_upstream(audit_result: SAudit) -> None:
 def main(argv: list[str] | None = None) -> int:
 	parser = argparse.ArgumentParser(description="配置暴露审计")
 	parser.add_argument("--list", action="store_true", help="列出 Qm 自有未接线配置与未登记项")
-	parser.add_argument("--list-internal", action="store_true", help="同时列出血线内的内部状态配置")
+	parser.add_argument("--list-internal", action="store_true", help="同时列出内部状态与已有就地入口的配置")
 	parser.add_argument("--list-upstream", action="store_true", help="列出无设置页入口的上游配置（仅盘点）")
 	parser.add_argument("--write-baseline", action="store_true", help="把当前未接线配置写入基线（保留已有分类）")
 	args = parser.parse_args(argv)
@@ -310,7 +318,7 @@ def main(argv: list[str] | None = None) -> int:
 				entries[var.name] = SBaselineEntry(default_category(var.name), "新登记，待人工确认分类")
 		dump_baseline(entries)
 		print(f"已写入基线：{BASELINE_RELPATH}（{len(entries)} 项）")
-		print("请复核 internal/pending-ui 分类与 note，再提交。")
+		print("请复核 internal/pending-ui/console-only/in-context 分类与 note，再提交。")
 		return 0
 
 	if args.list or args.list_internal or args.list_upstream:

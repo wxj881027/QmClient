@@ -27,7 +27,10 @@ public:
 	void TouchNode(uint64_t NodeKey);
 	CUIRect ResolveLayoutTransition(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const CUIRect &Target, const struct SUiSpringConfig &Spring, int Priority = 1, bool Animate = true);
 	CUIRect SyncLayoutTransition(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const CUIRect &Target);
-	SUiPresenceResult ResolvePresence(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, bool Visible, const SUiAnimTransition &Transition);
+	// pPresenceTransition 非空时把「在场/退场」与「淡入淡出」拆成两条轨道：
+	// 前者按该 transition 的时钟（通常 LOGIC）推进，后者用 Transition（通常 RENDER）。
+	// 为空时保持兼容：显隐仍由 ALPHA 轨道独立驱动。
+	SUiPresenceResult ResolvePresence(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, bool Visible, const SUiAnimTransition &Transition, const SUiAnimTransition *pPresenceTransition = nullptr);
 	float ResolvePresenceAlpha(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const SUiAnimTransition &Transition);
 	void EndFrame();
 	void EndFrame(CUiV2AnimationRuntime &AnimRuntime);
@@ -54,6 +57,7 @@ private:
 	};
 
 	void PruneLayoutTransitionCache(uint64_t CurrentUseCounter);
+	SUiPresenceResult ResolveSplitPresence(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, bool Visible, const SUiAnimTransition &VisualTransition, const SUiAnimTransition &PresenceTransition);
 	void ResolveEndFrame(CUiV2AnimationRuntime *pAnimRuntime);
 
 	std::unordered_set<uint64_t> m_FrameNodeKeys;

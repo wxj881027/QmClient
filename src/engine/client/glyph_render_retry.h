@@ -25,6 +25,21 @@ enum class EQmGlyphRenderResult
 	RETRY,
 };
 
+// 测量（TextWidth / 纯布局）只允许补齐尚未渲染字形的度量。
+// 已渲染字形必须保持 RENDERED：把它降级为 MEASURED 会让随后的绘制重新
+// 光栅化并再占一块图集，预热成果被立刻作废。后台在飞字形同样必须保持
+// QUEUED，否则结果发布时找不到任务归属。
+constexpr bool QmMeasurementNeedsGlyphMetrics(EQmGlyphState State)
+{
+	return State != EQmGlyphState::MEASURED && State != EQmGlyphState::RENDERED &&
+	       State != EQmGlyphState::ERROR;
+}
+
+constexpr EQmGlyphState QmGlyphStateAfterMeasurement(EQmGlyphState State)
+{
+	return State == EQmGlyphState::QUEUED || State == EQmGlyphState::RENDERED ? State : EQmGlyphState::MEASURED;
+}
+
 // 内存不足时整条光栅化链路共用冷却时间；已生成的字形仍可使用。
 // 替代字符只借给本次排版，不能覆盖原字形身份或变成永久成功缓存。
 class CQmGlyphRenderRetry

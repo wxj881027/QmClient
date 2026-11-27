@@ -351,7 +351,7 @@ void CCountryFlags::Render(const CCountryFlag &Flag, ColorRGBA Color, float x, f
 		const auto Pass = Ui()->MeasurementOnly()  ? EQmCountryFlagRenderPass::MEASUREMENT :
 				  Ui()->BackgroundRender() ? EQmCountryFlagRenderPass::BACKGROUND :
 							     EQmCountryFlagRenderPass::INTERACTIVE;
-		const auto Visual = Flag.ResolveEntryAnimation(Pass, g_Config.m_QmCountryFlagAnim != 0, g_Config.m_QmUiMotionLevel, CustomStartTime, time_get(), time_freq());
+		const auto Visual = Flag.ResolveEntryAnimation(Pass, g_Config.m_QmUiMotionLevel, CustomStartTime, time_get(), time_freq());
 		if(!Visual.m_Visible)
 			return;
 		ComputeCountryFlagEntryRect(x, y, w, h, Visual.m_Scale, RenderX, RenderY, RenderW, RenderH);

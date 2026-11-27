@@ -7,8 +7,8 @@
 
 #include <algorithm>
 #include <bitset>
-#include <charconv>
 #include <cctype>
+#include <charconv>
 #include <new>
 #include <type_traits>
 #include <utility>
@@ -96,7 +96,7 @@ void STranslateJob::StartChatTranslation(IHttp &Http, const char *pText, const c
 				m_MentionTokenPrefix += '_';
 			do
 			{
-				RequestText.append(pRemaining, Mention.data());
+				RequestText.append(pRemaining, (size_t)(Mention.data() - pRemaining));
 				RequestText += m_MentionTokenPrefix;
 				RequestText += std::to_string(m_vMentions.size());
 				RequestText += "]]";

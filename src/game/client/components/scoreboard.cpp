@@ -1470,7 +1470,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		Ui()->RegisterWheelOwner(&m_ScrollRegion, EUiWheelOwnerPriority::PAGE, ScrollViewport,
 			m_MouseUnlocked && m_RenderInteractions && !Ui()->UnderlyingScrollBlocked());
 		const float ContentHeight = ScoreboardRowsHeight(EndRow - FirstRow, NumTeamLabels, NumTeamModeLabels,
-			LineHeight, Spacing, FontSize / 1.5f, TeamModeIconSize) + TeamBottomPadding;
+						    LineHeight, Spacing, FontSize / 1.5f, TeamModeIconSize) +
+					    TeamBottomPadding;
 		// 在获取本帧偏移前收紧范围，人数减少时不会先绘制一帧空白。
 		m_ScrollRegion.State().Advance(0.0f, {ScrollViewport.h, ContentHeight}, QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f));
 		m_ScrollRegion.SetContentHeightForNextFrame(ContentHeight);
@@ -1792,7 +1793,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 					{
 						const CUIRect StatsRect{StatsOffset, Row.y, StatsLength, Row.h};
 						const char *pTip = Playtime.m_Status == EPointsStatus::READY ? Localize("Total playtime from DDStats. The last result stays visible while refreshing.") :
-							(Playtime.m_Status == EPointsStatus::FAILED ? Localize("Playtime query failed. Retrying shortly.") : Localize("Querying playtime from DDStats..."));
+													       (Playtime.m_Status == EPointsStatus::FAILED ? Localize("Playtime query failed. Retrying shortly.") : Localize("Querying playtime from DDStats..."));
 						GameClient()->m_Tooltips.DoToolTipForRect(&m_aPlaytimeTooltipIds[ClientId], &StatsRect, pTip, 240.0f);
 					}
 				}

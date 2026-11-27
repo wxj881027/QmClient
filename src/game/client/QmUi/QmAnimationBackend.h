@@ -31,6 +31,9 @@ enum class EUiAnimProperty
 	COLOR_A,
 	COLOR_MIX,
 	SCALE,
+	// 显隐状态轨道：只表示「在不在场」，不参与绘制。
+	// 与 ALPHA 分开后，开合/生命周期走逻辑步，淡入淡出走渲染帧，两者互不拖累。
+	PRESENCE,
 };
 
 enum class EUiAnimInterruptPolicy
@@ -161,6 +164,15 @@ struct SUiBezier
 	float m_Y2 = 1.0f;
 };
 
+// 状态动画（页切换、页签切换、弹层开合）按固定逻辑步长推进，帧率与长帧
+// 都不会改变它们的节奏；纯视觉插值（hover、淡入、弹簧）仍按截断后的渲染
+// 时间推进，保证高刷屏上的观感连续。
+enum class EUiAnimClock
+{
+	RENDER = 0,
+	LOGIC,
+};
+
 struct SUiAnimTransition
 {
 	float m_DurationSec = 0.18f;
@@ -169,6 +181,7 @@ struct SUiAnimTransition
 	EUiAnimInterruptPolicy m_Interrupt = EUiAnimInterruptPolicy::REPLACE;
 	EEasing m_Easing = EEasing::EASE_OUT;
 	EUiAnimDriver m_Driver = EUiAnimDriver::TWEEN;
+	EUiAnimClock m_Clock = EUiAnimClock::RENDER;
 	SUiSpringConfig m_Spring;
 	SUiBezier m_Bezier;
 	uint32_t m_CustomEasingId = 0;
@@ -209,6 +222,10 @@ public:
 
 	void Reset();
 	void Advance(float Dt);
+	// 分时钟推进：LOGIC 轨道只吃 DtLogic，其余轨道吃 DtVisual。
+	// LogicFraction 是下一逻辑步已走过的比例，用来把 LOGIC 轨道的展示值
+	// 插值到渲染帧，避免高刷屏上动画只在 60 Hz 跳变。
+	void Advance(float DtVisual, float DtLogic, float LogicFraction = 1.0f);
 
 	void SetValue(uint64_t NodeKey, EUiAnimProperty Property, float Value);
 	float GetValue(uint64_t NodeKey, EUiAnimProperty Property, float DefaultValue = 0.0f) const;
@@ -268,6 +285,11 @@ private:
 		float m_Velocity = 0.0f;
 		float m_RestTimerSec = 0.0f;
 		SUiAnimTransition m_Transition;
+		EUiAnimClock m_Clock = EUiAnimClock::RENDER;
+		// LOGIC 轨道：本逻辑步开始时的值，渲染帧在它与 m_Current 之间插值。
+		float m_StepStartValue = 0.0f;
+		// 对外读取的展示值（渲染帧插值结果）。
+		float m_DisplayValue = 0.0f;
 		uint32_t m_TrackId = 0;
 		FCustomEasing m_pfnCustomEasing = nullptr;
 		void *m_pCustomEasingUser = nullptr;

@@ -296,6 +296,24 @@ private:
 	bool m_Active;
 };
 
+// 过渡动画期间内容区按动画中的临时矩形出图；命中必须回到目标位置，
+// 否则点击会落在正在滑动的控件上。挂起指针输入的作用域只覆盖内容渲染趟，
+// 导航栏等目标矩形不受影响的控件仍在同一帧正常响应。
+class CUiScopedPointerInputSuppression
+{
+public:
+	explicit CUiScopedPointerInputSuppression(CUi *pUi);
+	CUiScopedPointerInputSuppression(CUi *pUi, bool Active);
+	~CUiScopedPointerInputSuppression();
+
+	CUiScopedPointerInputSuppression(const CUiScopedPointerInputSuppression &) = delete;
+	CUiScopedPointerInputSuppression &operator=(const CUiScopedPointerInputSuppression &) = delete;
+
+private:
+	CUi *m_pUi;
+	bool m_Active;
+};
+
 inline bool UiBatchableRectHasPositiveSize(float Width, float Height)
 {
 	return Width > 0.0f && Height > 0.0f;
@@ -850,6 +868,7 @@ private:
 	bool m_Enabled;
 	int m_RenderOnlyDepth = 0;
 	int m_BackgroundRenderDepth = 0;
+	int m_PointerInputSuppressDepth = 0;
 	int m_ContentDrawDepth = 0;
 	int m_PreLayoutInputDepth = 0;
 	float m_DropDownFontSize = -1.0f;
@@ -997,6 +1016,7 @@ private:
 	int m_LastUiScale = -1;
 
 	friend class CUiScopedClipSuspend;
+	friend class CUiScopedPointerInputSuppression;
 	std::vector<CUIRect, CBorrowedAllocator<CUIRect>> m_vClips;
 	void UpdateClipping();
 
@@ -1184,6 +1204,14 @@ public:
 		m_Enabled = Enabled;
 	}
 	bool Enabled() const { return m_Enabled; }
+	void BeginPointerInputSuppression() { ++m_PointerInputSuppressDepth; }
+	void EndPointerInputSuppression()
+	{
+		if(m_PointerInputSuppressDepth > 0)
+			--m_PointerInputSuppressDepth;
+	}
+	// 内容过渡趟内为真：绘制仍继续，但指针命中与按钮状态一律按「未按下」处理。
+	bool PointerInputSuppressed() const { return m_PointerInputSuppressDepth > 0; }
 	void BeginRenderOnly();
 	void EndRenderOnly();
 	void BeginBackgroundRender(bool ContentDraw = false)

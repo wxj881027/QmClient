@@ -2,10 +2,10 @@
 
 #include <engine/shared/config.h>
 
-#include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiConfigHint.h>
 #include <game/client/QmUi/UiSwitchTipPolicy.h>
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
 #include <game/localization.h>

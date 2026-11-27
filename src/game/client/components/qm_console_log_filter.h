@@ -8,7 +8,7 @@
 /**
  * 控制台日志分类与筛选（纯函数，便于单测）。
  *
- * 控制台顶栏的分类按钮为单选：「全部」显示所有分类，其他按钮只显示对应分类。
+ * 控制台顶栏的分类按钮为多选：点亮的类别保留，熄灭的类别排除；「全部」恢复所有类别。
  * 分类结果由每行日志里的 system 名决定（`<时间戳> <级别> <system>: <内容>`），而不是靠内容关键字猜。
  */
 
@@ -150,23 +150,27 @@ inline int QmClassifyConsoleLogLine(const char *pLine, size_t Length)
 }
 
 /**
- * 将筛选掩码归一化为单个分类或全部分类。
+ * 把筛选掩码归一化到合法分类集合。
+ *
+ * 空掩码是合法状态：四类全部排除，日志区为空；顶栏按钮仍然保留，可随时恢复任一分类。
  */
 inline int QmNormalizeConsoleLogFilterMask(int Mask)
 {
-	const int Valid = Mask & QM_CONSOLE_LOG_CATEGORY_ALL;
-	return Valid != 0 && (Valid & (Valid - 1)) == 0 ? Valid : QM_CONSOLE_LOG_CATEGORY_ALL;
+	return Mask & QM_CONSOLE_LOG_CATEGORY_ALL;
 }
 
-/** 选中的按钮与当前筛选掩码一致。 */
+/** 「全部」只在所有分类保留时选中；分类按钮在对应类别保留时选中。 */
 inline bool QmConsoleLogFilterButtonActive(int Mask, int Category)
 {
-	return QmNormalizeConsoleLogFilterMask(Mask) == Category;
+	return (QmNormalizeConsoleLogFilterMask(Mask) & Category) == Category;
 }
 
-inline int QmSelectConsoleLogFilterCategory(int Category)
+/** 独立切换一个类别的保留/排除状态；「全部」始终恢复所有类别。 */
+inline int QmToggleConsoleLogFilterCategory(int Mask, int Category)
 {
-	return QmNormalizeConsoleLogFilterMask(Category);
+	if(Category == QM_CONSOLE_LOG_CATEGORY_ALL)
+		return QM_CONSOLE_LOG_CATEGORY_ALL;
+	return QmNormalizeConsoleLogFilterMask(QmNormalizeConsoleLogFilterMask(Mask) ^ (Category & QM_CONSOLE_LOG_CATEGORY_ALL));
 }
 
 /** 该行是否应该显示在给定筛选掩码下。 */

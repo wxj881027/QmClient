@@ -23,17 +23,18 @@
 #include <test/support/qmclient_source_contract_test.h>
 #include <test/test.h>
 
-TEST(QmNewUiMenuSettingsColorsContract, TranslateUiColorsPreserveConfiguredAlpha)
+TEST(QmNewUiMenuSettingsColorsContract, LegacyTranslateUiColorsStayRemoved)
 {
 	const std::string Config = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
 	for(const char *pKey : {
-		    "MACRO_CONFIG_COL(QmTranslateBtnColorDisabled, qm_translate_btn_color_disabled, 0xD1000029, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA",
-		    "MACRO_CONFIG_COL(QmTranslateBtnColorEnabled, qm_translate_btn_color_enabled, 0xE69E5E86, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA",
-		    "MACRO_CONFIG_COL(QmTranslateMenuBgColor, qm_translate_menu_bg_color, 0xF200001F, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA",
-		    "MACRO_CONFIG_COL(QmTranslateMenuOptionSelected, qm_translate_menu_option_selected, 0xE69E5E86, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA",
-		    "MACRO_CONFIG_COL(QmTranslateMenuOptionNormal, qm_translate_menu_option_normal, 0xE6000033, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA",
+		    "QmTranslateBtnColorDisabled",
+		    "QmTranslateBtnColorEnabled",
+		    "QmTranslateMenuBgColor",
+		    "QmTranslateMenuOptionSelected",
+		    "QmTranslateMenuOptionNormal",
+		    "QmTranslateColorAlphaMigrated",
 	    })
-		EXPECT_NE(Config.find(pKey), std::string::npos) << pKey;
+		EXPECT_EQ(Config.find(pKey), std::string::npos) << pKey;
 }
 
 TEST(QmNewUiMenuSettingsColorsContract, LegacyUiSurfaceOptionsRemainCompatible)

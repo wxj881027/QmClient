@@ -41,30 +41,27 @@ SOURCE_DEFINITION = re.compile(
 
 
 # 源码路径继续保守计数；资源路径只在读取内容或查询目录结构时计数。
-# data/fonts/ 是生产字体扫描器的输入，保留 master 对字体目录的资源分类。
+# data/fonts/ 下的字体二进制是生产字体扫描器的输入，不算源码合同；
+# 同目录的文本清单（如 index.json）仍按文本读取计数。
 DIRECT_REPO_READ = re.compile(
 	r'TestSourcePath\s*\(\s*"(?:src/|qmclient_scripts/|datasrc/|other/|scripts/|CMakeLists\.txt)'
 	r'|std::ifstream\s+\w+\s*\([^;\n]*DDNET_TEST_SOURCE_DIR'
 )
 DIRECT_RESOURCE_READ = re.compile(
 	r'(?:std::ifstream\s+\w+|fs_is_dir|fs_exists|std::filesystem::(?:exists|is_directory))\s*\(\s*'
-	r'(TestSourcePath\s*\(\s*"data/(?!fonts/)[^"\n]+"\s*\))'
+	r'(TestSourcePath\s*\(\s*"data/[^"\n]+"\s*\))'
 )
+FONT_BINARY_PATH = re.compile(r'\.(?:ttf|otf|ttc)"', re.IGNORECASE)
 
 
 def count_source_reads(text: str) -> int:
-	# 二进制数据资源是生产解析器的输入，不是源码合同；仅排除明确以 binary
-	# 打开的字体资源。源码、文本清单以及 ReadRepoFile 等合同 helper 仍全部计数。
-	binary_font_reads = {
-		match.start(1)
-		for match in re.finditer(
-			r'std::ifstream\s+\w+\s*\(\s*(TestSourcePath\s*\(\s*"data/[^"\n]+\.(?:ttf|otf|ttc)"\s*\))\s*,\s*std::ios::binary\s*\)',
-			text,
-			re.IGNORECASE,
-		)
-	}
+	# 二进制数据资源是生产解析器的输入，不是源码合同；只按字体二进制扩展名排除，
+	# 不整目录豁免 data/fonts/，否则同目录的文本清单读取会被漏计。
 	direct_reads = len(DIRECT_REPO_READ.findall(text))
-	direct_reads += sum(match.start(1) not in binary_font_reads for match in DIRECT_RESOURCE_READ.finditer(text))
+	direct_reads += sum(
+		FONT_BINARY_PATH.search(match.group(1)) is None
+		for match in DIRECT_RESOURCE_READ.finditer(text)
+	)
 	return len(SOURCE_READ.findall(text)) - len(SOURCE_DEFINITION.findall(text)) + direct_reads
 
 

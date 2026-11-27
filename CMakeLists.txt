@@ -4086,8 +4086,6 @@ if(CLIENT)
     components/qmclient/translate/translate_ui_common.h
     components/qmclient/translate/translate_ui_popup.cpp
     components/qmclient/translate/translate_ui_popup.h
-    components/qmclient/translate/translate_ui_settings.cpp
-    components/qmclient/translate/translate_ui_settings.h
     components/qmclient/update_version.cpp
     components/qmclient/font_download_storage.h
     components/qmclient/auto_vote.h
@@ -5108,6 +5106,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/message_repack_test.cpp
     src/test/integration/engine/client_snapshot_ticks_test.cpp
     src/test/unit/engine/map_download_progress_test.cpp
+    src/test/unit/engine/qm_background_refresh_test.cpp
     src/test/unit/engine/unpacker_raw_test.cpp
     src/test/unit/engine/packer_boundary_test.cpp
     src/test/unit/engine/unpacker_boundary_test.cpp
@@ -5537,6 +5536,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_map_cover_art_test.cpp
     src/test/unit/qmclient/ui/qm_map_cover_result_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
+    src/test/unit/qmclient/ui/browser_workspace_route_test.cpp
     src/test/unit/qmclient/ui/server_vote_list_test.cpp
     src/test/unit/qmclient/ui/qm_scoreboard_team_mode_lifecycle_test.cpp
     src/test/unit/qmclient/ui/vote_menu_mode_test.cpp
@@ -5559,6 +5559,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/graphics_viewport_test.cpp
     src/test/integration/client/map_render_screen_test.cpp
     src/test/integration/client/map_layer_render_resources_test.cpp
+    src/test/integration/client/map_entity_overlay_alpha_test.cpp
     src/test/integration/client/map_renderer_loading_test.cpp
     src/test/unit/engine/map_load_test.cpp
     src/test/unit/engine/map_tileskip_test.cpp
@@ -5710,6 +5711,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_map_download_index_test.cpp
     src/test/unit/qmclient/client/qm_map_render_pass_test.cpp
     src/test/unit/qmclient/client/qm_entity_overlay_build_plan_test.cpp
+    src/test/unit/qmclient/client/qm_entity_overlay_tint_test.cpp
     src/test/integration/qmclient/client/qm_browser_map_preview_loader_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_visible_bounds_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_visible_frame_test.cpp
@@ -5775,6 +5777,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_hud_notifications_legacy_contract_test.cpp
     src/test/contract/qmclient/client/qm_hud_editor_contract_test.cpp
     src/test/unit/qmclient/client/country_flag_anim_start_time_test.cpp
+    src/test/unit/qmclient/client/qm_local_time_format_test.cpp
     src/test/unit/qmclient/client/qm_ime_candidate_failure_test.cpp
     src/test/unit/qmclient/client/qm_ime_platform_test.cpp
     src/test/unit/qmclient/client/qm_serverlist_cache_test.cpp
@@ -6926,6 +6929,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/map_difficulty_axiom_file_test.cpp
       src/game/client/components/qmclient/map_difficulty_catalog.cpp
       src/game/client/components/qmclient/axiom_scores_data.cpp
+src/game/client/components/settings_runtime_cache.cpp
       src/engine/client/sqlite.cpp
       src/test/integration/qmclient/client/qm_text_temporary_lifetime_test.cpp
       src/test/integration/qmclient/client/qm_text_unbuffered_passes_test.cpp

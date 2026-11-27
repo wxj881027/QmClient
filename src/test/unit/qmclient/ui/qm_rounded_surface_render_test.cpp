@@ -131,7 +131,6 @@ namespace
 
 		void SetUp() override
 		{
-			g_Config.m_QmRectCornerSegments = 16;
 			g_Config.m_QmUiCornerCurve = ROUNDED_CORNER_CURVE_CLASSIC;
 			g_Config.m_QmUiCornerSmoothing = 0;
 			m_Params.m_Radius = 4.0f;
@@ -169,37 +168,33 @@ TEST_F(CQmRoundedSurfaceRender, TranslucentFillDoesNotBlendWithBorderUnderneath)
 	}
 }
 
-TEST_F(CQmRoundedSurfaceRender, BorderCoversEdgesForEachCornerMaskAndQuality)
+TEST_F(CQmRoundedSurfaceRender, BorderCoversEdgesForEachCornerMask)
 {
 	const ColorRGBA Fill(1, 0, 0, 0.25f), Border(0, 0, 1, 0.7f);
-	for(int Segments : {8, 16, 48})
+	// 半径是形状的唯一来源：非零半径 + CORNER_NONE 按四角全圆处理，方块请把半径给 0。
+	// 因此这一轮只枚举真正带角掩码的组合，零掩码由几何单测单独钉住。
+	for(int Corners = IGraphics::CORNER_TL; Corners <= IGraphics::CORNER_ALL; ++Corners)
 	{
-		g_Config.m_QmRectCornerSegments = Segments;
-		// 半径是形状的唯一来源：非零半径 + CORNER_NONE 按四角全圆处理，方块请把半径给 0。
-		// 因此这一轮只枚举真正带角掩码的组合，零掩码由几何单测单独钉住。
-		for(int Corners = IGraphics::CORNER_TL; Corners <= IGraphics::CORNER_ALL; ++Corners)
+		SCOPED_TRACE(::testing::Message() << "corners=" << Corners);
+		CSurfaceGraphics Graphics;
+		m_Params.m_Corners = Corners;
+		ASSERT_TRUE(DrawRoundedSurface(&Graphics, m_Rect, Fill, Border, m_Params));
+		ExpectColor(Graphics.Sample(vec2(10.37f, 6.23f)), Fill);
+		ExpectColor(Graphics.Sample(vec2(1.43f, 9.13f)), Fill);
+		ExpectColor(Graphics.Sample(vec2(10.37f, 0.43f)), Border);
+		ExpectColor(Graphics.Sample(vec2(29.57f, 9.13f)), Border);
+		ExpectColor(Graphics.Sample(vec2(10.37f, 19.57f)), Border);
+		ExpectColor(Graphics.Sample(vec2(0.43f, 9.13f)), Border);
+		for(const auto &Corner : std::array<std::pair<int, vec2>, 4>{{{IGraphics::CORNER_TL, vec2(0, 0)}, {IGraphics::CORNER_TR, vec2(30, 0)}, {IGraphics::CORNER_BR, vec2(30, 20)}, {IGraphics::CORNER_BL, vec2(0, 20)}}})
 		{
-			SCOPED_TRACE(::testing::Message() << "segments=" << Segments << " corners=" << Corners);
-			CSurfaceGraphics Graphics;
-			m_Params.m_Corners = Corners;
-			ASSERT_TRUE(DrawRoundedSurface(&Graphics, m_Rect, Fill, Border, m_Params));
-			ExpectColor(Graphics.Sample(vec2(10.37f, 6.23f)), Fill);
-			ExpectColor(Graphics.Sample(vec2(1.43f, 9.13f)), Fill);
-			ExpectColor(Graphics.Sample(vec2(10.37f, 0.43f)), Border);
-			ExpectColor(Graphics.Sample(vec2(29.57f, 9.13f)), Border);
-			ExpectColor(Graphics.Sample(vec2(10.37f, 19.57f)), Border);
-			ExpectColor(Graphics.Sample(vec2(0.43f, 9.13f)), Border);
-			for(const auto &Corner : std::array<std::pair<int, vec2>, 4>{{{IGraphics::CORNER_TL, vec2(0, 0)}, {IGraphics::CORNER_TR, vec2(30, 0)}, {IGraphics::CORNER_BR, vec2(30, 20)}, {IGraphics::CORNER_BL, vec2(0, 20)}}})
-			{
-				// 半径是形状的唯一来源：给了非零半径时 CORNER_NONE 也会被解析成四角全圆，
-				// 所以期望值要按解析后的掩码算，不能再拿调用点传进来的原始掩码。
-				const int EffectiveCorners = ResolveRoundedSurfaceCorners(m_Params.m_Radius, Corners);
-				const vec2 Direction(Corner.second.x > 0 ? -1.0f : 1.0f, Corner.second.y > 0 ? -1.0f : 1.0f);
-				const vec2 Point = Corner.second + Direction * (EffectiveCorners & Corner.first ? vec2(1.21f, 1.17f) : vec2(0.43f, 1.17f));
-				ExpectColor(Graphics.Sample(Point), Border);
-				const vec2 Outside = Corner.second + Direction * vec2(0.31f, 0.27f);
-				ExpectColor(Graphics.Sample(Outside), EffectiveCorners & Corner.first ? ColorRGBA(0, 0, 0, 0) : Border);
-			}
+			// 半径是形状的唯一来源：给了非零半径时 CORNER_NONE 也会被解析成四角全圆，
+			// 所以期望值要按解析后的掩码算，不能再拿调用点传进来的原始掩码。
+			const int EffectiveCorners = ResolveRoundedSurfaceCorners(m_Params.m_Radius, Corners);
+			const vec2 Direction(Corner.second.x > 0 ? -1.0f : 1.0f, Corner.second.y > 0 ? -1.0f : 1.0f);
+			const vec2 Point = Corner.second + Direction * (EffectiveCorners & Corner.first ? vec2(1.21f, 1.17f) : vec2(0.43f, 1.17f));
+			ExpectColor(Graphics.Sample(Point), Border);
+			const vec2 Outside = Corner.second + Direction * vec2(0.31f, 0.27f);
+			ExpectColor(Graphics.Sample(Outside), EffectiveCorners & Corner.first ? ColorRGBA(0, 0, 0, 0) : Border);
 		}
 	}
 }

@@ -280,6 +280,7 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_mini_features[] = {
+		{Localizable("Auto-accept team invites"), nullptr, "自动接受组队邀请"},
 		{Localizable("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"), nullptr, "自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）"},
 		{Localizable("Blank asset auto fallback"), nullptr, "空白资源自动回退 怎么隐藏雪花特效 空白材质 屏蔽雪花"},
 		{Localizable("Color map tune zones by their tune zone number"), nullptr, "按 Tune Zone 编号给地图上的对应区块着色"},
@@ -296,6 +297,7 @@ namespace
 		{Localizable("Sponsor reminder"), nullptr, "赞助提醒"},
 		{Localizable("Show command completion in chat"), nullptr, "聊天中显示命令补全"},
 		{Localizable("Chat emoji completion"), nullptr, "聊天表情补全"},
+		{nullptr, "qm_auto_accept_team_invite", nullptr},
 		{nullptr, "qm_blank_asset_fallback", nullptr},
 		{nullptr, "qm_client_show_badge", nullptr},
 		{nullptr, "qm_hide_join_server_info", nullptr},
@@ -338,7 +340,7 @@ namespace
 		{Localizable("UI scale"), nullptr, "UI 大小"},
 		{Localizable("View points"), nullptr, "查看积分"},
 		{Localizable("Whisper"), nullptr, "私聊"},
-		{nullptr, "qm_perf_debug", nullptr},
+		{nullptr, "qm_perf_auto_record", nullptr},
 		{nullptr, "qm_pie_menu_color_copy_name", nullptr},
 		{nullptr, "qm_pie_menu_color_copy_skin", nullptr},
 		{nullptr, "qm_pie_menu_color_follow", nullptr},
@@ -522,24 +524,6 @@ namespace
 		{nullptr, "qm_translate_llm_custom_thinking", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("qm:translate", qm_translate);
-}
-
-// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
-namespace
-{
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_translate_ui[] = {
-		{Localizable("Button - Disabled"), nullptr, "按钮 - 未启用"},
-		{Localizable("Button - Enabled"), nullptr, "按钮 - 已启用"},
-		{Localizable("Menu background"), nullptr, "菜单背景"},
-		{Localizable("Menu option - normal"), nullptr, "菜单选项 - 普通"},
-		{Localizable("Menu option - selected"), nullptr, "菜单选项 - 选中"},
-		{nullptr, "qm_translate_btn_color_disabled", nullptr},
-		{nullptr, "qm_translate_btn_color_enabled", nullptr},
-		{nullptr, "qm_translate_menu_bg_color", nullptr},
-		{nullptr, "qm_translate_menu_option_normal", nullptr},
-		{nullptr, "qm_translate_menu_option_selected", nullptr},
-	};
-	QM_CARD_SEARCH_REGISTER("qm:translate_ui", qm_translate_ui);
 }
 
 // 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。

@@ -660,6 +660,41 @@ TEST(QmScoreHudLayout, WiderRankExpandsOnlyToTheLeft)
 	EXPECT_FLOAT_EQ(ThreeDigits.m_RankX, TwoDigits.m_RankX - 7.0f);
 }
 
+TEST(QmScoreHudLayout, TeamBoxRightAnchorsAndShrinksOnlyToTheLeft)
+{
+	// 团队比分条（和 HUD 编辑器选框）右缘永远贴住屏幕右缘；
+	// 分数变长或出现旗帜占位时只向左长，左侧不留固定空档。
+	constexpr float Right = 300.0f;
+	constexpr float Top = 229.0f;
+	constexpr float Height = 18.0f;
+	const auto ShortScore = QmScoreHudTeamBoxRect(Right, Top, 14.0f, 3.0f, Height);
+	const auto LongScore = QmScoreHudTeamBoxRect(Right, Top, 70.0f, 3.0f, Height);
+	const auto WithFlag = QmScoreHudTeamBoxRect(Right, Top, 14.0f, 16.0f, Height);
+
+	EXPECT_FLOAT_EQ(ShortScore.x + ShortScore.w, Right);
+	EXPECT_FLOAT_EQ(ShortScore.y, Top);
+	EXPECT_FLOAT_EQ(ShortScore.h, Height);
+	EXPECT_FLOAT_EQ(LongScore.x + LongScore.w, Right);
+	EXPECT_FLOAT_EQ(LongScore.w - ShortScore.w, 70.0f - 14.0f);
+	EXPECT_FLOAT_EQ(ShortScore.x - LongScore.x, 70.0f - 14.0f);
+	EXPECT_FLOAT_EQ(WithFlag.w - ShortScore.w, 16.0f - 3.0f);
+}
+
+TEST(QmScoreHudLayout, NameCentersUnderBarAndStaysOnScreen)
+{
+	constexpr float Screen = 300.0f;
+	const auto Bar = QmScoreHudTeamBoxRect(Screen, 229.0f, 24.0f, 16.0f, 18.0f);
+	constexpr float NameWidth = 40.0f;
+	EXPECT_FLOAT_EQ(QmScoreHudNameX(Bar.x, Bar.w, NameWidth, Screen), Bar.x + (Bar.w - NameWidth) * 0.5f);
+
+	// 名字比条还宽时按屏幕右缘兜底，但仍不从屏幕左边溢出。
+	const auto TinyBar = QmScoreHudTeamBoxRect(Screen, 229.0f, 0.0f, 0.0f, 18.0f);
+	constexpr float LongName = 200.0f;
+	const float LongX = QmScoreHudNameX(TinyBar.x, TinyBar.w, LongName, Screen);
+	EXPECT_LE(LongX + LongName, Screen);
+	EXPECT_GE(LongX, 0.0f);
+}
+
 TEST(QmInputOverlayLayout, MouseClassificationRequiresMouseOnlyInputs)
 {
 	EXPECT_TRUE(QmInputOverlay::IsMouseOnlyLayout(false, true));

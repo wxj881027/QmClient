@@ -59,7 +59,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.1 设计 Token（design token）
 
 - 定义：所有尺寸、颜色、圆角、字号、动效参数只有一个来源；调用点选语义，不写数字。
-- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间按职责分组：`ui_token::color`（60 项，含搜索命中的 `SEARCH_MATCH_ON_DARK/SEARCH_MATCH_ON_LIGHT`）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/CARD_RADIUS/TAGS_*`，整页只认一套行制：行高 = `BODY_SIZE × ROW_HEIGHT_RATIO`、标签列 = `LABEL_WIDTH`，备注行与开关行不再自带 `NOTE_*` 度量）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::motd`（`DESIGN_WIDTH/DESIGN_HEIGHT/TITLE_HEIGHT_RATIO/TITLE_GAP/BOX_GLYPHS_PER_STEP/FONT_SIZE`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING/MARGIN/SURFACE_COLOR_SCALE`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::vote_hud`（`PANEL_*/PADDING/HEADER_*/REASON_*/BARS_*/BUTTON_*/TITLE_FONT_SIZE/REASON_FONT_SIZE/TIME_*/RADIUS`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
+- 唯一实现：`src/game/client/QmUi/UiTokens.h`，命名空间按职责分组：`ui_token::color`（60 项，含搜索命中的 `SEARCH_MATCH_ON_DARK/SEARCH_MATCH_ON_LIGHT`）、`ui_token::spacing`、`ui_token::radius`（`NONE/TIGHT/BASE/SMALL_MENU/MENU/CARD/PILL`）、`ui_token::font`（`HEADLINE_LG/HEADLINE/TITLE/BODY/SMALL/CAPTION/TIP`）、`ui_token::motion`（36 项）、`ui_token::elevation`、`ui_token::control`（`PadX/PadY/IconBox/IconTextGap/TEXT_WIDTH_SLACK/ResolveTextMaxWidth/ResolveIconTextRow/SUFFIX_RATIO/SwitchMinWidth/SwitchTrackAspect`）、`ui_token::list`、`ui_token::settings` + `ui_token::settings::row`、`ui_token::feedback`、`ui_token::glow`、`ui_token::tooltip`、`ui_token::secondary_panel`、`ui_token::server_filter`、`ui_token::status_bar`、`ui_token::server_info`（`TITLE_SIZE/BODY_SIZE/TITLE_GAP/ROW_HEIGHT_RATIO/LABEL_WIDTH/CARD_RADIUS/TAGS_*`，整页只认一套行制：行高 = `BODY_SIZE × ROW_HEIGHT_RATIO`、标签列 = `LABEL_WIDTH`，备注行与开关行不再自带 `NOTE_*` 度量）、`ui_token::motd`（`FONT_SIZE/BOX_CELL_MIN_RATIO`）、`ui_token::motd`（`DESIGN_WIDTH/DESIGN_HEIGHT/TITLE_HEIGHT_RATIO/TITLE_GAP/BOX_GLYPHS_PER_STEP/FONT_SIZE`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP/ICON_Y_OFFSET`）、`ui_token::panel`（`GAP/PADDING/MARGIN/SURFACE_COLOR_SCALE`）、`ui_token::chat`（滚动条 + 气泡圆角派生 + `input::RowHeight/ButtonBorderWidth` 聊天输入行行高与翻译按钮描边）、`ui_token::player_card`（玩家信息卡分区度量）、`ui_token::text_caret`（`THICKNESS_PX/RADIUS_PX/BLOCK_RADIUS_PX/WIDTH_RATIO/OUTLINE_PX`）、`ui_token::confirm_dialog`、`ui_token::dropdown`、`ui_token::discrete_slider`、`ui_token::ime`、`ui_token::hud::font`、`ui_token::vote_hud`（`PANEL_*/MINI_*/PADDING/HEADER_*/REASON_*/BARS_*/BUTTON_*/TITLE_FONT_SIZE/REASON_FONT_SIZE/TIME_*/RADIUS/MINI_RADIUS`）、`ui_token::page_title`（`FONT_SIZE/HEIGHT/ICON_SIZE/ICON_GAP`）、`ui_token::chat`（`SCROLLBAR_*/BUBBLE_*`、`BubbleRadius`）、`ui_token::player_card`（`SIDE_BY_SIDE_MIN_WIDTH/CARD_MAX_WIDTH/CARD_WIDTH_RATIO/STACK_CARD_HEIGHT_RATIO/LIST_CARD_GAP/PADDING/RADIUS/SECTION_GAP/HEADER_*/ACTION_*/ICON_*/STATUS_*/DETAIL_*/LIST_*/SEARCH_HEIGHT/COPY_TOAST_SECONDS`）。
 - 禁止的反面写法：`Row.h - 2.0f` 这类就地魔数；为单个组件新开命名空间放通用色；用近似值复制已有 token（`PREVIEW_BACKDROP` 与 `SURFACE_OVERLAY` 二选一时必须复用）。
 
 #### 调试 HUD 字体（debug HUD font）
@@ -74,6 +74,17 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`UiTokens.h` 中的 `ui_token::finish_summary::*`（完成摘要卡数字及差值角色色）、`ui_token::map_preview::*`（预览背板及占位图标）、`ui_token::world_lyrics::*`（世界歌词正文及光晕）和 `ui_token::tag::MONET_PALETTE`（标签与取色器共用的固定预设）；通用色仍走 `ui_token::color`。
 - 禁止的反面写法：在绘制代码里写 `ColorRGBA(...)` 数字字面量；把组件身份色放进 `ui_token::color` 变成全局色；同一组件两处各写一份近似色；用近似值复制已有 token。
 
+### 2.1b TClient 页面 Token（TClient page token）
+
+- 定义：TClient 专属页面（字体、档案、配置、战争列表、状态栏、视觉、绑轮盘）的尺寸、比例、透明度与动效节流值只放在 `ui_token::tclient::<页面>`；页面代码只写语义名，不写裸浮点。
+- 唯一实现：`ui_token::tclient`（`src/game/client/QmUi/UiTokens.h`）：`font::*`（筛选框、卡片网格、预览行、状态列、字形板、应用节流）、`profiles::*`（预览缩放、占位十字、卡片高度、列表宽度）、`configs::*`、`warlist::*`（行内列宽占比、动作组宽度、双列阈值、文本计划字号量化）、`statusbar::*`、`visual::*`、`bindwheel::*`、`page::*`，以及跨页的 `HALF/DOUBLE/PERCENT/NONE`。静态门禁 `qmclient_scripts/gate/checks/qm_tclient_tokens.py` 扫描 `QmCardCatalogTClient*.*`（页面 `.cpp` 与公共头 `.h`）：先剥离注释/字符串，只放行 `0.0/1.0`；确属物理常量的行必须在注释中写 `// qm-token-allow: <原因>`（带冒号与非空原因）。
+- 禁止的反面写法：在 TClient 卡片函数里写 `18.0f`、`* 0.28f`、`ColorRGBA(1.0f, 0.4f, 0.4f, 1.0f)`；把页面专属尺寸塞回 `ui_token::settings`；用近似值复制已有 token 而不复用。
+
+### 2.1c 图标文字行布局（icon-text row layout）
+
+- 定义：按钮/控件里的「图标 + 文字」是一个整体，按文字实测自然宽度居中；标签最大宽度取自然宽度加 1px 并向上取整，锁成单行。行宽真的不够时文字矩形收到可用宽度并省略，不能折成两行撑破控件。
+- 唯一实现：`ui_token::control::TEXT_WIDTH_SLACK`、`ResolveTextMaxWidth`、`SIconTextRowLayout`、`ResolveIconTextRow`（`src/game/client/QmUi/UiTokens.h`）；菜单按钮接线 `MenuButtonIconTextLayout`、`MenuButtonLabelProps`（`src/game/client/components/menus.cpp`）。
+- 禁止的反面写法：把 `TextWidth` 实测值原样塞给 `m_MaxWidth`（等宽边界会让空格处折行）；用 `(int)` 向下截断宽度；按钮标签允许自动换行；图标与文字各算一套矩形或用固定左边距凑对齐。
 #### 材质编辑器画布角色色（assets editor canvas roles）
 
 - 定义：双色棋盘格标识贴图透明区。槽位边框区分悬停、选中、染色和拖拽落点，拖动缩略图使用独立浮层表面。
@@ -138,6 +149,24 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 定义：本地时钟动画只在「输入趟」推进，测量趟与只读趟只读，保证过渡不被后台绘制吃掉。
 - 唯一实现：`QmSettingsRevealShouldAdvance(...)`、`QmInteractiveRevealSeconds(...)`、`QmInteractiveRevealProgress(...)`、`QmSettingsRevealCanMeasureContent(...)`（`src/game/client/QmUi/SettingsRowReveal.h`）。
 - 禁止的反面写法：不分趟次直接 `Progress += Dt`；在 `MeasurementOnly` 趟写进度；用进度反推显隐判定。
+
+### 2.7a UI 帧时钟（UI frame clock）
+
+- 定义：每帧只生成一次时间快照：渲染 dt（已按 1/20 s 截断）、逻辑 dt（0 或 N × 1/120 s）与逻辑插值进度。UI 动画一律从这里取 dt，不再各自读 `RenderFrameTime()`。
+- 唯一实现：`SQmUiFrameClock` + `QM_UI_LOGIC_STEP_SEC` / `QM_UI_LOGIC_MAX_CATCHUP_SEC`（`src/game/client/QmUi/QmUiPerf.h`），由 `CUiRuntimeV2::OnRender` 填充，经 `UiRuntimeV2()->FrameClock()` 读取；逻辑步推进用 `QmUiAdvanceLogicClockStep`。
+- 禁止的反面写法：在菜单/HUD/TClient 的 UI 动画里直接调用 `Client()->RenderFrameTime()`；用逻辑 dt 做淡入/弹簧；对 dt 不截断导致长帧一次跳完动画。
+
+### 2.7b 状态动画与视觉动画（state vs visual animation）
+
+- 定义：状态类过渡（页面/页签切换、弹层开合、显隐生命周期）按固定 120 Hz 逻辑步推进；纯视觉插值（淡入淡出、缩放、hover、弹簧、滚动）按截断后的渲染帧推进。两条轨道互不拖累。
+- 唯一实现：`SUiAnimTransition::m_Clock`（`EUiAnimClock::LOGIC/RENDER`，`src/game/client/QmUi/QmAnimationBackend.h`）；`ui_token::motion::PAGE_SLIDE/TAB_SWITCH/MODAL_PRESENCE` 走 LOGIC，`HOVER_FADE/PRESS_SCALE/MODAL_FADE_SCALE/TOAST_SLIDE` 等走 RENDER；模态弹窗用 `AnimatePresence(..., MODAL_IN, &MODAL_PRESENCE)` 把显隐与透明度拆到两条轨道（`UiOverlays.h` + `CUiV2Tree::ResolvePresence`）。
+- 禁止的反面写法：把 hover/弹簧/滚动改挂 LOGIC；用一条 LOGIC 轨道同时承载显隐与透明度；为分类而在调用点手写 `if(Logic) Dt = ...`。
+
+### 2.7c 过渡命中稳定性（transition hit stability）
+
+- 定义：过渡动画中的内容按临时偏移矩形绘制，但命中与按钮状态必须在目标矩形上结算；过渡期间的指针输入直接挂起，已按住的旧点击被释放，不在过渡结束后补发。
+- 唯一实现：`CUiScopedPointerInputSuppression`（`src/game/client/ui.h`）+ `CUi::PointerInputSuppressed()`；`ApplyUiSwitchOffset` 的每个调用点（菜单页切换、服务器浏览器筛选/工具箱、Tee 子页签、触屏菜单）在内容趟内建立该作用域。
+- 禁止的反面写法：把动画中的偏移矩形直接交给 `DoButtonLogic`；在过渡期间允许新按下；把导航栏等目标矩形不受影响的控件一起挂起。
 
 ### 2.8 滚动与让位（scroll and reserve）
 
@@ -252,9 +281,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.8d 控制台顶栏按钮（console toolbar button）
 
-- 定义：控制台筛选与动作按钮的出现、消失都走同一条存在度；同一按钮换文案时复用槽位并平滑过渡宽度，按钮宽度、透明度和命中一起收放，任意两颗实际可见的按钮之间保留同一档固定间距，目标集合决定是否折成两行，选中底色取全局强调色的派生档。
-- 唯一实现：`QmConsoleUi::CToolbarPresenceMotion`、`QmConsoleUi::LayoutToolbarAnimated`、`QmConsoleUi::ToolbarFlowGap`、`QmConsoleUi::ToolbarFlowWidth`、`QmConsoleUi::ResolveToolbarWidth`、`QmConsoleUi::ResolveConsoleButtonFill`、`QmConsoleUi::Button`（`src/game/client/QmUi/QmConsoleUi.h`）；显隐动效取 `ui_token::motion::NAVIGATION_APPEAR`、文案宽度取 `ui_token::motion::TAB_SWITCH`，调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
-- 禁止的反面写法：动作集合变化时瞬切按钮或只淡文字不缩宽度；把搜索/取消、展开/收起拆成两颗按钮同时一缩一长；用当前动画宽度决定折行；隐藏槽位吞掉左右按钮之间的间距或让间距随存在度缩到 0；选中底色取控制台命令语法色或在调用点写裸 `ColorRGBA`；显隐和选中共用同一条 `ALPHA` 轨道。
+- 定义：控制台筛选与动作按钮的出现、消失都走同一条存在度；同一按钮换文案时复用槽位并平滑过渡宽度，按钮宽度、透明度和命中一起收放，任意两颗实际可见的按钮之间保留同一档固定间距，目标集合决定是否折成两行，选中底色取全局强调色的派生档。分类筛选为多选：点亮表示保留该类日志，熄灭并显示禁用图标表示排除；「全部」只在四类都保留时点亮，点击后恢复全部；四类可以全部熄灭，此时日志区为空，顶栏按钮仍保留，任一点亮的分类或「全部」都能恢复。
+- 唯一实现：`QmConsoleUi::CToolbarPresenceMotion`、`QmConsoleUi::LayoutToolbarAnimated`、`QmConsoleUi::ToolbarFlowGap`、`QmConsoleUi::ToolbarFlowWidth`、`QmConsoleUi::ResolveToolbarWidth`、`QmConsoleUi::ResolveConsoleButtonFill`、`QmConsoleUi::Button`（`src/game/client/QmUi/QmConsoleUi.h`）；筛选语义 `QmToggleConsoleLogFilterCategory` / `QmConsoleLogFilterButtonActive` / `QmNormalizeConsoleLogFilterMask`（`src/game/client/components/qm_console_log_filter.h`）；显隐动效取 `ui_token::motion::NAVIGATION_APPEAR`、文案宽度取 `ui_token::motion::TAB_SWITCH`，调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
+- 禁止的反面写法：动作集合变化时瞬切按钮或只淡文字不缩宽度；把搜索/取消、展开/收起拆成两颗按钮同时一缩一长；用当前动画宽度决定折行；隐藏槽位吞掉左右按钮之间的间距或让间距随存在度缩到 0；选中底色取控制台命令语法色或在调用点写裸 `ColorRGBA`；显隐和选中共用同一条 `ALPHA` 轨道；把分类筛选退回单选、去掉排除图标，或把空掩码强行回退成全部。
 
 ### 2.8e 控制台类型切换与远程头部（console type switch）
 
@@ -473,7 +502,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
   | 聊天历史 | 行型面 | `QmResolveWheelLineCount(3, StepScale, 可见行数, 8)` 行 |
 
   `CListBox::SetWheelStepScale` 是**单列表**倍率，只乘该列表的 `m_WheelScale`（皮肤列表行高含预览图，取 0.7）。按住 Alt 滚轮额外 `× QmScrollAltMultiplier()`(3)。
-- 手感参数与距离无关：`qm_ui_scroll_feel`（原版 / 平滑 / 弹簧）、`qm_ui_scroll_spring_response`、`qm_ui_scroll_spring_damping`、`qm_ui_scroll_bounce` 只改动画曲线与回弹，不改每格位移。默认档以配置默认值为准（当前原版）；原版与平滑保留为可切回的兜底档。
+- 手感参数与距离无关：`qm_ui_scroll_feel`（原版 / 平滑 / 弹簧）、`qm_ui_scroll_spring_response`、`qm_ui_scroll_spring_damping`、`qm_ui_scroll_bounce` 只改动画曲线与回弹，不改每格位移。默认档以配置默认值为准（当前弹簧）；原版与平滑保留为可切回的兜底档。
 - 禁止的反面写法：调用点直接写绝对滚动像素；用单列表倍率去补全局配置该改的值（会让不同页面失去等比关系）；改 `DoStart` 的 `RowsPerScroll` 来调滚轮速度（它会连带把键盘 PageUp/Down 的 `RowsPerScroll×4` 一起改掉）；面板级再乘一次 `QmPanelWheelStepMultiplier`（`QmSettingsScrollConfig` 已乘过）；给控制台或聊天新增逐面速度配置，或继续用 `qm_ui_scroll_step / 行高` 求行数。
 
 ### 3.12d 游戏内 HUD 背景模糊接入（in-game blur scope）
@@ -488,7 +517,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`EVoteHudMode` / `QmVoteHudMode` / `QmVoteHudCoordScale` / `QmVoteHudDefaultRect` / `QmVoteHudLayoutFromRect` / `QmMiniVoteHudLayoutFromRect` / `QmScoreboardVoteLayout`（`components/qmclient/voting_hud.h`）+ `CVoting::RenderVoteHudPanel` / `CVoting::RenderMiniVoteHudPanel`（`components/voting.cpp`）+ `ui_token::vote_hud::*`（`QmUi/UiTokens.h`）。
 - 坐标与尺寸：非计分板完整面板处于游戏世界屏幕坐标，计分板处于 UI 坐标；`QmVoteHudCoordScale` 按两套坐标宽度折算，完整面板因此与计分板上方投票面板保持同一物理宽高。旧版紧凑状态条固定为 70×35，只缩小尺寸，不另起配色。计分板内始终使用完整面板，不受 `qm_mini_vote_hud` 开关影响。
 - 可见性：投票进行中且尚未选择时，按开关显示紧凑条或完整面板；投票后默认消失，只有 `cl_show_votes_after_voting=1` 才继续显示。计分板打开时普通 HUD 隐藏，由计分板内完整投票面板接管。
-- 底色与圆角取计分板同一份：完整面板、计分板内投票和旧版紧凑状态条都走同一个 `ResolveConfiguredInterfaceSurface()` 表面解析（`QmUi/UiTheme.h`，压暗比例取 `ui_token::panel::SURFACE_COLOR_SCALE`），圆角取 `ui_token::vote_hud::RADIUS`（与计分板主面板同为 `radius::CARD`）；完整面板按钮仍走 `ui_widget::DrawButtonSurface`。
+- 底色与圆角取计分板同一份：完整面板、计分板内投票和旧版紧凑状态条都走同一个 `ResolveConfiguredInterfaceSurface()` 表面解析（`QmUi/UiTheme.h`，压暗比例取 `ui_token::panel::SURFACE_COLOR_SCALE`）；完整面板的圆角取 `ui_token::vote_hud::RADIUS`（与计分板主面板同为 `radius::CARD`），紧凑条只有 35 高，取 `MINI_RADIUS`（`radius::BASE`）保持同一角高比，不再沿用整卡 14 读成胶囊。完整面板按钮仍走 `ui_widget::DrawButtonSurface`。
 - 禁止的反面写法：把完整面板的 `320×60` 直接塞进游戏世界坐标导致实机放大；投票进行中且尚未选择时返回“完全不画”；给非计分板投票框重新写 `SURFACE_GLASS` 或裸 `ColorRGBA`；新增第二个小 HUD 开关；用 `Ui()->RenderGaussianBlur(...)` 绕开 `CUiScopedGaussianBlur`。
 
 ### 3.12e 媒体封面（唱片自转 / cover spin）

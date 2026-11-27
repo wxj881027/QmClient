@@ -128,21 +128,21 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 	CUIRect Label, Button;
 
 	auto RenderProfile = [&](CUIRect Rect, const CProfile &Profile, bool Main) {
-		const float PreviewTeeSize = ProfileMetrics.m_ButtonHeight * 2.0f;
+		const float PreviewTeeSize = ProfileMetrics.m_ButtonHeight * ui_token::tclient::profiles::PREVIEW_TEE_SCALE;
 		const float PreviewFlagHeight = ProfileMetrics.m_ButtonHeight;
-		const float PreviewColorSize = ProfileMetrics.m_LineSpacing * 2.0f;
+		const float PreviewColorSize = ProfileMetrics.m_LineSpacing * ui_token::tclient::profiles::PREVIEW_COLOR_SCALE;
 		auto RenderCross = [&](CUIRect Cross, float MaxSize = 0.0f) {
 			// 未覆盖字段使用中性短横线，避免与删除操作的 destructive 图标混淆。
-			const float Extent = std::min(MaxSize > 0.0f ? MaxSize : Cross.h * 0.4f, Cross.w * 0.5f);
-			CUIRect Placeholder{Cross.Center().x - Extent * 0.5f, Cross.Center().y - 1.0f, Extent, 2.0f};
-			Placeholder.Draw(ColorRGBA(0.65f, 0.65f, 0.65f, 0.8f), IGraphics::CORNER_ALL, 1.0f);
+			const float Extent = std::min(MaxSize > 0.0f ? MaxSize : Cross.h * ui_token::tclient::profiles::CROSS_HEIGHT_RATIO, Cross.w * ui_token::tclient::profiles::CROSS_WIDTH_RATIO);
+			CUIRect Placeholder{Cross.Center().x - Extent * ui_token::tclient::HALF, Cross.Center().y - 1.0f, Extent, ui_token::tclient::profiles::CROSS_THICKNESS};
+			Placeholder.Draw(ui_token::tclient::profiles::CROSS_COLOR, IGraphics::CORNER_ALL, ui_token::tclient::profiles::CROSS_RADIUS);
 		};
 		{
 			CUIRect Skin;
 			Rect.VSplitLeft(PreviewTeeSize, &Skin, &Rect);
 			if(!Main && Profile.m_SkinName[0] == '\0')
 			{
-				RenderCross(Skin, 20.0f);
+				RenderCross(Skin, ui_token::tclient::profiles::CROSS_ICON_SIZE);
 			}
 			else
 			{
@@ -150,7 +150,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 				TeeRenderInfo.Apply(GameClient()->m_Skins.Find(Profile.m_SkinName));
 				TeeRenderInfo.ApplyColors(Profile.m_BodyColor >= 0 && Profile.m_FeetColor >= 0, Profile.m_BodyColor, Profile.m_FeetColor);
 				TeeRenderInfo.m_Size = PreviewTeeSize;
-				const vec2 Pos = Skin.Center() + vec2(0.0f, TeeRenderInfo.m_Size / 10.0f); // Prevent overflow from hats
+				const vec2 Pos = Skin.Center() + vec2(0.0f, TeeRenderInfo.m_Size / ui_token::tclient::profiles::TEE_OFFSET_DIVISOR); // Prevent overflow from hats
 				vec2 Dir = vec2(1.0f, 0.0f);
 				if(Main)
 					RenderTeeCute(CAnimState::GetIdle(), &TeeRenderInfo, std::max(0, Profile.m_Emote), Dir, Pos, false);
@@ -162,16 +162,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		{
 			CUIRect Colors;
 			Rect.VSplitLeft(PreviewColorSize, &Colors, &Rect);
-			CUIRect BodyColor{Colors.Center().x - PreviewColorSize * 0.5f, Colors.Center().y - PreviewColorSize * 0.5f - ProfileMetrics.m_LineSpacing, PreviewColorSize, PreviewColorSize};
-			CUIRect FeetColor{Colors.Center().x - PreviewColorSize * 0.5f, Colors.Center().y + ProfileMetrics.m_LineSpacing, PreviewColorSize, PreviewColorSize};
+			CUIRect BodyColor{Colors.Center().x - PreviewColorSize * ui_token::tclient::HALF, Colors.Center().y - PreviewColorSize * ui_token::tclient::HALF - ProfileMetrics.m_LineSpacing, PreviewColorSize, PreviewColorSize};
+			CUIRect FeetColor{Colors.Center().x - PreviewColorSize * ui_token::tclient::HALF, Colors.Center().y + ProfileMetrics.m_LineSpacing, PreviewColorSize, PreviewColorSize};
 			if(Profile.m_BodyColor >= 0 && Profile.m_FeetColor >= 0)
 			{
 				// Body Color
 				DrawRoundedSurface(Ui(), BodyColor,
-					color_cast<ColorRGBA>(ColorHSLA(Profile.m_BodyColor).UnclampLighting(ColorHSLA::DARKEST_LGT)).WithAlpha(1.0f), ColorRGBA(), 2.0f);
+					color_cast<ColorRGBA>(ColorHSLA(Profile.m_BodyColor).UnclampLighting(ColorHSLA::DARKEST_LGT)).WithAlpha(1.0f), ColorRGBA(), ui_token::tclient::profiles::COLOR_SWATCH_RADIUS);
 				// Feet Color;
 				DrawRoundedSurface(Ui(), FeetColor,
-					color_cast<ColorRGBA>(ColorHSLA(Profile.m_FeetColor).UnclampLighting(ColorHSLA::DARKEST_LGT)).WithAlpha(1.0f), ColorRGBA(), 2.0f);
+					color_cast<ColorRGBA>(ColorHSLA(Profile.m_FeetColor).UnclampLighting(ColorHSLA::DARKEST_LGT)).WithAlpha(1.0f), ColorRGBA(), ui_token::tclient::profiles::COLOR_SWATCH_RADIUS);
 			}
 			else
 			{
@@ -182,10 +182,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		Rect.VSplitLeft(ProfileMetrics.m_LineSpacing, nullptr, &Rect);
 		{
 			CUIRect Flag;
-			Rect.VSplitRight(PreviewFlagHeight * 2.0f, &Rect, &Flag);
-			Flag = {Flag.x, Flag.y + (Flag.h - PreviewFlagHeight) / 2.0f, Flag.w, PreviewFlagHeight};
+			Rect.VSplitRight(PreviewFlagHeight * ui_token::tclient::profiles::FLAG_WIDTH_SCALE, &Rect, &Flag);
+			Flag = {Flag.x, Flag.y + (Flag.h - PreviewFlagHeight) / ui_token::tclient::DOUBLE, Flag.w, PreviewFlagHeight};
 			if(Profile.m_CountryFlag == -2)
-				RenderCross(Flag, 20.0f);
+				RenderCross(Flag, ui_token::tclient::profiles::CROSS_ICON_SIZE);
 			else
 			{
 				// 主播模式下按 -1 渲染，屏蔽配置页里的国旗（来自 master 的 #441）。
@@ -195,7 +195,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		}
 		Rect.VSplitRight(ProfileMetrics.m_LineSpacing, &Rect, nullptr);
 		{
-			const float Height = Rect.h / 3.0f;
+			const float Height = Rect.h / ui_token::tclient::profiles::PREVIEW_ROW_DIVISOR;
 			if(Main)
 			{
 				char aBuf[256];
@@ -328,11 +328,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		Profiles.HSplitTop(LineSize, &Label, &Profiles);
 		DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Your profile"), FontSize, TEXTALIGN_ML);
 		Profiles.HSplitTop(RowSpacing, nullptr, &Profiles);
-		Profiles.HSplitTop(LineSize * 3.0f, &Skin, &Profiles);
-		DrawRoundedSurface(Ui(), Skin, ColorRGBA(1.0f, 1.0f, 1.0f, 0.035f), ColorRGBA(), 4.0f);
+		Profiles.HSplitTop(LineSize * ui_token::tclient::profiles::PREVIEW_ROW_SPAN, &Skin, &Profiles);
+		DrawRoundedSurface(Ui(), Skin, ui_token::tclient::profiles::OWN_PREVIEW_COLOR, ColorRGBA(), ui_token::tclient::profiles::PREVIEW_RADIUS);
 		Skin.Margin(ProfileMetrics.m_LineSpacing, &Skin);
-		const float PreviewRowWidth = std::min(Skin.w, ProfileMetrics.m_LabelWidth * 2.5f);
-		Skin.VMargin(std::max(0.0f, (Skin.w - PreviewRowWidth) * 0.5f), &Skin);
+		const float PreviewRowWidth = std::min(Skin.w, ProfileMetrics.m_LabelWidth * ui_token::tclient::profiles::PREVIEW_WIDTH_SCALE);
+		Skin.VMargin(std::max(0.0f, (Skin.w - PreviewRowWidth) * ui_token::tclient::HALF), &Skin);
 		RenderProfile(Skin, CurrentProfile, true);
 		if(pConstSelectedProfile())
 		{
@@ -340,11 +340,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 			Profiles.HSplitTop(LineSize, &Label, &Profiles);
 			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("After Load"), FontSize, TEXTALIGN_ML);
 			Profiles.HSplitTop(RowSpacing, nullptr, &Profiles);
-			Profiles.HSplitTop(LineSize * 3.0f, &Skin, &Profiles);
-			DrawRoundedSurface(Ui(), Skin, ColorRGBA(0.25f, 0.55f, 0.85f, 0.08f), ColorRGBA(), 4.0f);
+			Profiles.HSplitTop(LineSize * ui_token::tclient::profiles::PREVIEW_ROW_SPAN, &Skin, &Profiles);
+			DrawRoundedSurface(Ui(), Skin, ui_token::tclient::profiles::DUMMY_PREVIEW_COLOR, ColorRGBA(), ui_token::tclient::profiles::PREVIEW_RADIUS);
 			Skin.Margin(ProfileMetrics.m_LineSpacing, &Skin);
-			const float PreviewRowWidth = std::min(Skin.w, ProfileMetrics.m_LabelWidth * 2.5f);
-			Skin.VMargin(std::max(0.0f, (Skin.w - PreviewRowWidth) * 0.5f), &Skin);
+			const float PreviewRowWidth = std::min(Skin.w, ProfileMetrics.m_LabelWidth * ui_token::tclient::profiles::PREVIEW_WIDTH_SCALE);
+			Skin.VMargin(std::max(0.0f, (Skin.w - PreviewRowWidth) * ui_token::tclient::HALF), &Skin);
 			RenderProfile(Skin, BuildPreviewProfile(), true);
 		}
 	};
@@ -400,14 +400,14 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		CSettingsContentLayoutFlow Flow(Content);
 		const auto *pScope = CSettingsContentLayoutScope::Current();
 		const float Width = pScope && pScope->m_pLayout ? pScope->m_pLayout->Width() : Content.w;
-		const float InlineMinimum = ResolveSettingsInlineRowMinimumWidth(ProfileMetrics.m_LabelWidth + 2.0f * ProfileMetrics.m_ButtonHeight, ProfileMetrics.m_SectionGap, 1);
+		const float InlineMinimum = ResolveSettingsInlineRowMinimumWidth(ProfileMetrics.m_LabelWidth + ui_token::tclient::profiles::INLINE_BUTTON_SPAN * ProfileMetrics.m_ButtonHeight, ProfileMetrics.m_SectionGap, 1);
 		const bool Inline = Width >= InlineMinimum;
-		const float PreviewWidth = Inline ? std::min(ProfileMetrics.m_LabelWidth * 2.5f, Width * 0.55f) : Width;
-		const float ActionsWidth = Inline ? std::max(0.0f, Width - PreviewWidth - RowSpacing * 2.0f) : Width;
+		const float PreviewWidth = Inline ? std::min(ProfileMetrics.m_LabelWidth * ui_token::tclient::profiles::PREVIEW_WIDTH_SCALE, Width * ui_token::tclient::profiles::INLINE_PREVIEW_WIDTH_RATIO) : Width;
+		const float ActionsWidth = Inline ? std::max(0.0f, Width - PreviewWidth - RowSpacing * ui_token::tclient::profiles::INLINE_ROW_GAP_COUNT) : Width;
 		const auto PreviewContent = [&](CUIRect &Rect) {
 			CSettingsContentLayoutFlow PreviewFlow(Rect);
 			CUIRect Block;
-			const float Height = pConstSelectedProfile() ? LineSize * 8.0f + RowSpacing * 3.0f : LineSize * 4.0f + RowSpacing;
+			const float Height = pConstSelectedProfile() ? LineSize * ui_token::tclient::profiles::EXPANDED_ROWS + RowSpacing * ui_token::tclient::profiles::EXPANDED_GAPS : LineSize * ui_token::tclient::profiles::COLLAPSED_ROWS + RowSpacing;
 			if(PreviewFlow.Control("tclient-profile-preview", Height, Block))
 				RenderProfilePreview(Block);
 		};
@@ -433,8 +433,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		CSettingsContentLayoutFlow Flow(Content);
 		const auto *pScope = CSettingsContentLayoutScope::Current();
 		const float Width = pScope && pScope->m_pLayout ? pScope->m_pLayout->Width() : Content.w;
-		const bool Inline = Width >= ResolveSettingsInlineRowMinimumWidth(ProfileMetrics.m_LabelWidth + 2.0f * ProfileMetrics.m_ButtonHeight, ProfileMetrics.m_SectionGap, 1);
-		const float ColumnWidth = Inline ? std::max(0.0f, (Width - RowSpacing) * 0.5f) : Width;
+		const bool Inline = Width >= ResolveSettingsInlineRowMinimumWidth(ProfileMetrics.m_LabelWidth + ui_token::tclient::profiles::INLINE_BUTTON_SPAN * ProfileMetrics.m_ButtonHeight, ProfileMetrics.m_SectionGap, 1);
+		const float ColumnWidth = Inline ? std::max(0.0f, (Width - RowSpacing) * ui_token::tclient::HALF) : Width;
 		const auto RenderSaveLoad = [&](CUIRect &View) {
 			CSettingsContentLayoutFlow Flow(View);
 			CUIRect Row;
@@ -497,7 +497,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		if(Flow.Control("tclient-profiles-file", LineSize, SelectorRect, ui_token::settings::RowGap(ProfileMetrics.m_LineSpacing)))
 		{
 			static CButtonContainer s_ProfilesFile;
-			const float ProfilesButtonWidth = std::clamp(ProfileMetrics.m_LabelWidth, ProfileMetrics.m_ButtonHeight * 4.0f, ProfileMetrics.m_LabelWidth * 1.25f);
+			const float ProfilesButtonWidth = std::clamp(ProfileMetrics.m_LabelWidth, ProfileMetrics.m_ButtonHeight * ui_token::tclient::profiles::PROFILES_BUTTON_MIN_SPAN, ProfileMetrics.m_LabelWidth * ui_token::tclient::profiles::PROFILES_BUTTON_MAX_RATIO);
 			SelectorRect.VSplitLeft(ProfilesButtonWidth, &Button, &SelectorRect);
 			if(DoTClientSettingsButton_Menu(&s_ProfilesFile, "tclient-profiles-file", Localize("Profiles file"), 0, &Button) && !ReadOnly && !Ui()->RenderOnly())
 			{
@@ -518,9 +518,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		ProfilesListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 		ProfilesListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 		CPerfTimer ListTimer;
-		const float ProfileItemWidth = std::max(ProfileMetrics.m_ListRowHeight * 6.0f, ProfileMetrics.m_LabelWidth + ProfileMetrics.m_ButtonHeight * 2.0f);
+		const float ProfileItemWidth = std::max(ProfileMetrics.m_ListRowHeight * ui_token::tclient::profiles::LIST_MIN_WIDTH_ROWS, ProfileMetrics.m_LabelWidth + ProfileMetrics.m_ButtonHeight * ui_token::tclient::profiles::LABEL_BUTTON_SPAN);
 		const int ProfilesPerRow = maximum(1, (int)(MainView.w / ProfileItemWidth));
-		const float ProfileListRowHeight = std::max(ProfileMetrics.m_ListRowHeight * 3.0f, ProfileMetrics.m_ButtonHeight * 3.0f + ProfileMetrics.m_LineSpacing * 2.0f);
+		const float ProfileListRowHeight = std::max(ProfileMetrics.m_ListRowHeight * ui_token::tclient::profiles::LIST_MIN_HEIGHT_ROWS, ProfileMetrics.m_ButtonHeight * ui_token::tclient::profiles::LIST_BUTTON_ROWS + ProfileMetrics.m_LineSpacing * ui_token::tclient::profiles::LIST_LINE_SPANS);
 		// 行距并进行高：组件在 ItemsPerRow > 1 时按每个格子推进一次自动行距，多列网格的
 		// 行距会变成 N 倍、行位逐行漂移，底部的行滚不到；这里自己按行步进，自动行距关掉。
 		const float ProfileListRowPitch = ProfileListRowHeight + ui_token::list::ROW_SPACING;
@@ -532,7 +532,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		ProfilesListBox.DoAutoSpacing(0.0f);
 		// 整卡 tile：选中填充只贴条目矩形，内缩保持半档行距，整卡内容仍排 Item.m_Rect
 		// （推进 m_ContentRect 会挤窄卡内布局、破坏 preview cache key）。
-		ProfilesListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * 0.5f);
+		ProfilesListBox.SetItemSelectionInset(ui_token::list::ROW_SPACING * ui_token::tclient::HALF);
 		// 整数行：行高含行距，而测高是「行数 × 行高 + (行数 - 1) × 行距」——最后一行后面没有
 		// 缝，比「行数 × 行步进」正好少一条行距，所以补回那一条再除。直接 floor(高 / 行步进)
 		// 会少算一行，卡片底部空出一整条行高。lround 只为抵掉浮点误差：测出来的高度本来就是

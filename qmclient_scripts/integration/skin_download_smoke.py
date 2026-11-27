@@ -93,7 +93,7 @@ def smoke_cache_before_network_and_community_fallback(build_dir: Path) -> None:
 			"dummy_skin qm_skin_fallback",
 			"player_skin",
 			"dummy_skin",
-			"qm_pref 1 400",
+			"qm_perf 1",
 			"stdout_output_level 1",
 		])
 		if sys.platform == "win32":
@@ -182,7 +182,7 @@ def smoke_refresh_cancels_loaded_cache_request(build_dir: Path) -> None:
 			f"cl_skin_download_url {base}/official/",
 			f"cl_skin_community_download_url {base}/community/",
 			"player_skin qm_skin_refresh",
-			"qm_pref 1 400",
+			"qm_perf 1",
 		])
 		wait_uploads(env, "qm_skin_refresh", 1)
 		if not requested.wait(3):

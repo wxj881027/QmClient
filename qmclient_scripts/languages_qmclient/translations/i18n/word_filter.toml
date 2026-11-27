@@ -47,6 +47,22 @@ turkish = "Kelime listesi dosyası açılamıyor. Önceki kelimeler etkin kalır
 polish = "Nie można otworzyć pliku. Poprzednie słowa pozostają aktywne."
 
 [[message]]
+key = "Cannot prepare word list. Previous words remain active."
+[message.translations]
+simplified_chinese = "无法准备词表，继续使用上次成功加载的词条。"
+traditional_chinese = "無法準備詞表，繼續使用上次成功載入的詞條。"
+japanese = "単語リストを準備できません。以前の単語を引き続き使用します。"
+korean = "단어 목록을 준비할 수 없습니다. 이전 단어 목록을 유지합니다."
+russian = "Не удалось подготовить список слов. Прежний список слов остаётся активным."
+german = "Die Wortliste kann nicht vorbereitet werden. Bisherige Wörter bleiben aktiv."
+spanish = "No se puede preparar la lista de palabras. Las palabras anteriores siguen activas."
+french = "Impossible de préparer la liste de mots. Les mots précédents restent actifs."
+brazilian_portuguese = "Não foi possível preparar a lista de palavras. As palavras anteriores continuam ativas."
+portuguese = "Não foi possível preparar a lista de palavras. As palavras anteriores continuam ativas."
+turkish = "Kelime listesi hazırlanamadı. Önceki kelimeler etkin kalıyor."
+polish = "Nie można przygotować listy słów. Poprzednie słowa pozostają aktywne."
+
+[[message]]
 key = "Cannot read complete word list file. Previous words remain active."
 [message.translations]
 simplified_chinese = "无法完整读取词表文件，继续使用上次成功加载的词条。"

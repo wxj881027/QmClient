@@ -16,7 +16,10 @@ public:
 	CQmNeteaseHookProvider(const CQmNeteaseHookProvider &) = delete;
 	CQmNeteaseHookProvider &operator=(const CQmNeteaseHookProvider &) = delete;
 
+	// 启动与停止都只发布后台状态：建映射、拉起 helper、读取共享内存
+	// 都可能被系统安全扫描拖慢，不能占用渲染或逻辑线程。
 	void Start(const char *pHelperPath, int TimeoutMs);
+	void RequestStop();
 	void Stop();
 	bool Read(QmNeteaseHook::SSnapshot *pSnapshot, int TimeoutMs);
 	// v5 只承载网易云私有歌词桥接数据，不覆盖 SMTC 状态。

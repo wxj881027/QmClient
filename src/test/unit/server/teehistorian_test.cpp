@@ -40,7 +40,7 @@ protected:
 
 	TeeHistorian()
 	{
-		mem_zero(&m_Config, sizeof(m_Config));
+		m_Config = CConfig();
 #define MACRO_CONFIG_INT(Name, ScriptName, Def, Min, Max, Save, Desc) \
 	m_Config.m_##Name = (Def);
 #define MACRO_CONFIG_COL(Name, ScriptName, Def, Save, Desc) MACRO_CONFIG_INT(Name, ScriptName, Def, 0, 0, Save, Desc)

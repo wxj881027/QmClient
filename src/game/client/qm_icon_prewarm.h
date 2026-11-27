@@ -46,16 +46,30 @@ public:
 
 	bool Next(int &Codepoint, int &PixelSize)
 	{
+		if(!Peek(Codepoint, PixelSize))
+			return false;
+		Advance();
+		return true;
+	}
+
+	// 先看再推进：后台队列满时调用方可以停在当前字形，下一轮重试，
+	// 不会因为队列瞬时拒绝而永久跳过某个图标字号。
+	bool Peek(int &Codepoint, int &PixelSize) const
+	{
 		if(m_SizeIndex >= m_SizeCount)
 			return false;
 		Codepoint = CQmIconRegistry::Codepoint(static_cast<EQmIcon>(m_IconIndex));
 		PixelSize = m_aPixelSizes[m_SizeIndex];
+		return true;
+	}
+
+	void Advance()
+	{
 		if(++m_IconIndex == static_cast<int>(EQmIcon::COUNT))
 		{
 			m_IconIndex = 0;
 			++m_SizeIndex;
 		}
-		return true;
 	}
 
 	bool Complete() const { return m_SizeIndex >= m_SizeCount; }

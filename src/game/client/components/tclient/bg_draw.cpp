@@ -365,7 +365,7 @@ void CBgDraw::OnRender()
 
 	Graphics()->TextureClear();
 
-	float Delta = Client()->RenderFrameTime();
+	float Delta = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 
 	m_NextAutoSave -= Delta;
 	if(m_NextAutoSave < 0)

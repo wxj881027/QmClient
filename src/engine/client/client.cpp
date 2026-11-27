@@ -74,6 +74,7 @@
 #include <engine/shared/protocol7.h>
 #include <engine/shared/protocol_ex.h>
 #include <engine/shared/protocolglue.h>
+#include <engine/shared/qm_background_refresh.h>
 #include <engine/shared/qm_default_profile.h>
 #include <engine/shared/qm_removed_config.h>
 #include <engine/shared/qm_storage_layout.h>
@@ -730,7 +731,7 @@ CClient::CClient() :
 		SnapshotStorage.Init();
 	mem_zero(m_aDemorecSnapshotHolders, sizeof(m_aDemorecSnapshotHolders));
 	m_CurrentServerInfo = {};
-	mem_zero(&m_Checksum, sizeof(m_Checksum));
+	m_Checksum = CChecksum();
 	for(auto &GameTime : m_aGameTime)
 		GameTime.Init(0);
 	m_PredictedTime.Init(0);
@@ -5418,8 +5419,11 @@ void CClient::Run()
 			bool IsRenderActive = (g_Config.m_GfxBackgroundRender || m_pGraphics->WindowOpen());
 
 			bool AsyncRenderOld = g_Config.m_GfxAsyncRenderOld;
-			Inactive = g_Config.m_ClRefreshRateInactive && !m_pGraphics->WindowActive();
-			const int RefreshRate = Inactive ? g_Config.m_ClRefreshRateInactive : g_Config.m_ClRefreshRate;
+			// 后台节拍按模式解析：跟随显示器 / 自定义 cl_refresh_rate_inactive / 不限。
+			// 每帧重算，切换模式或显示器刷新率变化后无需重启；前台限帧更低时沿用前台值。
+			const int InactiveRefreshRate = QmResolveBackgroundRefreshRate(QmBackgroundRefreshModeFromConfig(g_Config.m_QmBackgroundRefreshMode), g_Config.m_ClRefreshRateInactive, g_Config.m_GfxScreenRefreshRate, g_Config.m_ClRefreshRate);
+			Inactive = InactiveRefreshRate > 0 && !m_pGraphics->WindowActive();
+			const int RefreshRate = Inactive ? InactiveRefreshRate : g_Config.m_ClRefreshRate;
 			bool UpdateDue = true;
 			if(RefreshRate)
 			{
@@ -7847,7 +7851,7 @@ int CClient::HandleChecksum(int Conn, CUuid Uuid, CUnpacker *pUnpacker)
 
 	if(Start <= (int)sizeof(m_Checksum.m_aBytes))
 	{
-		mem_zero(&m_Checksum.m_Data.m_Config, sizeof(m_Checksum.m_Data.m_Config));
+		m_Checksum.m_Data.m_Config = CConfig();
 #define CHECKSUM_RECORD(Flags) (((Flags) & CFGFLAG_CLIENT) == 0 || ((Flags) & CFGFLAG_INSENSITIVE) != 0)
 #define MACRO_CONFIG_INT(Name, ScriptName, Def, Min, Max, Flags, Desc) \
 	if(CHECKSUM_RECORD(Flags)) \
@@ -8981,9 +8985,11 @@ int main(int argc, const char **argv)
 	}
 	pFutureFileLogger->Set(std::move(pConfiguredFileLogger));
 
+	// 性能诊断按保存的开关自动开始记录：qm_perf 1/0 只改配置，下次启动沿用。
+	g_Config.m_QmPerfEnabled = g_Config.m_QmPerfAutoRecord != 0;
+
 	// 性能日志文件：CFutureLogger 只能 Set 一次，启动时固定到可切换包装；
-	// 游戏内 qm_pref
-	// 变化由 CClient::UpdateQmPerfFileLogger 按帧检测，立即打开/关闭文件。
+	// 游戏内 qm_perf 变化由 CClient::UpdateQmPerfFileLogger 按帧检测，立即打开/关闭文件。
 	std::shared_ptr<CQmPerfFileSwitchLogger> pQmPerfFileSwitchLogger = std::make_shared<CQmPerfFileSwitchLogger>();
 	pFuturePerfFileLogger->Set(pQmPerfFileSwitchLogger);
 	pClient->SetQmPerfFileSwitch(std::move(pQmPerfFileSwitchLogger));

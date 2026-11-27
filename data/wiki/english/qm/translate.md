@@ -16,6 +16,8 @@ Outgoing messages are translated before they are actually sent, and only the tra
 4. To translate outgoing messages as well, enable "Auto translate sent messages" and set "Translate outgoing messages to" separately (default en).
 5. "Advanced options" holds LLM concurrency (0 = auto; Zhipu free tier allows only 1), receive/send translation methods (translate only when needed vs. always), and more.
 
+The chat input translate button and language menu follow the global UI theme and accent color; there are no separate translation color settings.
+
 ## Watch out
 
 - Hitting the MyMemory daily quota warns only once, then stays quiet for a minute; sentences over 500 bytes are not sent for translation.
@@ -25,5 +27,4 @@ Outgoing messages are translated before they are actually sent, and only the tra
 
 ## Related
 
-- [Translate button](qm:translate_ui)
 - [Language](deck:general-language)

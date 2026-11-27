@@ -45,7 +45,7 @@ void CMod::OnRender()
 		}
 		else
 		{
-			const float Delta = Client()->RenderFrameTime();
+			const float Delta = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 			if(Delta < 1.0f / 30.0f) // Don't do anything if lagging
 			{
 				m_ModWeaponActiveTimeLeft -= Delta;

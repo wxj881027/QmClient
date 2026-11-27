@@ -28,9 +28,6 @@
 "Advanced options" adds category filters and colors; join, version, rules and help texts still stay in chat.
 == 進階選項裡能加類別過濾和顏色；進服、版本、規則和幫助類文字仍然留在聊天裡。
 
-"Button - Enabled" only shows while automatic outgoing translation is on; "Reset translation colors" undoes your changes.
-== 按鈕 - 啟用只在自動翻譯送出內容開啟時可見；重設翻譯顏色會復原你的修改。
-
 "Copy all" only copies the filtered rows, so clear the search first if you want your whole list.
 == 複製全部只會複製篩選後的列，想複製完整列表請先清空搜尋。
 
@@ -89,7 +86,7 @@
 == %d / %d 張地圖
 
 %d entries
-== %d entries
+== %d 項
 
 %d items selected
 == 已選擇 %d 項
@@ -167,19 +164,19 @@
 == %s 請求與你交換。請等待 %s 秒後輸入 /swap %s 完成
 
 %s is full. Waiting for a slot...
-== %s is full. Waiting for a slot...
+== %s 已滿員，正在等待空位……
 
 %s joined this server
 == %s好友進入本服
 
 %s moved to %s. Following in %d seconds...
-== %s moved to %s. Following in %d seconds...
+== %s 已轉移到 %s，%d 秒後跟隨……
 
 %s not found
 == 未找到 %s
 
 %s requires a password. Connect manually to enter it.
-== %s requires a password. Connect manually to enter it.
+== %s 需要密碼，請手動連線並輸入密碼。
 
 %s translating to %s
 == %s 正在翻譯為 %s
@@ -367,7 +364,7 @@
 
 []
 [Clan] %s
-== [Clan] %s
+== [戰隊] %s
 
 _ or ' ' = blank spacer
 == _ 或 ' ' = 空白間隔
@@ -442,7 +439,7 @@ A vote is currently active.
 == 目前有投票正在進行。
 
 A war group already has this name
-== A war group already has this name
+== 已有同名敵對群組
 
 Abort
 == 取消
@@ -583,10 +580,10 @@ Add a voting option
 == 添加投票選項
 
 Add an entry manually
-== Add an entry manually
+== 手動新增條目
 
 Add by
-== Add by
+== 新增方式
 
 Add category
 == 新增分類
@@ -640,7 +637,7 @@ Add phrase
 == 新增語錄
 
 Add player '%s' to '%s'
-== Add player '%s' to '%s'
+== 將玩家「%s」加入「%s」
 
 Add players or groups, then choose which markers and chat highlights apply to them.
 == 新增玩家或群組，再選擇要套用到它們的標記與聊天醒目提示。
@@ -655,7 +652,7 @@ Add team name:
 == 添加友好玩家：
 
 Add the entire clan '%s' to '%s'
-== Add the entire clan '%s' to '%s'
+== 將整個戰隊「%s」加入「%s」
 
 Add to %s
 == 添加到 %s
@@ -673,7 +670,7 @@ Add to queue
 == 加入隊列
 
 Add to war list
-== Add to war list
+== 加入敵對列表
 
 Add war clan:
 == 添加敵對戰隊：
@@ -764,6 +761,9 @@ Adjust TClient heads-up display elements
 
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == 調整顯示選項；在加入熱鬧的伺服器前，先開啟一項投票確認版面。
+
+Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
+== 在這裡調整氣泡字號和彈跳動畫；背景色跟隨彈層顏色。
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -856,7 +856,7 @@ All combined
 == 全部文件
 
 All groups
-== All groups
+== 所有群組
 
 All items
 == 全部項目
@@ -928,10 +928,10 @@ Alpha
 == 透明度
 
 Already first (none is the fixed fallback group)
-== Already first (none is the fixed fallback group)
+== 已在最前（none 固定為兜底組）
 
 Already last
-== Already last
+== 已在最後
 
 Also apply to dummy
 == 同時應用到分身
@@ -980,9 +980,6 @@ Angle:
 
 Angular gradient
 == 角度漸層
-
-Animate country flags
-== 國旗入場動畫
 
 Animated title style id
 == 頭銜動態風格 ID
@@ -1204,7 +1201,7 @@ Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is igno
 == 分別綁定禁止自殺和允許自殺兩個按鍵；按下禁止鍵後，K 會被忽略，直到你按允許鍵。
 
 Assigned group
-== Assigned group
+== 所屬群組
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == 為環形 Bind 輪盤的各槽位指派指令與標籤。
@@ -1377,6 +1374,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 Auto weapon switch
 == 自動切錘
 
+Auto-accept team invites
+== 自動接受組隊邀請
+
 Auto-accept team invites by sending /team <n>
 == 透過傳送 /team <n> 自動接受組隊邀請
 
@@ -1517,6 +1517,9 @@ Automatically re-join team 0 after finish (only if unlocked).
 
 Automatically record demos
 == 自動錄製回放
+
+Automatically record performance diagnostics on startup
+== 啟動時自動記錄效能診斷
 
 Automatically record replays
 == 自動錄製回放
@@ -1679,6 +1682,15 @@ Background Draw
 
 Background draw
 == 背景繪製
+
+Background frame rate
+== 背景幀率
+
+Background frame rate limit
+== 背景幀率上限
+
+Background frame rate: 0=follow display refresh rate, 1=custom cl_refresh_rate_inactive, 2=unlimited
+== 背景幀率：0=跟隨顯示器刷新率，1=自訂 cl_refresh_rate_inactive，2=不限
 
 Background image in menu
 == 菜單中的背景圖
@@ -1980,12 +1992,6 @@ Build the status text shown above Tees
 Built-in
 == 內置
 
-Button - Disabled
-== 按鈕 - 未啟用
-
-Button - Enabled
-== 按鈕 - 已啟用
-
 Button browser
 == 按鈕瀏覽器
 
@@ -2005,16 +2011,16 @@ Buttons with this behavior execute some predefined actions.
 == 具有此行為的按鈕會執行一些預定義的動作。
 
 By clan
-== By clan
+== 按戰隊
 
 By clan name
-== By clan name
+== 按戰隊名
 
 By player
-== By player
+== 按玩家
 
 By player name
-== By player name
+== 按玩家名
 
 By row
 == 逐行
@@ -2113,13 +2119,13 @@ Cannot open word list file. Previous words remain active.
 == 無法開啟詞表檔案，繼續使用上次成功載入的詞條。
 
 Cannot prepare word list. Previous words remain active.
-== Cannot prepare word list. Previous words remain active.
+== 無法準備詞表，繼續使用上次成功載入的詞條。
 
 Cannot read complete word list file. Previous words remain active.
 == 無法完整讀取詞表檔案，繼續使用上次成功載入的詞條。
 
 Cannot read the wiki file
-== Cannot read the wiki file
+== 無法讀取 Wiki 檔案
 
 Cannot remove the wiki file
 == 無法刪除 Wiki 檔案
@@ -2304,9 +2310,6 @@ Chat export cancelled
 Chat export failed
 == 聊天記錄導出失敗
 
-Chat fade smooth time (milliseconds)
-== 聊天消息淡出平滑時間（毫秒）
-
 Chat font size
 == 聊天字體大小
 
@@ -2467,7 +2470,7 @@ Choose the menu map and background colors
 == Choose the menu map and background colors
 
 Choose the new group color
-== Choose the new group color
+== 選擇新群組的顏色
 
 Choose when recording starts and how demos are named; playback speed and camera follow are separate.
 == 選擇錄製何時開始以及回放的命名方式；播放速度與鏡頭跟隨是另外的設定。
@@ -2524,7 +2527,7 @@ Clan color in friends list
 == 好友列表中戰隊成員條目顏色
 
 Clan friend
-== Clan friend
+== 戰隊好友
 
 Clan member entry color in friend list
 == 好友列表中戰隊成員條目顏色
@@ -2536,7 +2539,7 @@ Clan Name
 == 戰隊名稱
 
 Clan name
-== Clan name
+== 戰隊名稱
 
 Clan name size on nameplate
 == 銘牌上戰隊名稱的大小
@@ -2810,9 +2813,6 @@ Colors for chat command and emoji completion
 
 Colors of the hook collision line, in case of a possible collision with:
 == 鉤子輔助線顏色（瞄準以下目標時）：
-
-Colors of the translate button in the chat input and of the language menu that button opens.
-== 聊天輸入框裡翻譯按鈕的顏色，以及該按鈕開啟的語言選單的顏色。
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 == 為計分板各行著色：已認證玩家、同戰隊玩家、好友，以及好友列表中的戰隊成員。
@@ -3373,7 +3373,7 @@ Could not add this entry.
 == 無法加入此條目。
 
 Could not apply %s. The console could not parse the value.
-== Could not apply %s. The console could not parse the value.
+== 無法套用 %s，主控台無法解析該值。
 
 Could not back up configuration files.
 == 無法備份配置檔案。
@@ -3659,9 +3659,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
-
-Customize translate button and menu colors
-== 自定義翻譯按鈕和菜單顏色
 
 Customize vote display and interaction
 == Customize vote display and interaction
@@ -4000,13 +3997,13 @@ Delete demo
 == 刪除回放
 
 Delete entry
-== Delete entry
+== 刪除條目
 
 Delete folder
 == 刪除文件夾
 
 Delete group
-== Delete group
+== 刪除群組
 
 Delete screenshot
 == 刪除截圖
@@ -4207,13 +4204,13 @@ Display
 == 展示體
 
 Display and blocking rules
-== Display and blocking rules
+== 顯示與封鎖規則
 
 Display index
 == 畫面索引
 
 Display locations and blocking options
-== Display locations and blocking options
+== 顯示位置與封鎖細則
 
 Display mode
 == 顯示模式
@@ -4977,9 +4974,6 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 啟用背景 3D 粒子拖尾
 
-Enable bounce-in entrance animation when country flags finish loading
-== 國旗圖標加載完成時播放彈跳入場動畫
-
 Enable camera drift
 == 啟用鏡頭漂移
 
@@ -5005,7 +4999,7 @@ Enable client-initiated self-kill (K key / kill command)
 == 啟用用戶端發起的自殺（K 鍵 / kill 指令）
 
 Enable collision hitboxes
-== Enable collision hitboxes
+== 啟用碰撞箱
 
 Enable colored console output
 == 啟用控制台彩色輸出
@@ -5135,9 +5129,6 @@ Enable Kugou Music hook integration
 
 Enable Kugou Music lyrics
 == 啟用 酷狗音樂 歌詞
-
-Enable left swipe offset on chat fade
-== 聊天消息淡出時啟用左滑偏移
 
 Enable LLM thinking mode (may increase response time)
 == 請求支援推理的模型在翻譯前進行思考，譯文可能更晚返回。具體效果取決於所用模型和伺服器端。
@@ -5335,7 +5326,7 @@ Enable the selected Gores helpers, such as hammer switching and fast input, whil
 == 進入 Gores 模式後，啟用下方選中的輔助功能，例如錘槍切換和快速輸入。
 
 Enable the war list to change this setting
-== Enable the war list to change this setting
+== 請先啟用敵對列表
 
 Enable thinking mode
 == 啟用思考模式
@@ -5458,25 +5449,25 @@ Enter a phrase.
 == 請輸入語錄。
 
 Enter a player or clan name first
-== Enter a player or clan name first
+== 請先輸入玩家名稱或戰隊名稱
 
 Enter a valid group name (other than none)
-== Enter a valid group name (other than none)
+== 請輸入有效的群組名稱（不能為 none）
 
 Enter clan name (matches all members)
-== Enter clan name (matches all members)
+== 輸入戰隊名稱（匹配全隊成員）
 
 Enter fast practice
 == 進入快速練習
 
 Enter group name
-== Enter group name
+== 輸入群組名稱
 
 Enter Password
 == 輸入密碼
 
 Enter player name
-== Enter player name
+== 輸入玩家名稱
 
 Enter solo mode
 == 進入單人模式
@@ -5527,7 +5518,7 @@ Entrance overshoot
 == 入場過衝
 
 Entries and blocking
-== Entries and blocking
+== 條目與封鎖
 
 Entries in it will fall back to none.
 == 裡面的條目會回到 none。
@@ -5632,7 +5623,7 @@ Exit and install
 == 結束並安裝
 
 Exit editing
-== Exit editing
+== 退出編輯
 
 Exit fast practice
 == 退出快速練習
@@ -5674,7 +5665,7 @@ Export failed
 == 匯出失敗
 
 Export failed. Could not compose %d edited slot(s).
-== 匯出失敗。有 %d 個已編輯的部件無法合成。
+== 匯出失敗：無法合成 %d 個已編輯的插槽。
 
 Export name contains invalid characters.
 == 導出名稱包含無效字符。
@@ -5720,9 +5711,6 @@ Exported to %s
 
 Exporting chat images: %d
 == 正在匯出聊天圖片：%d
-
-Expose playback controls to the operating system
-== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == 外部控制台密碼。需要設置此選項才能啟用經濟。
@@ -5860,7 +5848,7 @@ Fake CTF flags
 == 偽 CTF 旗幟
 
 Fallback group
-== Fallback group
+== 預設兜底
 
 Fast encode
 == 編碼快
@@ -5974,7 +5962,7 @@ Fill in the connect and join command fields, separate several commands with semi
 == 填好連線指令和加入指令欄位，多條指令用分號隔開；伺服器還沒準備好時，把延遲調大。
 
 Filter by group
-== Filter by group
+== 按群組篩選
 
 Filter chat messages by regular expression
 == 按正則表達式過濾聊天消息
@@ -6103,7 +6091,10 @@ Follow
 == 跟隨
 
 Follow a player across servers for this session
-== Follow a player across servers for this session
+== 本次工作階段中跨伺服器跟隨玩家
+
+Follow display
+== 跟隨顯示器
 
 Follow graphics setting
 == 跟隨圖形設定
@@ -6136,7 +6127,7 @@ Following %s across servers
 == 正在跨服跟隨 %s
 
 Following %s to %s
-== Following %s to %s
+== 正在跟隨 %s 前往 %s
 
 Following: %s
 == 正在跟隨：%s
@@ -6235,10 +6226,10 @@ Freeze
 == 凍結
 
 Freeze and death borders
-== Freeze and death borders
+== 凍結與死亡邊界
 
 Freeze and death check points
-== Freeze and death check points
+== 角色凍結與死亡判定點
 
 Freeze bar opacity (0 invisible, 100 fully visible)
 == 凍結內凍結條的不透明度（0 不可見，100 完全可見）
@@ -6250,7 +6241,7 @@ Freeze heart / health pickup
 == 凍結愛心 / 拾取生命值
 
 Freeze hitbox color
-== Freeze hitbox color
+== 凍結判定顏色
 
 Freeze Laser Inner Color
 == 凍結雷射內色
@@ -6268,16 +6259,22 @@ Freeze opacity
 == 凍結不透明度
 
 Freeze projectiles and lasers
-== Freeze projectiles and lasers
+== 凍結子彈與雷射
 
 Freeze stars
 == 顯示凍結效果的星星動畫
+
+Freeze tile color
+== 凍結塊顏色
 
 Freeze tile outline color
 == 凍結圖塊輪廓顏色
 
 Freeze tile outline width
 == 凍結方塊的描邊寬度
+
+Freeze/deep freeze tile entity tint color
+== 凍結/深度凍結塊實體著色
 
 Frequently asked questions
 == 常見問題
@@ -6598,7 +6595,7 @@ Glow range
 == 輝光範圍
 
 Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
-== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== 字形點陣化：0=僅同步，1=背景 CPU 工作執行緒預取，2=背景 GPU 覆蓋預取（可見文字始終同步）
 
 Go back one marker
 == 返回上一個標記
@@ -6739,13 +6736,13 @@ Ground jump
 == 地面起跳
 
 Group color
-== Group color
+== 群組顏色
 
 Group name
 == 分組名稱
 
 Group names can use up to 15 UTF-8 bytes
-== Group names can use up to 15 UTF-8 bytes
+== 群組名稱最多 15 個 UTF-8 位元組
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 將輸入輔助集中分組：快速輸入、自動邊距、子 tick 瞄準與游標行為。
@@ -6772,7 +6769,7 @@ Hammer and gun switching made for Gores (KOG) servers, with optional Axiom login
 == 為 Gores（KOG）伺服器設計的槌子與槍枝切換，可選 Axiom 登入與快速輸入。
 
 Hammer and hook range
-== Hammer and hook range
+== 錘擊與鉤索範圍
 
 Hammer hit
 == 錘子命中
@@ -6927,9 +6924,6 @@ Hide non-friend names/clans and show client ID
 Hide other players' ghosts when frozen
 == 如果其他玩家的幽靈被凍結則隱藏
 
-Hide own chat bubble (only when authenticated in remote console)
-== 登入遠端主控台（rcon）後，本體和分身輸入聊天時不向伺服器報告打字狀態，其他玩家看不到打字氣泡。
-
 Hide player messages
 == 隱藏玩家消息
 
@@ -7039,10 +7033,10 @@ Hit feedback
 == 命中回饋
 
 Hitbox line opacity
-== Hitbox line opacity
+== 線條不透明度
 
 Hitbox player scope: 0=self only, 1=self and dummy, 2=all players
-== Hitbox player scope: 0=self only, 1=self and dummy, 2=all players
+== 顯示哪些玩家的碰撞箱：0=僅自己，1=自己與分身，2=所有玩家
 
 HJ assist
 == HJ 大佬輔助
@@ -7863,9 +7857,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 Keep the feeling of the maximum cursor distance independent of resolution
 == 讓最大游標距離的手感不受解析度影響
 
-Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
-== 深色背景配淺色文字最好讀；想恢復建議樣式就點重設提示外觀。
-
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 == 這些顏色要和隊伍顏色區分開，否則同戰隊名字會融進隊伍面板裡，變得難以辨認。
 
@@ -8255,9 +8246,6 @@ Link style
 
 Links open in the system browser.
 == 連結會在系統瀏覽器中開啟。
-
-Links the music playing on your system with the system media controls, and can show its title in the top-left HUD.
-== 把系統正在播放的音樂接入系統媒體控制項，並可將其標題顯示在左上角 HUD 中。
 
 Links to related project and community websites.
 == 連往相關專案與社群網站的連結。
@@ -8821,7 +8809,7 @@ Match %d of %d
 == 匹配 %d/%d
 
 Match by
-== Match by
+== 匹配類型
 
 Match ghost by map version instead of map name
 == 按地圖版本而不是僅按地圖名稱匹配鬼魂
@@ -8965,7 +8953,7 @@ may cause delay
 == 可能會產生延遲
 
 Measure a fixed cold glyph batch with performance diagnostics enabled
-== Measure a fixed cold glyph batch with performance diagnostics enabled
+== 在啟用效能診斷的情況下測量固定的冷字形批次
 
 Medium
 == 中
@@ -8978,9 +8966,6 @@ Mention option color
 
 Menu accent panel opacity
 == 菜單強調面板透明度
-
-Menu background
-== 菜單背景
 
 Menu button hover
 == 選單按鈕懸停
@@ -9005,12 +8990,6 @@ Menu music
 
 Menu opacity (0-100)
 == 菜單不透明度 (Menu opacity 0-100)
-
-Menu option - normal
-== 菜單選項 - 普通
-
-Menu option - selected
-== 菜單選項 - 選中
 
 Menu panel color
 == 選單面板顏色
@@ -9205,7 +9184,7 @@ Move a friend category to a position
 == 將好友分組移動到指定位置
 
 Move down (decrease priority)
-== Move down (decrease priority)
+== 下移（降低優先級）
 
 Move left
 == 向左移動
@@ -9223,7 +9202,7 @@ Move to category
 == 移動到分類
 
 Move up (increase match color priority)
-== Move up (increase match color priority)
+== 上移（提高匹配顏色優先級）
 
 Movement
 == 移動
@@ -9598,7 +9577,7 @@ New version available
 == 有新版本可用
 
 New war group
-== New war group
+== 新建敵對群組
 
 Newest first
 == 最新發佈優先
@@ -9718,7 +9697,7 @@ No empty team left.
 == 已經沒有空隊伍了
 
 No entries match
-== No entries match
+== 沒有符合篩選條件的條目
 
 No entries yet
 == 暫無條目
@@ -9947,9 +9926,6 @@ Note
 
 Note:
 == 備註：
-
-Nothing appears until a media app is playing; use the buttons to check which app the system reports.
-== 沒有媒體應用程式播放時不會顯示任何內容；可用這些按鈕確認系統回報的是哪個應用程式。
 
 Nothing hookable
 == 未瞄準可鉤物體
@@ -10291,7 +10267,7 @@ Optional export range in seconds. Leave empty to export the whole demo.
 == 可選的匯出範圍（秒）；留空匯出整個回放。
 
 Optional reason (can appear under the name plate)
-== Optional reason (can appear under the name plate)
+== 可選：備註原因（可顯示在名牌下方）
 
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == 可選的起止時間，單位是秒。兩個都留空就匯出整段 demo。
@@ -10360,7 +10336,7 @@ Outline opacity
 == 輪廓不透明度
 
 Outline where freeze, deep freeze and death tiles take effect
-== Outline where freeze, deep freeze and death tiles take effect
+== 描出地圖上凍結塊、深凍塊和死亡塊生效的邊緣
 
 Outlines can be distracting in fast maps; lower the opacity instead of disabling them.
 == 在快速節奏的地圖中描邊可能干擾視線；建議降低不透明度，而不是直接關閉。
@@ -10637,9 +10613,6 @@ Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 
 Phrase
 == 語錄
-
-Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
-== 分別選提示背景色和提示文字色，拖動提示字號滑條，想要彈出時的小回彈就保持提示回彈動畫開啟。
 
 Pick a color preset or a custom color, then choose regular or bold weight.
 == 選擇預設顏色或自訂顏色，再選擇標準或粗體。
@@ -11476,7 +11449,7 @@ Project and community websites
 == 專案與社群站點入口
 
 Projectiles, explosions and regular lasers
-== Projectiles, explosions and regular lasers
+== 子彈、爆炸與普通雷射
 
 ProRes profile
 == ProRes 檔位
@@ -11704,7 +11677,7 @@ Quick action menu for players
 == 對玩家快捷操作菜單
 
 Quick add
-== Quick add
+== 快速新增
 
 Quintic Bezier
 == 五次貝塞爾
@@ -12546,8 +12519,8 @@ Reset to defaults
 Reset tooltip appearance
 == 還原氣泡預設外觀
 
-Reset translation colors
-== 還原翻譯預設顏色
+Reset tooltip appearance to restore the default font size and bounce animation.
+== 重設氣泡外觀可恢復預設字號和彈跳動畫。
 
 Reset tuning after each map change
 == 每次地圖更改後是否重置調整
@@ -13087,7 +13060,7 @@ Search donor asset
 == 搜索來源材質
 
 Search entries or reasons
-== Search entries or reasons
+== 搜尋敵對條目或備註原因
 
 Search ghosts
 == 搜尋影子
@@ -13156,7 +13129,7 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 == 輸入 /practicecmdlist 可以查看所有可用的練習指令。最常用的是 /telecursor、/lasttp 和 /rescue
 
 See freeze and death borders, character check points, shield pickups and weapon ranges.
-== See freeze and death borders, character check points, shield pickups and weapon ranges.
+== 顯示地圖上的凍結與死亡邊界、角色判定點、護盾拾取範圍和武器範圍。
 
 See you at the next checkpoint.
 == 下個檢查點見。
@@ -13186,7 +13159,7 @@ Select a saved .map file (client limit: 64 MiB).
 == 選擇已儲存的 .map 檔案（用戶端上限：64 MiB）。
 
 Select a target group
-== Select a target group
+== 請選擇目標群組
 
 Select all chat
 == 全選聊天記錄
@@ -13234,7 +13207,7 @@ Self
 == 本體
 
 Self and dummy
-== Self and dummy
+== 自己與分身
 
 Self and friends
 == 自己和好友
@@ -13425,9 +13398,6 @@ Server-side ghost opacity during fast practice (%)
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 設定背景顏色與背景不透明度，再設文字顏色、選取文字顏色與選取背景顏色；下方會即時預覽。
 
-Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
-== 按鈕用按鈕 - 停用與按鈕 - 啟用來設定，彈出選單則設選單背景與兩行選單選項。
-
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == 把顯示方式設為按鍵顯示或一直顯示，再依需要開啟手槍輔助線和預測忍者路徑，並調整顏色、線寬和透明度。
 
@@ -13600,7 +13570,7 @@ Sharpen
 == 銳利化
 
 Shield pickup range
-== Shield pickup range
+== 護盾拾取範圍
 
 Short pain voice
 == 短促受傷叫聲
@@ -13984,13 +13954,13 @@ Show hammer status
 == 顯示錘狀態
 
 Show hazard borders, character check points and weapon ranges
-== Show hazard borders, character check points and weapon ranges
+== 顯示地形危險邊界、角色判定點與武器範圍
 
 Show health, shields and ammo
 == 顯示生命、護甲與彈藥欄
 
 Show hitboxes for
-== Show hitboxes for
+== 顯示對象
 
 Show Hook Collision
 == 顯示鉤子輔助線
@@ -14448,9 +14418,6 @@ Show skin names in nameplate
 Show skin release date and author
 == 顯示造型發布日期與作者
 
-Show song info in top-left corner
-== 在左上角顯示歌曲信息
-
 Show spectate option
 == 顯示旁觀選項
 
@@ -14530,7 +14497,7 @@ Show text entities
 == 顯示文本實體
 
 Show the areas where freeze projectiles and lasers can freeze a Tee
-== Show the areas where freeze projectiles and lasers can freeze a Tee
+== 顯示冰彈和冰雷射能凍住角色的範圍
 
 Show the chat scrollbar on the right
 == 在右側顯示聊天捲軸
@@ -15684,9 +15651,6 @@ System default
 System graphics settings
 == 系統圖形設定
 
-System media controls
-== 系統媒體控制
-
 System message
 == 系統消息
 
@@ -15712,7 +15676,7 @@ Taper trail width
 == 錐形拖尾寬度
 
 Target group
-== Target group
+== 目標群組
 
 Target language code (e.g. zh, en, ja, zh-TW)
 == 翻譯目標語言代碼（如 zh、en、ja、zh-TW）
@@ -15883,10 +15847,10 @@ Tee collision
 == Tee 碰撞
 
 Tee collision circle
-== Tee collision circle
+== 角色碰撞圓
 
 Tee collision color
-== Tee collision color
+== 角色碰撞顏色
 
 Tee color
 == Tee 顏色
@@ -16251,6 +16215,9 @@ There's an unsaved map in the editor, you might want to save it.
 These effects are cosmetic and can cost a little performance on weaker GPUs.
 == 這些效果僅為外觀，在較弱的 GPU 上可能稍微影響效能。
 
+These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered.
+== 這些選項彼此獨立，只開啟會用到的功能，聊天和計分板會更清爽。
+
 These options only change prediction on your client; what other players see is not affected.
 == 這些選項只改變你客戶端的預測，不影響其他玩家看到的畫面。
 
@@ -16273,7 +16240,7 @@ This connection cannot change names while connected. Reconnect with the saved na
 == 此連線不支援線上改名，請使用存檔中的名字重新連線。
 
 This friend has no player name. Switch to By clan to add them.
-== This friend has no player name. Switch to By clan to add them.
+== 該好友沒有玩家名稱，請切換為「按戰隊」新增
 
 This ID is not connected
 == 該 ID 未連接
@@ -16297,7 +16264,7 @@ This person has disabled receiving whispers
 == 該玩家已關閉接收私聊
 
 This player has no clan. Switch to By player to add them.
-== This player has no clan. Switch to By player to add them.
+== 該玩家沒有戰隊，請切換為「按玩家」新增
 
 This pose file does not record a map. Choose the map used for rendering.
 == 該合影檔案沒有記錄地圖，請選擇用於渲染的地圖。
@@ -16361,9 +16328,6 @@ Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its m
 
 Tick "Enable 3D background particles", pick a "Particle type", then set "Particle count", "Particle speed" and "Particle color".
 == 勾選啟用 3D 背景粒子，選擇粒子類型，然後設定粒子數量、粒子速度與粒子顏色。
-
-Tick "Enable system media control", then "Show song info in top-left corner"; the Previous, Play/Pause and Next buttons drive the track.
-== 勾選啟用系統媒體控制項，再勾選在左上角顯示歌曲資訊；上一首、播放/暫停與下一首按鈕可控制曲目。
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 勾選啟用語音，打開進階選項選擇輸入裝置與輸出裝置；說話時自動取消靜音能讓你空出靜音鍵。
@@ -16713,9 +16677,6 @@ Too many translation tasks
 Toolbox page
 == 工具箱頁面
 
-Tooltip background color
-== 提示氣泡背景顏色
-
 Tooltip bounce animation
 == 提示氣泡回彈動畫
 
@@ -16724,9 +16685,6 @@ Tooltip font size
 
 Tooltip preview
 == 提示氣泡預覽
-
-Tooltip text color
-== 提示氣泡文字顏色
 
 Tooltips
 == 提示氣泡
@@ -16809,9 +16767,6 @@ Translate outgoing messages to
 Translate received messages to
 == 收到訊息譯為
 
-Translate UI
-== 翻譯 UI
-
 Translate:
 == 翻譯：
 
@@ -16830,29 +16785,11 @@ Translated text size
 Translating to %s...
 == 正在翻譯為 %s……
 
-Translation button active color
-== 翻譯按鈕開啟時的顏色
-
-Translation button cancel color
-== 翻譯按鈕取消時的顏色
-
 Translation canceled because the sender changed
 == 傳送者已變更，翻譯已取消
 
-Translation color alpha migration completed flag
-== 翻譯顏色透明度遷移已完成標記
-
 Translation diagnostics
 == 翻譯診斷
-
-Translation menu background color
-== 翻譯菜單背景顏色
-
-Translation menu normal color
-== 翻譯菜單正常顏色
-
-Translation menu selected color
-== 翻譯菜單選中時顏色
 
 Translation model was not found. Check the model name.
 == 找不到翻譯模型，請檢查模型名稱。
@@ -16969,7 +16906,7 @@ Turn on "Enable camera drift" or "Enable dynamic FOV", then tune "Drift intensit
 == 開啟鏡頭漂移或動態 FOV 後，才會出現對應的強度與平滑度滑條；用長寬比預設固定畫面形狀，選自訂可自己填比例。
 
 Turn on "Enable collision hitboxes", choose what to draw, then pick which players to show under "Show hitboxes for".
-== Turn on "Enable collision hitboxes", choose what to draw, then pick which players to show under "Show hitboxes for".
+== 開啟「啟用碰撞箱」，勾選想看的項目，再在「顯示對象」裡選擇要顯示哪些玩家。
 
 Turn on "Enable controller", choose the device, pick "Relative" or "Absolute" under "Ingame controller mode", then tick the axes you want under "Aim bind".
 == 開啟使用手柄並選好裝置，在遊戲內手柄瞄準模式裡選相對或絕對，再在操作軸綁定裡勾選需要的軸。
@@ -17139,9 +17076,6 @@ UI motion level
 UI mouse sens.
 == 鼠標靈敏度（界面）
 
-UI rounded corner segments (even numbers recommended)
-== UI 圓角分段數（建議使用偶數）
-
 UI scale
 == UI 大小
 
@@ -17203,7 +17137,7 @@ Unable to save the watermarked screenshot
 == 無法儲存含浮水印的螢幕截圖
 
 Unassigned entries fall back to this built-in group. It cannot be edited or deleted.
-== Unassigned entries fall back to this built-in group. It cannot be edited or deleted.
+== 未分配群組的條目歸入此處，內建兜底組不可修改或刪除
 
 Unavailable
 == 無法使用
@@ -17427,6 +17361,9 @@ Updated this phrase.
 Updates
 == 更新次數
 
+Updates per second while the window is inactive; 0 = unlimited
+== 視窗處於非活動狀態時每秒的更新次數；0 = 不限
+
 Updating preview…
 == 正在更新預覽…
 
@@ -17598,8 +17535,8 @@ Use procedural ring pipeline
 Use public word filter
 == 使用公共屏蔽詞
 
-Use qm_pref <0|1> [20-400] (milliseconds)
-== 用法：qm_pref <0|1> [20-400]（毫秒）
+Use qm_perf <0|1>
+== 用法：qm_perf <0|1>
 
 Use server defaults
 == 使用服務預設值
@@ -18121,7 +18058,7 @@ When other players' ghosts are visible, draw the solid tee at the server positio
 == 顯示他人影子時，實體角色畫在伺服器位置，影子畫在本機預測位置。
 
 When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
-== When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
+== 跑圖時可以保留「凍結子彈與雷射」，關掉「錘擊與鉤索範圍」和「子彈、爆炸與普通雷射」，這樣更容易看清迎面而來的冰彈和冰雷射。
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
@@ -18883,7 +18820,7 @@ Menu
 
 [Collision hitbox]
 All players
-== All players
+== 所有玩家
 
 [Config help]
 %s (default: "%s", max length: %d)
@@ -18956,62 +18893,6 @@ Hook
 [Direct touch input]
 Relative aim
 == 相對瞄準
-
-[Editor]
-Could not generate the quad art image.
-== Could not generate the quad art image.
-
-[Editor]
-Drawing tools require the active physics layers.
-== Drawing tools require the active physics layers.
-
-[Editor]
-Failed to write sound to file '%s'.
-== Failed to write sound to file '%s'.
-
-[Editor]
-No image selected.
-== No image selected.
-
-[Editor]
-No sound selected.
-== No sound selected.
-
-[Editor]
-Saving failed: Could not prepare or queue the map.
-== Saving failed: Could not prepare or queue the map.
-
-[Editor]
-Saving failed: Could not write map file '%s'.
-== Saving failed: Could not write map file '%s'.
-
-[Editor]
-Sync interrupted: the map was loaded, but the editor could not refresh it
-== Sync interrupted: the map was loaded, but the editor could not refresh it
-
-[Editor]
-The drawing is too large. Split it into smaller strokes.
-== The drawing is too large. Split it into smaller strokes.
-
-[Editor]
-The drawing preview is too large to display.
-== The drawing preview is too large to display.
-
-[Editor]
-The file path is too long.
-== The file path is too long.
-
-[Editor]
-The game and physics layers must have matching dimensions before they can be extended.
-== The game and physics layers must have matching dimensions before they can be extended.
-
-[Editor]
-The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
-== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
-
-[Editor]
-The requested tile layer dimensions are too large.
-== The requested tile layer dimensions are too large.
 
 [Friend auto follow]
 Follow this friend across servers

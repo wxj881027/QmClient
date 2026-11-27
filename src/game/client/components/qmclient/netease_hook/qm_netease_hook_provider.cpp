@@ -7,10 +7,14 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstring>
 #include <filesystem>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace
@@ -103,6 +107,20 @@ struct CQmNeteaseHookProvider::SImpl
 	HANDLE m_hHelperProcess = nullptr;
 	uint64_t m_LastV5Sequence = 0;
 	uint32_t m_LastV5Pid = 0;
+
+	// 以下字段跨越主线程与后台 Hook 线程，统一由 m_Mutex 保护。
+	std::mutex m_Mutex;
+	std::condition_variable m_Wake;
+	std::thread m_Worker;
+	bool m_StopRequested = false;
+	bool m_DesiredEnabled = false;
+	std::string m_DesiredHelperPath;
+	int m_DesiredTimeoutMs = 1500;
+	uint64_t m_ConfigGeneration = 0;
+	std::string m_ActiveHelperPath;
+	bool m_PublishedV5Valid = false;
+	QmNeteaseHook::SSnapshotV5 m_PublishedV5{};
+	std::atomic_bool m_Running{false};
 
 	bool OpenV5()
 	{
@@ -216,6 +234,140 @@ struct CQmNeteaseHookProvider::SImpl
 			Sleep(10);
 		}
 	}
+
+	void PublishV5(bool Valid, const QmNeteaseHook::SSnapshotV5 &Snapshot)
+	{
+		std::scoped_lock Lock(m_Mutex);
+		m_PublishedV5Valid = Valid;
+		if(Valid)
+			m_PublishedV5 = Snapshot;
+	}
+
+	void StopHelper()
+	{
+		// 读取器可能尚未打开映射；给刚注入的 DLL 一个很短的初始化窗口。
+		bool StopRequested = RequestStop();
+		if(!StopRequested)
+		{
+			const uint64_t Deadline = GetTickCount64() + STOP_MAPPING_WAIT_MS;
+			while(GetTickCount64() < Deadline && !StopRequested)
+			{
+				Sleep(10);
+				StopRequested = RequestStop();
+			}
+		}
+		if(StopRequested)
+			WaitForStopAcknowledged(STOP_ACK_TIMEOUT_MS);
+
+		if(m_hHelperProcess != nullptr)
+		{
+			if(WaitForSingleObject(m_hHelperProcess, 0) == WAIT_TIMEOUT)
+			{
+				// Helper 是本客户端创建的子进程；关闭 Hook 数据源时结束它的监听循环。
+				TerminateProcess(m_hHelperProcess, 0);
+				WaitForSingleObject(m_hHelperProcess, 3000);
+			}
+			CloseHandle(m_hHelperProcess);
+			m_hHelperProcess = nullptr;
+		}
+		CloseMapping();
+		CloseV5();
+		m_LastSequence = 0;
+		m_LastProducerPid = 0;
+		m_LastValidTick = 0;
+		m_SawSequenceReset = false;
+		m_HelperStarted = false;
+		m_ActiveHelperPath.clear();
+		m_Running.store(false, std::memory_order_release);
+		PublishV5(false, {});
+	}
+
+	bool ReadV5Direct(QmNeteaseHook::SSnapshotV5 *pSnapshot, int TimeoutMs)
+	{
+		if(pSnapshot == nullptr || !OpenV5())
+			return false;
+		QmNeteaseHook::SSnapshotV5 Candidate{};
+		for(int Attempt = 0; Attempt < 3; ++Attempt)
+		{
+			auto *pShared = static_cast<const volatile QmNeteaseHook::SSharedBlockV5 *>(m_pViewV5);
+			const uint64_t Begin = *reinterpret_cast<const volatile uint64_t *>(&pShared->m_Sequence);
+			MemoryBarrier();
+			if(Begin == 0 || (Begin & 1) != 0)
+				continue;
+			std::memcpy(&Candidate, (const void *)&pShared->m_Snapshot, sizeof(Candidate));
+			MemoryBarrier();
+			const uint64_t End = *reinterpret_cast<const volatile uint64_t *>(&pShared->m_Sequence);
+			if(!QmNeteaseHook::IsStableSequenceV5(Begin, End) || Candidate.m_Sequence != End)
+				continue;
+			if(!QmNeteaseHook::ValidateSnapshotV5(Candidate))
+				continue;
+			const uint64_t Now = GetTickCount64();
+			if(QmNeteaseHook::IsStaleV5(Candidate, Now, (uint64_t)std::max(1, TimeoutMs)))
+				return false;
+			if(m_LastV5Pid != 0 && Candidate.m_CloudMusicPid != m_LastV5Pid)
+				m_LastV5Sequence = 0;
+			if(m_LastV5Sequence != 0 && Candidate.m_Sequence < m_LastV5Sequence)
+				m_LastV5Sequence = 0;
+			m_LastV5Pid = Candidate.m_CloudMusicPid;
+			m_LastV5Sequence = Candidate.m_Sequence;
+			*pSnapshot = Candidate;
+			return true;
+		}
+		return false;
+	}
+
+	void WorkerMain()
+	{
+		for(;;)
+		{
+			bool Enabled;
+			std::string HelperPath;
+			int TimeoutMs;
+			uint64_t Generation;
+			{
+				std::scoped_lock Lock(m_Mutex);
+				Enabled = m_DesiredEnabled;
+				HelperPath = m_DesiredHelperPath;
+				TimeoutMs = m_DesiredTimeoutMs;
+				Generation = m_ConfigGeneration;
+				if(m_StopRequested)
+					break;
+			}
+
+			if(!Enabled)
+			{
+				if(m_HelperStarted || m_pView != nullptr || m_pViewV5 != nullptr)
+					StopHelper();
+				else
+					PublishV5(false, {});
+			}
+			else
+			{
+				if(m_HelperStarted && m_ActiveHelperPath != HelperPath)
+					StopHelper();
+				if(!m_HelperStarted)
+				{
+					// 建映射与 CreateProcessW 都可能被系统安全扫描拖到数百毫秒，
+					// 这里位于后台线程，不阻塞渲染与逻辑帧。
+					Resume();
+					m_hHelperProcess = LaunchHelper(HelperPath.c_str());
+					m_HelperStarted = true;
+					m_ActiveHelperPath = HelperPath;
+				}
+
+				QmNeteaseHook::SSnapshotV5 Snapshot{};
+				const bool ReadOk = ReadV5Direct(&Snapshot, TimeoutMs);
+				m_Running.store(m_pViewV5 != nullptr, std::memory_order_release);
+				PublishV5(ReadOk, Snapshot);
+			}
+
+			std::unique_lock Lock(m_Mutex);
+			m_Wake.wait_for(Lock, std::chrono::milliseconds(50), [this, Generation] {
+				return m_StopRequested || m_ConfigGeneration != Generation;
+			});
+		}
+		StopHelper();
+	}
 };
 
 CQmNeteaseHookProvider::CQmNeteaseHookProvider() :
@@ -226,60 +378,60 @@ CQmNeteaseHookProvider::~CQmNeteaseHookProvider()
 	Stop();
 }
 
-void CQmNeteaseHookProvider::Start(const char *pHelperPath, int /*TimeoutMs*/)
+void CQmNeteaseHookProvider::Start(const char *pHelperPath, int TimeoutMs)
 {
 	if(!m_pImpl)
 		return;
-	const bool ResumedExistingDll = m_pImpl->Resume();
-	if(!m_pImpl->m_HelperStarted)
 	{
-		m_pImpl->m_hHelperProcess = LaunchHelper(pHelperPath);
-		m_pImpl->m_HelperStarted = m_pImpl->m_hHelperProcess != nullptr;
+		std::scoped_lock Lock(m_pImpl->m_Mutex);
+		m_pImpl->m_DesiredEnabled = true;
+		m_pImpl->m_DesiredHelperPath = pHelperPath != nullptr ? pHelperPath : "";
+		m_pImpl->m_DesiredTimeoutMs = TimeoutMs;
+		m_pImpl->m_StopRequested = false;
+		++m_pImpl->m_ConfigGeneration;
 	}
-	if(!ResumedExistingDll)
+	if(!m_pImpl->m_Worker.joinable())
 	{
-		const uint64_t Deadline = GetTickCount64() + STOP_MAPPING_WAIT_MS;
-		while(GetTickCount64() < Deadline && !m_pImpl->Resume())
-			Sleep(10);
+		try
+		{
+			m_pImpl->m_Worker = std::thread([this] { m_pImpl->WorkerMain(); });
+		}
+		catch(...)
+		{
+			return;
+		}
 	}
+	m_pImpl->m_Wake.notify_all();
+}
+
+void CQmNeteaseHookProvider::RequestStop()
+{
+	if(!m_pImpl)
+		return;
+	{
+		std::scoped_lock Lock(m_pImpl->m_Mutex);
+		m_pImpl->m_DesiredEnabled = false;
+		++m_pImpl->m_ConfigGeneration;
+	}
+	m_pImpl->m_Wake.notify_all();
 }
 
 void CQmNeteaseHookProvider::Stop()
 {
 	if(!m_pImpl)
 		return;
-	// 读取器可能尚未打开映射；给刚注入的 DLL 一个很短的初始化窗口。
-	bool StopRequested = m_pImpl->RequestStop();
-	if(!StopRequested)
 	{
-		const uint64_t Deadline = GetTickCount64() + STOP_MAPPING_WAIT_MS;
-		while(GetTickCount64() < Deadline && !StopRequested)
-		{
-			Sleep(10);
-			StopRequested = m_pImpl->RequestStop();
-		}
+		std::scoped_lock Lock(m_pImpl->m_Mutex);
+		m_pImpl->m_DesiredEnabled = false;
+		m_pImpl->m_StopRequested = true;
+		++m_pImpl->m_ConfigGeneration;
 	}
-	if(StopRequested)
-		m_pImpl->WaitForStopAcknowledged(STOP_ACK_TIMEOUT_MS);
-
-	if(m_pImpl->m_hHelperProcess != nullptr)
-	{
-		if(WaitForSingleObject(m_pImpl->m_hHelperProcess, 0) == WAIT_TIMEOUT)
-		{
-			// Helper 是本客户端创建的子进程；关闭 Hook 数据源时结束它的监听循环。
-			TerminateProcess(m_pImpl->m_hHelperProcess, 0);
-			WaitForSingleObject(m_pImpl->m_hHelperProcess, 3000);
-		}
-		CloseHandle(m_pImpl->m_hHelperProcess);
-		m_pImpl->m_hHelperProcess = nullptr;
-	}
-	m_pImpl->CloseMapping();
-	m_pImpl->CloseV5();
-	m_pImpl->m_LastSequence = 0;
-	m_pImpl->m_LastProducerPid = 0;
-	m_pImpl->m_LastValidTick = 0;
-	m_pImpl->m_SawSequenceReset = false;
-	m_pImpl->m_HelperStarted = false;
+	m_pImpl->m_Wake.notify_all();
+	if(m_pImpl->m_Worker.joinable())
+		m_pImpl->m_Worker.join();
+	// 后台线程退出时已完成清理；这里只兜底处理线程从未启动的情况。
+	if(m_pImpl->m_HelperStarted || m_pImpl->m_pView != nullptr || m_pImpl->m_pViewV5 != nullptr)
+		m_pImpl->StopHelper();
 }
 
 bool CQmNeteaseHookProvider::Read(QmNeteaseHook::SSnapshot *pSnapshot, int TimeoutMs)
@@ -352,41 +504,20 @@ bool CQmNeteaseHookProvider::Read(QmNeteaseHook::SSnapshot *pSnapshot, int Timeo
 
 bool CQmNeteaseHookProvider::ReadV5(QmNeteaseHook::SSnapshotV5 *pSnapshot, int TimeoutMs)
 {
-	if(pSnapshot == nullptr || !m_pImpl || !m_pImpl->OpenV5())
+	if(pSnapshot == nullptr || !m_pImpl)
 		return false;
-	QmNeteaseHook::SSnapshotV5 Candidate{};
-	for(int Attempt = 0; Attempt < 3; ++Attempt)
-	{
-		auto *pShared = static_cast<const volatile QmNeteaseHook::SSharedBlockV5 *>(m_pImpl->m_pViewV5);
-		const uint64_t Begin = *reinterpret_cast<const volatile uint64_t *>(&pShared->m_Sequence);
-		MemoryBarrier();
-		if(Begin == 0 || (Begin & 1) != 0)
-			continue;
-		std::memcpy(&Candidate, (const void *)&pShared->m_Snapshot, sizeof(Candidate));
-		MemoryBarrier();
-		const uint64_t End = *reinterpret_cast<const volatile uint64_t *>(&pShared->m_Sequence);
-		if(!QmNeteaseHook::IsStableSequenceV5(Begin, End) || Candidate.m_Sequence != End)
-			continue;
-		if(!QmNeteaseHook::ValidateSnapshotV5(Candidate))
-			continue;
-		const uint64_t Now = GetTickCount64();
-		if(QmNeteaseHook::IsStaleV5(Candidate, Now, (uint64_t)std::max(1, TimeoutMs)))
-			return false;
-		if(m_pImpl->m_LastV5Pid != 0 && Candidate.m_CloudMusicPid != m_pImpl->m_LastV5Pid)
-			m_pImpl->m_LastV5Sequence = 0;
-		if(m_pImpl->m_LastV5Sequence != 0 && Candidate.m_Sequence < m_pImpl->m_LastV5Sequence)
-			m_pImpl->m_LastV5Sequence = 0;
-		m_pImpl->m_LastV5Pid = Candidate.m_CloudMusicPid;
-		m_pImpl->m_LastV5Sequence = Candidate.m_Sequence;
-		*pSnapshot = Candidate;
-		return true;
-	}
-	return false;
+	std::scoped_lock Lock(m_pImpl->m_Mutex);
+	if(!m_pImpl->m_PublishedV5Valid)
+		return false;
+	if(QmNeteaseHook::IsStaleV5(m_pImpl->m_PublishedV5, GetTickCount64(), (uint64_t)std::max(1, TimeoutMs)))
+		return false;
+	*pSnapshot = m_pImpl->m_PublishedV5;
+	return true;
 }
 
 bool CQmNeteaseHookProvider::IsRunning() const
 {
-	return m_pImpl != nullptr && (m_pImpl->m_pView != nullptr || m_pImpl->m_pViewV5 != nullptr);
+	return m_pImpl != nullptr && m_pImpl->m_Running.load(std::memory_order_acquire);
 }
 
 #else
@@ -400,6 +531,7 @@ CQmNeteaseHookProvider::CQmNeteaseHookProvider() :
 	m_pImpl(std::make_unique<SImpl>()) {}
 CQmNeteaseHookProvider::~CQmNeteaseHookProvider() = default;
 void CQmNeteaseHookProvider::Start(const char *, int) {}
+void CQmNeteaseHookProvider::RequestStop() {}
 void CQmNeteaseHookProvider::Stop() {}
 bool CQmNeteaseHookProvider::Read(QmNeteaseHook::SSnapshot *, int) { return false; }
 bool CQmNeteaseHookProvider::ReadV5(QmNeteaseHook::SSnapshotV5 *, int) { return false; }

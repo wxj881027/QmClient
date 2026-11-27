@@ -260,7 +260,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			ActionsWidth = LastAction.x + LastAction.w + ConfigMetrics.m_LineSpacing + MeasureChangesCounter();
 		}
 		// 窄行优先保住搜索区的标签列与控件下限，动作组随之压缩，两段不会互相挤压。
-		const float SearchMinimum = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + 2.0f * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
+		const float SearchMinimum = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + ui_token::tclient::configs::INLINE_BUTTON_SPAN * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
 		ActionsWidth = std::clamp(ActionsWidth, 0.0f, std::max(0.0f, Row.w - SearchMinimum - ConfigMetrics.m_LineSpacing));
 		const CUIRect SearchArea{Row.x, Row.y, std::max(0.0f, Row.w - ActionsWidth - ConfigMetrics.m_LineSpacing), Row.h};
 		const CUIRect Actions{SearchArea.x + SearchArea.w + ConfigMetrics.m_LineSpacing, Row.y, ActionsWidth, Row.h};
@@ -312,7 +312,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 	auto RenderList = [&](CUIRect ListArea) {
 		// 行内留白与标签缩进都从内容 metrics 派生：行距一个单位，标签缩进两个单位。
 		const float RowInset = ConfigMetrics.m_LineSpacing;
-		const float LabelIndent = 2.0f * ConfigMetrics.m_LineSpacing;
+		const float LabelIndent = ui_token::tclient::configs::LABEL_INDENT_SPANS * ConfigMetrics.m_LineSpacing;
 		const int FlagMask = CFGFLAG_CLIENT;
 		auto BuildConfigTagMask = [](const char *pScriptName) {
 			unsigned int Mask = 0;
@@ -513,7 +513,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 		vec2 ScrollOffset(0.0f, 0.0f);
 		SQmScrollRequest ConfigListScrollRequest;
 		ConfigListScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
-		const float ConfigInlineMinWidth = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + 2.0f * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
+		const float ConfigInlineMinWidth = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + ui_token::tclient::configs::INLINE_BUTTON_SPAN * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
 		const bool StackedConfigRows = ListArea.w < ConfigInlineMinWidth;
 		const float ConfigHelpFontSize = ConfigMetrics.m_SmallSize; // 说明行字号取小字档，不再把「正文字号减 2」折成字号
 		const SSettingsConfigRowMetrics ConfigRowMetrics = ResolveSettingsConfigRowMetrics(g_Config.m_QmUiCompactList != 0, StackedConfigRows, LineSize, RowSpacing, ConfigMetrics.m_LineHeight, ColorPickerLineSize, ConfigMetrics.m_LineSpacing);
@@ -567,7 +567,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 				continue;
 
 			const bool Modified = !IsEffectiveDefaultVar(pVar);
-			const ColorRGBA BgModified = ColorRGBA(1.0f, 0.8f, 0.0f, 0.15f);
+			const ColorRGBA BgModified = ui_token::tclient::configs::MODIFIED_BG;
 			const ColorRGBA BgNormal = ui_token::color::PREVIEW_BACKDROP;
 			RowItem.Draw(Modified ? BgModified : BgNormal, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 
@@ -586,7 +586,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 				const float UsedHeight = ConfigRowMetrics.m_ControlBlockHeight;
 				TopLine = RowContent;
 				TopLine.h = UsedHeight;
-				TopLine.y = round_to_int(RowContent.y + (RowContent.h - UsedHeight) / 2.0f);
+				TopLine.y = round_to_int(RowContent.y + (RowContent.h - UsedHeight) / ui_token::tclient::DOUBLE);
 				Below = RowContent;
 			}
 			else
@@ -601,15 +601,15 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 				TopLine.HSplitTop(ConfigRowMetrics.m_ControlLineHeight, &Right, nullptr);
 			}
 			else
-				TopLine.VSplitRight(std::clamp(TopLine.w * 0.46f, 170.0f, 320.0f), &NameLine, &Right);
+				TopLine.VSplitRight(std::clamp(TopLine.w * ui_token::tclient::configs::NAME_WIDTH_RATIO, ui_token::tclient::configs::NAME_MIN_WIDTH, ui_token::tclient::configs::NAME_MAX_WIDTH), &NameLine, &Right);
 			NameLine.VSplitLeft(std::min(LabelIndent, NameLine.w), nullptr, &NameLine);
 
 			Ui()->DoLabel(&NameLine, pVar->m_pScriptName, FontSize, TEXTALIGN_ML);
 
 			CUIRect Controls, ResetRect;
-			Right.VSplitRight(std::min(100.0f, std::max(0.0f, Right.w * 0.25f)), &Controls, &ResetRect);
+			Right.VSplitRight(std::min(ui_token::tclient::configs::RESET_MAX_WIDTH, std::max(0.0f, Right.w * ui_token::tclient::configs::RESET_WIDTH_RATIO)), &Controls, &ResetRect);
 			Controls.h = LineSize;
-			Controls.y = Right.y + (Right.h - LineSize) / 2.0f;
+			Controls.y = Right.y + (Right.h - LineSize) / ui_token::tclient::DOUBLE;
 			ResetRect.h = LineSize;
 			ResetRect.y = Controls.y;
 			Controls.VSplitRight(RowSpacing, &Controls, nullptr);
@@ -681,7 +681,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 					}
 
 					CUIRect InputBox, Dummy;
-					Controls.VSplitLeft(60.0f, &InputBox, &Dummy);
+					Controls.VSplitLeft(ui_token::tclient::configs::INPUT_WIDTH, &InputBox, &Dummy);
 
 					if(ui_widget::InputField(TClientConfigTextInputCtx, &State.m_Input, InputBox, nullptr, EditBoxFontSize))
 					{
@@ -733,8 +733,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 				GameClient()->m_Tooltips.DoToolTipForRect(pVar, &Right, BuildLocalizedConfigHelpText(pVar).c_str());
 				ColorRect.x = Controls.x;
 				ColorRect.h = ColorPickerLineSize;
-				ColorRect.y = Right.y + (Right.h - ColorPickerLineSize) / 2.0f;
-				ColorRect.w = ColorPickerLineSize + ui_token::spacing::SM + 60.0f;
+				ColorRect.y = Right.y + (Right.h - ColorPickerLineSize) / ui_token::tclient::DOUBLE;
+				ColorRect.w = ColorPickerLineSize + ui_token::spacing::SM + ui_token::tclient::configs::COLOR_PICKER_EXTRA_WIDTH;
 				const ColorRGBA DefaultColor = color_cast<ColorRGBA>(ColorHSLA(pCol->m_Default, true).UnclampLighting(pCol->m_DarkestLighting));
 				static std::unordered_map<const SConfigVariable *, CButtonContainer> s_ColorResetIds;
 				CButtonContainer &ResetId = s_ColorResetIds[pVar];
@@ -779,11 +779,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 	};
 
 	const auto ConfigListViewportHeightForWidth = [ConfigMetrics](float ContentWidth) {
-		const float ConfigInlineMinWidth = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + 2.0f * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
+		const float ConfigInlineMinWidth = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + ui_token::tclient::configs::INLINE_BUTTON_SPAN * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
 		const bool StackedRows = ContentWidth < ConfigInlineMinWidth;
 		const float HelpHeight = ConfigMetrics.m_LineHeight; // 说明行行高取一档行高，与绘制路径同源
 		const SSettingsConfigRowMetrics RowMetrics = ResolveSettingsConfigRowMetrics(g_Config.m_QmUiCompactList != 0, StackedRows, ConfigMetrics.m_LineHeight, ConfigMetrics.m_LineSpacing, HelpHeight, ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_LineSpacing);
-		return std::max(RowMetrics.m_RowHeight * 2.0f, ContentWidth * 0.52f);
+		return std::max(RowMetrics.m_RowHeight * ui_token::tclient::configs::PREVIEW_MIN_ROWS, ContentWidth * ui_token::tclient::configs::PREVIEW_WIDTH_RATIO);
 	};
 	const auto RenderConfigCard = [&](CUIRect &Content) {
 		CSettingsContentLayoutFlow Flow(Content);

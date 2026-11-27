@@ -16,9 +16,9 @@ namespace
 	protected:
 		CCountryFlags::CCountryFlag m_Flag{};
 
-		SCountryFlagEntryVisual Frame(EPass Pass, int64_t Now, int64_t CustomStart = 0, bool Enabled = true, int MotionLevel = 2)
+		SCountryFlagEntryVisual Frame(EPass Pass, int64_t Now, int64_t CustomStart = 0, int MotionLevel = 2)
 		{
-			return m_Flag.ResolveEntryAnimation(Pass, Enabled, MotionLevel, CustomStart, Now, kFreq);
+			return m_Flag.ResolveEntryAnimation(Pass, MotionLevel, CustomStart, Now, kFreq);
 		}
 
 		static void ExpectSettled(const SCountryFlagEntryVisual &Visual)
@@ -91,7 +91,7 @@ TEST_F(CountryFlagEntryLifecycle, MeasurementDoesNotCancelActiveEntrance)
 {
 	Frame(EPass::INTERACTIVE, kNow);
 	const auto Before = Frame(EPass::BACKGROUND, kNow + 20);
-	ExpectSettled(Frame(EPass::MEASUREMENT, kNow + 25, 0, false, 0));
+	ExpectSettled(Frame(EPass::MEASUREMENT, kNow + 25, 0, 0));
 	EXPECT_EQ(m_Flag.m_LastRenderTimestamp, kNow + 20);
 	EXPECT_EQ(m_Flag.m_AnimStartTimestamp, kNow);
 	const auto After = Frame(EPass::INTERACTIVE, kNow + 30);
@@ -108,20 +108,10 @@ TEST_F(CountryFlagEntryLifecycle, MeasurementDoesNotKeepAbsentFlagAlive)
 	EXPECT_EQ(m_Flag.m_AnimStartTimestamp, kNow + 1010);
 }
 
-TEST_F(CountryFlagEntryLifecycle, DisabledBackgroundCancelsEntranceAndKeepsVisibility)
-{
-	Frame(EPass::INTERACTIVE, kNow);
-	for(int64_t Elapsed = 20; Elapsed <= 1020; Elapsed += 100)
-		ExpectSettled(Frame(EPass::BACKGROUND, kNow + Elapsed, kNow + 5000, false));
-	ExpectSettled(Frame(EPass::INTERACTIVE, kNow + 1030));
-	EXPECT_EQ(m_Flag.m_AnimStartTimestamp, 0);
-	EXPECT_FLOAT_EQ(Frame(EPass::INTERACTIVE, kNow + 1030 + kGapTicks).m_Alpha, 0.0f);
-}
-
 TEST_F(CountryFlagEntryLifecycle, ZeroMotionCancelsEntranceWithoutReplayOnReenable)
 {
 	Frame(EPass::INTERACTIVE, kNow);
-	ExpectSettled(Frame(EPass::BACKGROUND, kNow + 20, kNow + 1000, true, 0));
+	ExpectSettled(Frame(EPass::BACKGROUND, kNow + 20, kNow + 1000, 0));
 	ExpectSettled(Frame(EPass::INTERACTIVE, kNow + 30));
 	EXPECT_EQ(m_Flag.m_AnimStartTimestamp, 0);
 }
@@ -180,10 +170,10 @@ TEST_F(CountryFlagEntryLifecycle, ExplicitCustomStartCanReplayContinuouslyVisibl
 
 TEST_F(CountryFlagEntryLifecycle, ReducedMotionCompletesEarlierWithoutRestarting)
 {
-	Frame(EPass::INTERACTIVE, kNow, 0, true, 1);
-	Frame(EPass::BACKGROUND, kNow + 100, 0, true, 1);
-	ExpectSettled(Frame(EPass::BACKGROUND, kNow + 160, 0, true, 1));
-	ExpectSettled(Frame(EPass::INTERACTIVE, kNow + 170, 0, true, 1));
+	Frame(EPass::INTERACTIVE, kNow, 0, 1);
+	Frame(EPass::BACKGROUND, kNow + 100, 0, 1);
+	ExpectSettled(Frame(EPass::BACKGROUND, kNow + 160, 0, 1));
+	ExpectSettled(Frame(EPass::INTERACTIVE, kNow + 170, 0, 1));
 	EXPECT_EQ(m_Flag.m_AnimStartTimestamp, kNow);
 }
 
@@ -192,10 +182,10 @@ TEST_F(CountryFlagEntryLifecycle, NonpositiveFrequencyUsesMinimumTickFrequency)
 	for(const int64_t Frequency : {int64_t(-1), int64_t(0), int64_t(1)})
 	{
 		SCOPED_TRACE(Frequency);
-		const auto Visual = m_Flag.ResolveEntryAnimation(EPass::BACKGROUND, true, 2, kNow, kNow, Frequency);
+		const auto Visual = m_Flag.ResolveEntryAnimation(EPass::BACKGROUND, 2, kNow, kNow, Frequency);
 		EXPECT_TRUE(Visual.m_Visible);
 		EXPECT_FLOAT_EQ(Visual.m_Scale, 0.0f);
 		EXPECT_FLOAT_EQ(Visual.m_Alpha, 0.0f);
-		ExpectSettled(m_Flag.ResolveEntryAnimation(EPass::INTERACTIVE, true, 2, kNow, kNow + 1, Frequency));
+		ExpectSettled(m_Flag.ResolveEntryAnimation(EPass::INTERACTIVE, 2, kNow, kNow + 1, Frequency));
 	}
 }

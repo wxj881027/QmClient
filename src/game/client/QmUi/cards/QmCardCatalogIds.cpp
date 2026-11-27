@@ -44,7 +44,6 @@ namespace qm_card_catalog
 			"qm:friend_notify",
 			"qm:block_words",
 			"qm:translate",
-			"qm:translate_ui",
 			"qm:qiafen",
 			"qm:pie_menu",
 			"qm:map_upload",
@@ -169,7 +168,7 @@ namespace qm_card_catalog
 
 	bool HasCardModule(const char *pStableId)
 	{
-		return IsTClientCard(pStableId) || IsStandardCard(pStableId) || (pStableId != nullptr && (str_comp(pStableId, "qm:system_media_controls") == 0 || str_comp(pStableId, "qm:chat_bubble") == 0 || str_comp(pStableId, "qm:entity_overlay") == 0 || str_comp(pStableId, "qm:bind_status_hud") == 0)) || ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId) || ContainsStableId(s_vGeneralCards, pStableId) || ContainsStableId(s_vControlsCards, pStableId);
+		return IsTClientCard(pStableId) || IsStandardCard(pStableId) || (pStableId != nullptr && (str_comp(pStableId, "qm:chat_bubble") == 0 || str_comp(pStableId, "qm:entity_overlay") == 0 || str_comp(pStableId, "qm:bind_status_hud") == 0)) || ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId) || ContainsStableId(s_vGeneralCards, pStableId) || ContainsStableId(s_vControlsCards, pStableId);
 	}
 
 	const std::vector<const char *> &ControlsCardStableIds()
@@ -270,7 +269,7 @@ namespace qm_card_catalog
 			std::map<std::string, std::vector<const char *>> Cards;
 			for(const auto &Default : qm_card_registry::Defaults())
 			{
-				if(!IsStandardCard(Default.m_pStableId) && !IsTClientCard(Default.m_pStableId) && str_comp(Default.m_pStableId, "qm:system_media_controls") != 0 && str_comp(Default.m_pStableId, "qm:chat_bubble") != 0 && str_comp(Default.m_pStableId, "qm:entity_overlay") != 0 && str_comp(Default.m_pStableId, "qm:bind_status_hud") != 0)
+				if(!IsStandardCard(Default.m_pStableId) && !IsTClientCard(Default.m_pStableId) && str_comp(Default.m_pStableId, "qm:chat_bubble") != 0 && str_comp(Default.m_pStableId, "qm:entity_overlay") != 0 && str_comp(Default.m_pStableId, "qm:bind_status_hud") != 0)
 					continue;
 				Cards[Default.m_pDefaultTab].push_back(Default.m_pStableId);
 			}

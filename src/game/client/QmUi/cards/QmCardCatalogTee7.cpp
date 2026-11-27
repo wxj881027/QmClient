@@ -186,6 +186,8 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 	const float TransitionStrength = ReadUiSwitchAnimation(Tee7SwitchNode);
 	const bool TransitionActive = TransitionStrength > 0.0f && s_Tee7TransitionDirection != 0.0f;
 	const CUIRect ContentClip = MainView;
+	// 过渡趟只绘制：命中与按钮状态必须在目标矩形上结算。
+	CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), TransitionActive);
 	if(TransitionActive)
 	{
 		Ui()->ClipEnable(&ContentClip);
@@ -446,6 +448,8 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView, const SSettingsContentMe
 	const float TransitionStrength = ReadUiSwitchAnimation(SkinPartSwitchNode);
 	const bool TransitionActive = TransitionStrength > 0.0f && s_SkinPartTransitionDirection != 0.0f;
 	const CUIRect ContentClip = MainView;
+	// 过渡趟只绘制：命中与按钮状态必须在目标矩形上结算。
+	CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), TransitionActive);
 	if(TransitionActive)
 	{
 		Ui()->ClipEnable(&ContentClip);

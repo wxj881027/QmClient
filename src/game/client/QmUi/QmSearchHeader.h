@@ -100,6 +100,17 @@ namespace qm_search_header
 	};
 	inline constexpr int NUM_SEARCH_PLACEHOLDERS = sizeof(SEARCH_PLACEHOLDERS) / sizeof(SEARCH_PLACEHOLDERS[0]);
 
+	template<typename FAdd>
+	void ForEachGlyphPrewarmText(FAdd &&Add, int SplashPixelSize, int PlaceholderPixelSize, uint8_t Priority)
+	{
+		if(SplashPixelSize > 0)
+			for(const char *pText : SPLASHES)
+				Add(pText, SplashPixelSize, Priority);
+		if(PlaceholderPixelSize > 0)
+			for(const char *pText : SEARCH_PLACEHOLDERS)
+				Add(pText, PlaceholderPixelSize, Priority);
+	}
+
 	struct SLogo
 	{
 		int m_Left;

@@ -545,8 +545,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	CUIRect SearchRect, CategoryRect, FilterRect, CountRect;
 	// 顶部栏（从右往左切）：字体总数 | 安装筛选 | 分类 —— 两个下拉等宽；
 	// 剩余整段给搜索框（最左，视觉主入口）。
-	const float FilterWidth = std::min(150.0f, TopBar.w * 0.20f);
-	const float CountWidth = std::min(150.0f, TopBar.w * 0.18f);
+	const float FilterWidth = std::min(ui_token::tclient::font::FILTER_MAX_WIDTH, TopBar.w * ui_token::tclient::font::FILTER_WIDTH_RATIO);
+	const float CountWidth = std::min(ui_token::tclient::font::FILTER_MAX_WIDTH, TopBar.w * ui_token::tclient::font::COUNT_WIDTH_RATIO);
 	TopBar.VSplitRight(CountWidth, &TopBar, &CountRect);
 	TopBar.VSplitRight(RowSpacing, &TopBar, nullptr);
 	TopBar.VSplitRight(FilterWidth, &TopBar, &FilterRect);
@@ -589,7 +589,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	// 对齐判定失效，外框无法把按钮与列表包成一个整体；用外框后钳制边界恰好
 	// 等于内容区边界，列表与按钮完全对齐，且仍不会溢出商店弹窗。
 	CUIRect PopupOuterRect = View;
-	PopupOuterRect.Margin(-CUi::PopupMenuContentInset() * 0.5f, &PopupOuterRect);
+	PopupOuterRect.Margin(-CUi::PopupMenuContentInset() * ui_token::tclient::HALF, &PopupOuterRect);
 	CUi::SDropDownProperties CategoryProps;
 	CategoryProps.m_Enabled = Active;
 	CategoryProps.m_pAnchorViewport = &PopupOuterRect;
@@ -660,15 +660,15 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
 	// 滚轮步长按卡片行计（每格 2 行）：目录数千行，沿用设置页固定 120px/格 体感过慢。
 	const float Gap = RowSpacing;
-	const float CardH = 108.0f;
-	ScrollParams.m_ScrollUnit = (CardH + Gap) * 2.0f;
+	const float CardH = ui_token::tclient::font::CARD_HEIGHT;
+	ScrollParams.m_ScrollUnit = (CardH + Gap) * ui_token::tclient::font::SCROLL_UNIT_CARDS;
 	s_GridScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
 	List.y += ScrollOffset.y;
 
 	pCtx->m_vCardButtons.resize(vFamilies.size());
 
 	// 每行 4 卡：期望宽度按 4 等分推导，窄弹窗时 Columns 公式自动减列。
-	const float CardW = std::clamp((List.w - 3.0f * Gap) / 4.0f, 150.0f, 320.0f);
+	const float CardW = std::clamp((List.w - ui_token::tclient::font::CARD_GAP_SPANS * Gap) / ui_token::tclient::font::CARD_COLUMNS, ui_token::tclient::font::CARD_MIN_WIDTH, ui_token::tclient::font::CARD_MAX_WIDTH);
 	const int Columns = std::max(1, (int)((List.w + Gap) / (CardW + Gap)));
 	const float RowW = Columns * CardW + (Columns - 1) * Gap;
 
@@ -677,7 +677,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	{
 		CUIRect RowRect;
 		List.HSplitTop(CardH + Gap, &RowRect, &List);
-		RowRect.x += (List.w - RowW) / 2.0f;
+		RowRect.x += (List.w - RowW) / ui_token::tclient::DOUBLE;
 		for(int Col = 0; Col < Columns && Index < pCtx->m_vResults.size(); ++Col, ++Index)
 		{
 			CUIRect Card;
@@ -708,9 +708,9 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 				fontstore::EnsurePreviewQueued(pStorage, FamilyIndex);
 
 			CUIRect Inner, SubsetsRect, BottomRect;
-			Card.Margin(6.0f, &Inner);
+			Card.Margin(ui_token::tclient::font::CARD_MARGIN, &Inner);
 			Inner.HSplitBottom(LineSize, &Inner, &BottomRect);
-			Inner.HSplitBottom(11.0f, &Inner, &SubsetsRect);
+			Inner.HSplitBottom(ui_token::tclient::font::SUBSETS_HEIGHT, &Inner, &SubsetsRect);
 
 			// 脚本覆盖徽标：小字暗色，展示族覆盖的脚本子集（最多 2 个 + 截断），
 			// 帮助非拉丁语言用户快速识别可用字体（日文/韩文/西里尔等）。
@@ -738,7 +738,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 						str_format(aMore, sizeof(aMore), " · +%" PRIzu, vpNames.size() - Shown);
 						str_append(aSubsets, aMore, sizeof(aSubsets));
 					}
-					pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(0.55f));
+					pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(ui_token::tclient::font::SUBSET_LABEL_ALPHA));
 					pUi->DoLabel(&SubsetsRect, aSubsets, SmallFontSize, TEXTALIGN_ML);
 					pTextRender->TextColor(pTextRender->DefaultTextColor());
 				}
@@ -758,22 +758,22 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 				else if(pAnyJob == nullptr)
 					pHint = Localize("Preview loading…");
 			}
-			DrawRoundedSurface(pUi, Inner, ColorRGBA(0.0f, 0.0f, 0.0f, 0.30f), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
+			DrawRoundedSurface(pUi, Inner, ui_token::tclient::font::PREVIEW_SHADE, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 			CUIRect Preview;
-			Inner.Margin(5.0f, &Preview);
-			const float ContentH = pHint != nullptr ? 55.0f : 41.0f;
-			const float PreviewY = Preview.y + std::max(0.0f, (Preview.h - ContentH) * 0.5f);
+			Inner.Margin(ui_token::tclient::font::PREVIEW_MARGIN, &Preview);
+			const float ContentH = pHint != nullptr ? ui_token::tclient::font::PREVIEW_HINT_HEIGHT : ui_token::tclient::font::PREVIEW_HEIGHT;
+			const float PreviewY = Preview.y + std::max(0.0f, (Preview.h - ContentH) * ui_token::tclient::HALF);
 			if(FaceReady)
 				pTextRender->SetFontPreviewFace(PreviewConfig.c_str());
-			pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(FaceReady ? 1.0f : 0.45f));
+			pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(FaceReady ? 1.0f : ui_token::tclient::font::PREVIEW_PENDING_ALPHA));
 			// 预览区三档文字与卡片度量同源：族名用正文号，样例两行与提示行用小字档。
 			pTextRender->Text(Preview.x, PreviewY, FontSize, Family.m_Name.c_str(), Preview.w);
 			// 固定样例文案：拉丁+数字 与 CJK（汉字/假名）各一行，直观展示该
 			// 字体的实际字形效果；未就绪的族同样渲染（压暗），视觉密度一致。
-			pTextRender->Text(Preview.x, PreviewY + 16.0f, SmallFontSize, "Aa Bb Gg 0123456789", Preview.w);
-			pTextRender->Text(Preview.x, PreviewY + 30.0f, SmallFontSize, "永久 字体 テスト", Preview.w);
+			pTextRender->Text(Preview.x, PreviewY + ui_token::tclient::font::PREVIEW_LINE_1_Y, SmallFontSize, "Aa Bb Gg 0123456789", Preview.w);
+			pTextRender->Text(Preview.x, PreviewY + ui_token::tclient::font::PREVIEW_LINE_2_Y, SmallFontSize, "永久 字体 テスト", Preview.w);
 			if(pHint != nullptr)
-				pTextRender->Text(Preview.x, PreviewY + 44.0f, SmallFontSize, pHint, Preview.w);
+				pTextRender->Text(Preview.x, PreviewY + ui_token::tclient::font::PREVIEW_LINE_3_Y, SmallFontSize, pHint, Preview.w);
 			pTextRender->TextColor(pTextRender->DefaultTextColor());
 			if(FaceReady)
 				pTextRender->SetFontPreviewFace(nullptr);
@@ -783,31 +783,31 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 			str_copy(aFamilyClamped, Family.m_Name.c_str(), sizeof(aFamilyClamped));
 			pUi->DoLabel(&BottomRect, aFamilyClamped, FontSize, TEXTALIGN_ML);
 			CUIRect StatusRect;
-			BottomRect.VSplitRight(64.0f, &BottomRect, &StatusRect);
+			BottomRect.VSplitRight(ui_token::tclient::font::STATUS_COLUMN_WIDTH, &BottomRect, &StatusRect);
 			const fontstore::SInstallJob *pJob = fontstore::FindInstallJob(FamilyIndex);
 			if(Family.m_Installed)
 			{
-				pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(0.6f));
+				pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(ui_token::tclient::font::STATUS_TEXT_ALPHA));
 				pUi->DoLabel(&StatusRect, Localize("Installed"), FontSize, TEXTALIGN_MR);
 				pTextRender->TextColor(pTextRender->DefaultTextColor());
 			}
 			else if(pJob != nullptr && !pJob->m_Failed && pJob->m_pRequest != nullptr)
 			{
 				const size_t TotalFiles = std::max<size_t>(Family.m_vEntryIndices.size(), 1);
-				const float DoneFiles = (float)pJob->m_FileCursor + (pJob->m_pRequest ? pJob->m_pRequest->Progress() / 100.0f : 0.0f);
+				const float DoneFiles = (float)pJob->m_FileCursor + (pJob->m_pRequest ? pJob->m_pRequest->Progress() / ui_token::tclient::PERCENT : 0.0f);
 				char aProgress[32];
-				str_format(aProgress, sizeof(aProgress), "%d%%", (int)(DoneFiles * 100.0f / (float)TotalFiles));
+				str_format(aProgress, sizeof(aProgress), "%d%%", (int)(DoneFiles * ui_token::tclient::PERCENT / (float)TotalFiles));
 				pUi->DoLabel(&StatusRect, aProgress, FontSize, TEXTALIGN_MR);
 			}
 			else if(pJob != nullptr && pJob->m_Failed)
 			{
-				pTextRender->TextColor(ColorRGBA(1.0f, 0.4f, 0.4f, 1.0f));
+				pTextRender->TextColor(ui_token::color::DANGER);
 				pUi->DoLabel(&StatusRect, Localize("Retry"), FontSize, TEXTALIGN_MR);
 				pTextRender->TextColor(pTextRender->DefaultTextColor());
 			}
 			else
 			{
-				pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(0.8f));
+				pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(ui_token::tclient::font::STATUS_DONE_ALPHA));
 				pUi->DoLabel(&StatusRect, Localize("Download"), FontSize, TEXTALIGN_MR);
 				pTextRender->TextColor(pTextRender->DefaultTextColor());
 			}
@@ -944,14 +944,14 @@ namespace
 		int m_AppliedWeight = std::numeric_limits<int>::min(); // 已推进到渲染层的值
 		int m_SeenWeight = std::numeric_limits<int>::min(); // 上帧读到的滑杆值
 		int m_FinishedWeight = std::numeric_limits<int>::min(); // 已执行收尾的值
-		float m_LastApplyTime = -10.0f;
+		float m_LastApplyTime = ui_token::tclient::font::LAST_APPLY_SENTINEL_SEC;
 		float m_LastChangeTime = 0.0f;
 	};
 
 	void QmTickVariableWeightThrottle(SQmWeightThrottleState &State, int Weight, float Now, const std::function<void(int)> &ApplyRender, const std::function<void()> &FinishHeavy)
 	{
-		constexpr float ApplyInterval = 0.10f; // 拖动中最小应用间隔
-		constexpr float SettleDelay = 0.15f; // 值稳定该时长视为停手
+		constexpr float ApplyInterval = ui_token::tclient::font::APPLY_INTERVAL_SEC; // 拖动中最小应用间隔
+		constexpr float SettleDelay = ui_token::tclient::font::SETTLE_DELAY_SEC; // 值稳定该时长视为停手
 		if(Weight != State.m_SeenWeight)
 		{
 			State.m_SeenWeight = Weight;
@@ -1341,23 +1341,23 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	// QmClient: 预览区 —— 「预览」标签 + 方框（背景+边框），内部三行分别展示
 	// 英文、中文与图标符号字形的实际效果（走当前配置的字体回退链）。
 	{
-		const float PreviewBoxH = LineSize * 3.0f + RowSpacing * 2.0f + 6.0f;
+		const float PreviewBoxH = LineSize * ui_token::tclient::font::GLYPH_ROW_COUNT + RowSpacing * ui_token::tclient::font::GLYPH_ROW_GAP_COUNT + ui_token::tclient::font::GLYPH_BOX_EXTRA;
 		if(Flow.Control("tclient-font-preview", PreviewBoxH, Button, RowSpacing) && Flow.Drawing() && !Ui()->DrawingSuppressed())
 		{
 			SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button, ESettingsControlWidth::LONG_CHOICE);
 			CUIElement &PreviewElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-font-preview-label");
 			DoSettingsLabelStreamed(PreviewElement, &Label, Localize("Preview"), FontSize, TEXTALIGN_ML, TClientFixedLabelProperties(FontSize, Label.w));
 			// 预览框与激光/头衔等 QmClient 预览行同款：暗色半透明底、无高亮边框。
-			DrawRoundedSurface(Ui(), Button, ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
+			DrawRoundedSurface(Ui(), Button, ui_token::tclient::font::PREVIEW_SHADE, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 			CUIRect Inner;
-			Button.Margin(RowSpacing + 2.0f, &Inner);
+			Button.Margin(RowSpacing + ui_token::tclient::font::GLYPH_BOX_PADDING, &Inner);
 			const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 			TextRender()->TextColor(TextRender()->DefaultTextColor().WithAlpha(PreviousTextColor.a));
 			Ui()->DoText(Inner.x, Inner.y, FontSize, "The quick brown fox 0123");
 			Ui()->DoText(Inner.x, Inner.y + LineSize, FontSize, "中文字体预览，笔画清晰锐利");
 			// 图标行符号全部落在分类图标码点范围内（qm_font_category.h），
 			// 行宽宽裕，尽量覆盖常见字形分类。
-			Ui()->DoText(Inner.x, Inner.y + LineSize * 2.0f, FontSize, "★ ☆ ♥ ♦ ♣ ♠ ✓ ✗ ♪ ♫ ● ○ ■ □ ▲ ▼ → ←");
+			Ui()->DoText(Inner.x, Inner.y + LineSize * ui_token::tclient::font::GLYPH_SECOND_ROW, FontSize, "★ ☆ ♥ ♦ ♣ ♠ ✓ ✗ ♪ ♫ ● ○ ■ □ ▲ ▼ → ←");
 			TextRender()->TextColor(PreviousTextColor);
 		}
 	}
@@ -1375,7 +1375,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 
 			// 状态位（右侧）：最近一次安装任务的进度 / 失败重试 / 已安装。
 			CUIRect StoreStatus;
-			Button.VSplitRight(64.0f, &Button, &StoreStatus);
+			Button.VSplitRight(ui_token::tclient::font::STATUS_COLUMN_WIDTH, &Button, &StoreStatus);
 			Button.VSplitRight(RowSpacing, &Button, nullptr);
 
 			static CButtonContainer s_StoreBrowseId;
@@ -1407,9 +1407,9 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				{
 					// 下载中：状态位显示整族进度文本，不可交互。
 					const size_t TotalFiles = std::max<size_t>(LastFamily.m_vEntryIndices.size(), 1);
-					const float DoneFiles = (float)pJob->m_FileCursor + (pJob->m_pRequest ? pJob->m_pRequest->Progress() / 100.0f : 0.0f);
+					const float DoneFiles = (float)pJob->m_FileCursor + (pJob->m_pRequest ? pJob->m_pRequest->Progress() / ui_token::tclient::PERCENT : 0.0f);
 					char aProgress[32];
-					str_format(aProgress, sizeof(aProgress), "%d%%", (int)(DoneFiles * 100.0f / (float)TotalFiles));
+					str_format(aProgress, sizeof(aProgress), "%d%%", (int)(DoneFiles * ui_token::tclient::PERCENT / (float)TotalFiles));
 					Ui()->DoLabel(&StoreStatus, aProgress, FontSize, TEXTALIGN_MC);
 				}
 				else if(pJob != nullptr && pJob->m_Failed)
@@ -1417,7 +1417,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 					static CButtonContainer s_StoreRetryId;
 					// 重试是图标类动作：方形按钮居中在状态行内。
 					const float RetrySize = std::min(StoreStatus.h, StoreStatus.w);
-					CUIRect RetryRect{StoreStatus.x + (StoreStatus.w - RetrySize) * 0.5f, StoreStatus.y, RetrySize, RetrySize};
+					CUIRect RetryRect{StoreStatus.x + (StoreStatus.w - RetrySize) * ui_token::tclient::HALF, StoreStatus.y, RetrySize, RetrySize};
 					if(Ui()->DoButton_QmIcon(&s_StoreRetryId, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RetryRect, BUTTONFLAG_LEFT) != 0)
 					{
 						fontstore::RetryInstall(Http(), Storage(), (size_t)LastInstall);
