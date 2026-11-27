@@ -56,6 +56,14 @@ TEST(QmLegacyBind, NestedBindMigratesCommandWithoutChangingEscapedChatMessage)
 	EXPECT_EQ(QmLegacyConfig::MigrateBindCommand("bind x tc_show_chat_client 0"), "bind x qm_show_chat_client 0");
 }
 
+TEST(QmLegacyBind, RetiredDebugGraphAliasMapsToShowPerf)
+{
+	EXPECT_EQ(QmLegacyConfig::MigrateBindCommand("toggle dbg_graphs 0 1"), "toggle cl_show_perf 0 1");
+	EXPECT_EQ(QmLegacyConfig::MigrateBindCommand("reset dbg_graphs"), "reset cl_show_perf");
+	EXPECT_EQ(QmLegacyConfig::MigrateBindCommand("bind g toggle dbg_graphs 0 1"), "bind g toggle cl_show_perf 0 1");
+	EXPECT_EQ(QmLegacyConfig::MigrateBindCommand("say \"dbg_graphs\""), "say \"dbg_graphs\"");
+}
+
 TEST(QmLegacyBind, EscapedBackslashBeforeClosingQuoteKeepsChatTextLiteral)
 {
 	const char *pOld = R"(echo "C:\\maps\\"; say "note; tc_jump_hint stays literal"; toggle tc_jump_hint 0 1)";

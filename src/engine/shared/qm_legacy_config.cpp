@@ -109,7 +109,8 @@ namespace QmLegacyConfig
 				return Result;
 			if(ConfigArgument)
 			{
-				const char *pTarget = CanonicalName(Argument.m_Value.c_str());
+				// dbg_graphs 已并入 cl_show_perf；旧绑定、bind 命令和嵌套绑定都在这里统一迁移。
+				const char *pTarget = str_comp_nocase(Argument.m_Value.c_str(), "dbg_graphs") == 0 ? "cl_show_perf" : CanonicalName(Argument.m_Value.c_str());
 				if(pTarget != Argument.m_Value.c_str())
 					Result.replace(Argument.m_Start, Argument.m_End - Argument.m_Start, EncodeToken(pTarget, Argument.m_Quoted));
 			}

@@ -1,6 +1,6 @@
 ## What this controls
 
-The full diagnostic panel that appears on the right side of the screen once dbg_graphs is on: a connection rating badge with a one-line reason, five curves — RTT, prediction margin, snapshot age, prediction jitter and game time headroom — plus an FPS graph and metric cards. The panel is fixed to the right side of the screen; it does not enter HUD editing and cannot be dragged.
+The full diagnostic panel that appears on the right side of the screen once cl_show_perf is on: a connection rating badge with a one-line reason, five curves — RTT, prediction margin, snapshot age, prediction jitter and game time headroom — plus an FPS graph and metric cards. The panel is fixed to the right side of the screen; it does not enter HUD editing and cannot be dragged.
 
 ## In game
 
@@ -10,9 +10,9 @@ The full diagnostic panel that appears on the right side of the screen once dbg_
 
 ## How to tune it
 
-1. On the card, bind a key to "Global toggle key" (default Ctrl+Shift+G), then use it to switch the panel on and off.
+1. Press Ctrl+Shift+G by default, or enter cl_show_perf 1 in the console to show the panel and cl_show_perf 0 to hide it.
 2. If the panel blocks too much of the view, lower "Panel opacity"; it only fades the backing plate, text and curves are unaffected.
-3. Turn it off when you are done: dbg_graphs is not written to the config, so it is off anyway after a client restart.
+3. Turn it off when you are done: cl_show_perf is saved, so the next launch keeps the last state.
 
 ## Watch out
 
