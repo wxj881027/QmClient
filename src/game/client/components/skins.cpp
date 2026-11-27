@@ -1455,7 +1455,10 @@ void CSkins::FinishSkinPreviewUpload(CSkinContainer *pSkinContainer)
 	pSkinContainer->m_pPendingSkin->m_BloodColor = pSkinContainer->m_SettingsPendingUploadData.m_BloodColor;
 	if(pSkinContainer->m_SettingsPendingUploadData.m_LastModified.has_value())
 		pSkinContainer->SetLastModified(pSkinContainer->m_SettingsPendingUploadData.m_LastModified.value());
-	SkinIt->second->m_SettingsSourceApproxBytes = SettingsSkinSourceBytesEstimate((int)pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, (int)pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, 2);
+	CSkinContainer *pPublishedSkin = SkinIt->second.get();
+	const size_t NewSourceBytes = SettingsSkinSourceBytesEstimate((int)pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, (int)pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, 2);
+	m_SkinSourceBytes.SetLoaded(pPublishedSkin->m_SettingsSourceApproxBytes, NewSourceBytes);
+	pPublishedSkin->m_SettingsSourceApproxBytes = NewSourceBytes;
 	if(pSkinContainer->m_pSkin)
 	{
 		pSkinContainer->m_pSkin->m_OriginalSkin.Unload(Graphics());
@@ -1464,7 +1467,7 @@ void CSkins::FinishSkinPreviewUpload(CSkinContainer *pSkinContainer)
 	pSkinContainer->m_pSkin = std::move(pSkinContainer->m_pPendingSkin);
 	pSkinContainer->m_LoadedSource = SQmSkinSourceIdentity{pSkinContainer->Type() == CSkinContainer::EType::DOWNLOAD, pSkinContainer->StorageType(), pSkinContainer->LastModified()};
 	pSkinContainer->SetState(CSkinContainer::EState::LOADED, BackgroundTracked ? ESettingsResourcePriority::BACKGROUND : ESettingsResourcePriority::VISIBLE);
-	LogSettingsSkinSourceStageEvent("upload_done", pSkinContainer->Name(), pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, (int)SkinIt->second->m_SettingsSourceApproxBytes, std::chrono::duration<double, std::milli>(time_get_nanoseconds() - pSkinContainer->m_SettingsPendingUploadStart).count(), SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS);
+	LogSettingsSkinSourceStageEvent("upload_done", pSkinContainer->Name(), pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, (int)pPublishedSkin->m_SettingsSourceApproxBytes, std::chrono::duration<double, std::milli>(time_get_nanoseconds() - pSkinContainer->m_SettingsPendingUploadStart).count(), SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS);
 	// 已发布皮肤持有头像和描边，清除临时副本才能在回收皮肤时释放素材。
 	DiscardSkinPreviewUpload(pSkinContainer);
 }
@@ -1591,6 +1594,7 @@ void CSkins::OnShutdown()
 	}
 	m_vSkinDownloadNames.clear();
 	m_LoadingStats = {};
+	m_SkinSourceBytes.Reset();
 	m_VerifiedSkinCacheUrls.clear();
 	m_Skins.clear();
 	m_UnresolvedSkinScanState = {};
@@ -2121,18 +2125,14 @@ void CSkins::UnloadLoadedSkinTextures(CSkinContainer *pSkinContainer)
 	pSkinContainer->m_pSkin->m_ColorableSkin.Unload(Graphics());
 	pSkinContainer->m_pSkin.reset();
 	pSkinContainer->m_LoadedSource.reset();
+	m_SkinSourceBytes.Remove(pSkinContainer->m_SettingsSourceApproxBytes);
 	pSkinContainer->m_SettingsSourceApproxBytes = 0;
 	QueueSkinTexturesUnloaded(pSkinContainer->Name());
 }
 
 void CSkins::UpdateUnloadSkins(CSkinLoadingStats &Stats)
 {
-	size_t SourceBytesInUse = 0;
-	for(const auto &[_, pSkinContainer] : m_Skins)
-	{
-		if(pSkinContainer->m_pSkin != nullptr)
-			SourceBytesInUse += pSkinContainer->SettingsSourceApproxBytes();
-	}
+	const size_t SourceBytesInUse = m_SkinSourceBytes.BytesInUse();
 	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
 	const size_t ConfiguredLoadedLimit = (size_t)maximum(0, g_Config.m_ClSkinsLoadedMax);
 	const size_t ResidencyLimit = TeeSettingsActive ? ConfiguredLoadedLimit : SettingsSkinInactiveResidencyLimit(ConfiguredLoadedLimit);

@@ -1187,6 +1187,7 @@ private:
 	std::optional<std::chrono::nanoseconds> m_ContainerUpdateTime;
 	CSkinLoadingStats m_LoadingStats;
 	CQmSkinUploadFrameBudget m_SkinUploadFrameBudget;
+	CQmSkinSourceBytesTracker m_SkinSourceBytes;
 	CUnresolvedSkinScanState m_UnresolvedSkinScanState;
 	std::vector<std::string> m_vSkinsUnresolvedThisFrame;
 	std::vector<std::string> m_vSkinsTexturesUnloadedThisFrame;
