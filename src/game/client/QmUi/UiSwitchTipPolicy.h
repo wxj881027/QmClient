@@ -240,7 +240,7 @@ namespace ui_switch_tip
 		if(Help.empty())
 			return false;
 		const auto IsHan = [](char32_t Code) { return Code >= 0x3400 && Code <= 0x9fff; };
-		for(auto Pos = Label.find(Help); Pos != Label.npos; Pos = Label.find(Help, Pos + 1))
+		for(auto Pos = Label.find(Help); Pos != decltype(Label)::npos; Pos = Label.find(Help, Pos + 1))
 		{
 			const auto End = Pos + Help.size();
 			if((Pos == 0 || Label[Pos - 1] == U' ' || IsHan(Label[Pos - 1]) || IsHan(Help.front())) &&

@@ -46,11 +46,11 @@ namespace
 			if(Ctx.m_pTooltips != nullptr)
 				Ctx.m_pTooltips->DoSmallToolTip(pId, &Button, "复制答案", FontSize);
 		};
-		Card.m_LeadingHeaderInput = [pUi = Ctx.m_pUi, pId, ReadOnly, Copy = std::move(Copy)](const SSettingsCardFrame &Frame, bool) {
+		Card.m_LeadingHeaderInput = [pUi = Ctx.m_pUi, pId, ReadOnly, CopyAction = std::move(Copy)](const SSettingsCardFrame &Frame, bool) {
 			if(ReadOnly || !pUi->PreLayoutInput() || pUi->RenderOnly() || pUi->IsPopupOpen())
 				return false;
 			const CUIRect Button = QmUiSquareIconButtonRect(Frame.m_LeadingHeaderActionRect);
-			return Button.w > 0.0f && pUi->DoButtonLogic(pId, 0, &Button, BUTTONFLAG_LEFT) && Copy();
+			return Button.w > 0.0f && pUi->DoButtonLogic(pId, 0, &Button, BUTTONFLAG_LEFT) && CopyAction();
 		};
 	}
 }
@@ -194,7 +194,7 @@ void qm_card_catalog::BuildDdnetWikiSearchCard(const IUiContext &Ctx, const qm_w
 		pUi->Input()->SetClipboardText(Excerpt.c_str());
 		return false;
 	});
-	Out.m_RenderMeasured = [Ctx, ArticleIndex = Match.m_Article, Available = Match.m_aAvailable, Blocks = Match.m_aBlocks, Excerpt = std::move(Excerpt), ReadOnly, Metrics](CUIRect &Content) {
+	Out.m_RenderMeasured = [Ctx, ArticleIndex = Match.m_Article, Available = Match.m_aAvailable, Blocks = Match.m_aBlocks, ExcerptText = std::move(Excerpt), ReadOnly, Metrics](CUIRect &Content) {
 		static std::array<std::array<CButtonContainer, NUM_LANGUAGES>, NUM_DDNET_WIKI_ARTICLES> s_aOpenButtons{};
 		CSettingsContentLayoutFlow Flow(Content);
 		const bool Interactive = Flow.Input() && !ReadOnly && !Ctx.m_pUi->RenderOnly() && !Ctx.m_pUi->MeasurementOnly() && !Ctx.m_pUi->BackgroundRender() && !Ctx.m_pUi->IsPopupOpen();
@@ -210,7 +210,7 @@ void qm_card_catalog::BuildDdnetWikiSearchCard(const IUiContext &Ctx, const qm_w
 		char aOpenId[64];
 		str_format(aExcerptId, sizeof(aExcerptId), "%s-excerpt", Wiki.m_pSlug);
 		str_format(aOpenId, sizeof(aOpenId), "%s-open", Wiki.m_pSlug);
-		Flow.Text(aExcerptId, Excerpt.c_str(), 0, Metrics.m_BodySize, Gap, {}, DrawText, Metrics.m_LineHeight);
+		Flow.Text(aExcerptId, ExcerptText.c_str(), 0, Metrics.m_BodySize, Gap, {}, DrawText, Metrics.m_LineHeight);
 		CUIRect Row;
 		if(Flow.Control(aOpenId, Metrics.m_ButtonHeight, Row))
 		{

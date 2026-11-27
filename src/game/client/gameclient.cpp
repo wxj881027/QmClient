@@ -1245,7 +1245,7 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 	int StartupTextBuilt = 0;
 	int StartupVisibleMissing = -1;
 	int StartupTextNoProgressSteps = 0;
-	const char *pStartupStopReason = "deadline";
+	const char *pStartupStopReason;
 	int GlyphPumps = 0;
 	const int64_t GlyphPrewarmStart = time_get_nanoseconds().count();
 	int LoadingRefreshRate = Graphics() != nullptr ? Graphics()->ScreenRefreshRate() : 0;
@@ -6518,16 +6518,14 @@ void CGameClient::CClientData::UpdateRenderInfo()
 	const auto SameTexture = [](const IGraphics::CTextureHandle &Left, const IGraphics::CTextureHandle &Right) {
 		return Left.Id() == Right.Id() && Left.Generation() == Right.Generation();
 	};
-	bool ResourceChanged = !SameTexture(m_RenderInfo.m_OriginalRenderSkin.m_Body, NewRenderInfo.m_OriginalRenderSkin.m_Body) ||
-			       !SameTexture(m_RenderInfo.m_ColorableRenderSkin.m_Body, NewRenderInfo.m_ColorableRenderSkin.m_Body);
 	const auto SameSkinTextures = [&SameTexture](const CSkin::CSkinTextures &Left, const CSkin::CSkinTextures &Right) {
 		return SameTexture(Left.m_Body, Right.m_Body) && SameTexture(Left.m_BodyOutline, Right.m_BodyOutline) &&
 		       SameTexture(Left.m_Feet, Right.m_Feet) && SameTexture(Left.m_FeetOutline, Right.m_FeetOutline) &&
 		       SameTexture(Left.m_Hands, Right.m_Hands) && SameTexture(Left.m_HandsOutline, Right.m_HandsOutline) &&
 		       std::equal(std::begin(Left.m_aEyes), std::end(Left.m_aEyes), std::begin(Right.m_aEyes), [&SameTexture](const auto &A, const auto &B) { return SameTexture(A, B); });
 	};
-	ResourceChanged = !SameSkinTextures(m_RenderInfo.m_OriginalRenderSkin, NewRenderInfo.m_OriginalRenderSkin) ||
-			  !SameSkinTextures(m_RenderInfo.m_ColorableRenderSkin, NewRenderInfo.m_ColorableRenderSkin);
+	bool ResourceChanged = !SameSkinTextures(m_RenderInfo.m_OriginalRenderSkin, NewRenderInfo.m_OriginalRenderSkin) ||
+			       !SameSkinTextures(m_RenderInfo.m_ColorableRenderSkin, NewRenderInfo.m_ColorableRenderSkin);
 	for(int Dummy = 0; Dummy < NUM_DUMMIES && !ResourceChanged; ++Dummy)
 	{
 		for(int Part = 0; Part < protocol7::NUM_SKINPARTS && !ResourceChanged; ++Part)

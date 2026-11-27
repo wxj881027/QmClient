@@ -1689,7 +1689,9 @@ void CSystemMediaControls::OnUpdate()
 {
 	if(!m_Initialized)
 		return;
+#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 	const int64_t EntryStart = time_get_nanoseconds().count();
+#endif
 	const int64_t HookSyncStart = time_get_nanoseconds().count();
 	const bool HookReady = SyncNeteaseHookConfiguration();
 	const double HookSyncMs = (double)(time_get_nanoseconds().count() - HookSyncStart) * 1000.0 / time_freq();

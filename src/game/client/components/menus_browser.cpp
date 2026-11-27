@@ -3860,8 +3860,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 				const IUiContext Context = ui_widget::ControlContext(Ui());
 				const auto DoAction = [&](const CUIRect &IconRect, const void *pId, EQmIcon Icon, const char *pGlyph, int Checked, const char *pTooltip, const ui_widget::SIconButtonIconDraw *pDraw = nullptr) {
-					const CUIRect Hit = Actions.HitRect(IconRect);
-					const bool Pressed = ui_widget::DoIconButton(Context, pId, Icon, pGlyph, Checked, IconRect, Actions.ACTION_BUTTON_FLAGS, IGraphics::CORNER_ALL, true, std::nullopt, false, true, &Hit, pDraw) != 0;
+					const CUIRect Hit = decltype(Actions)::HitRect(IconRect);
+					const bool Pressed = ui_widget::DoIconButton(Context, pId, Icon, pGlyph, Checked, IconRect, decltype(Actions)::ACTION_BUTTON_FLAGS, IGraphics::CORNER_ALL, true, std::nullopt, false, true, &Hit, pDraw) != 0;
 					GameClient()->m_Tooltips.DoToolTip(pId, &IconRect, pTooltip);
 					if(Pressed)
 						ButtonResult = 0;

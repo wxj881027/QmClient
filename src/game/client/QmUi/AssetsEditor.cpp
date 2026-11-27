@@ -108,7 +108,7 @@ void CMenus::AssetsEditorRenderToolbar(CUIRect Tools, CUIRect Export, const IUiC
 	if(ui_widget::InputField(Ctx, &s_Name, Actions.m_Input, Options).m_Changed)
 		AssetsEditorCommitExportNameForType();
 	static CButtonContainer s_Export;
-	if(DoSettingsButton_Menu(SETTINGS_ASSETS, -1, -1, &s_Export, "assets-editor-export", Localize("Export"), 0, &Actions.m_Actions.m_aButtons[0], Metrics))
+	if(DoSettingsButton_Menu(SETTINGS_ASSETS, -1, -1, &s_Export, "assets-editor-export", Localize("Export"), 0, Actions.m_Actions.m_aButtons.data(), Metrics))
 		AssetsEditorExport();
 }
 

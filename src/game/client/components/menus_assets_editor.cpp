@@ -1660,8 +1660,9 @@ void CMenus::AssetsEditorRenderCanvas(const CUIRect &Rect, IGraphics::CTextureHa
 	int TileCount = 0;
 	for(int Row = 0; Row * Cell < Rect.h; ++Row)
 	{
-		for(float X = (Row % 2) * Cell; X < Rect.w; X += 2 * Cell)
+		for(int Col = Row % 2; Col * Cell < Rect.w; Col += 2)
 		{
+			const float X = Col * Cell;
 			const float Y = Row * Cell;
 			aTiles[TileCount++] = {Rect.x + X, Rect.y + Y, std::min(Cell, Rect.w - X), std::min(Cell, Rect.h - Y)};
 			if(TileCount == (int)std::size(aTiles))
