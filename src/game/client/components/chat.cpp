@@ -3630,6 +3630,11 @@ void CChat::OnRender()
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 	const bool ChatScrollbarOnRight = g_Config.m_QmChatScrollbarRight != 0;
 	const CUIRect ChatRect = {0.0f, 50.0f, std::min(Width, std::max(190.0f, g_Config.m_ClChatWidth + 32.0f)), 250.0f};
+	// 聊天是固定区域元素：选框、拖动和位置锚定都按整块区域算。
+	// 若按当帧内容包围盒上报，消息一多一少整块就会被重新锚定到保存位置，
+	// 实机里最后一条消息永远贴着那个点，改行内留白也看不出变化。
+	const float ChatElementBottom = 300.0f - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
+	const CUIRect ChatElementRect{ChatRect.x, CHAT_HEIGHT_MIN, ChatRect.w, maximum(0.0f, ChatElementBottom - CHAT_HEIGHT_MIN)};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Chat, ChatRect);
 	float MapX0, MapY0, MapX1, MapY1;
 	Graphics()->GetScreen(&MapX0, &MapY0, &MapX1, &MapY1);
@@ -4464,17 +4469,9 @@ void CChat::OnRender()
 	}
 	Graphics()->ClipDisable();
 
-	if(HudEditorPreview)
-	{
-		// 编辑器选框取聊天元素的真实占位：上沿是展开时的裁剪线
-		// （CHAT_HEIGHT_MIN 在这里是屏幕坐标，不是高度），下沿停在状态栏上边，
-		// 和打开聊天框时历史 + 输入行占据的区域一致，不再垂到屏幕最底部。
-		const float ChatBottom = 300.0f - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
-		const CUIRect ChatElementRect{ChatRect.x, CHAT_HEIGHT_MIN, ChatRect.w, maximum(0.0f, ChatBottom - CHAT_HEIGHT_MIN)};
-		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, ChatElementRect);
-	}
-	else if(VisibleBounds.Valid())
-		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, VisibleBounds.Rect());
+	// 编辑器选框与实机共用同一块占位：上沿是展开时的裁剪线
+	// （CHAT_HEIGHT_MIN 在这里是屏幕坐标，不是高度），下沿停在状态栏上边。
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, ChatElementRect);
 
 	// 与输入法候选栏相同，浮层覆盖聊天记录，不参与记录布局。
 	QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos(), &GameClient()->m_QmChatEmoji);
