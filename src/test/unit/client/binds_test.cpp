@@ -43,6 +43,15 @@ TEST(Binds, KeepsPlainKeyFallbackForNonScreenshotCombinations)
 	EXPECT_FALSE(CBinds::AllowsUnmodifiedFallback(KEY_C, (1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)));
 }
 
+TEST(Binds, FixedPerfGraphShortcutUsesCtrlOrGuiWithShift)
+{
+	EXPECT_TRUE(CBinds::IsFixedPerfGraphShortcut(KEY_G, (1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)));
+	EXPECT_TRUE(CBinds::IsFixedPerfGraphShortcut(KEY_G, (1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)));
+	EXPECT_FALSE(CBinds::IsFixedPerfGraphShortcut(KEY_G, 1 << KeyModifier::CTRL));
+	EXPECT_FALSE(CBinds::IsFixedPerfGraphShortcut(KEY_G, 1 << KeyModifier::SHIFT));
+	EXPECT_FALSE(CBinds::IsFixedPerfGraphShortcut(KEY_H, (1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)));
+}
+
 TEST(Binds, RevisionTracksExternalBindReplacementAndPreservesModifierSlots)
 {
 	CBindStorage Binds;

@@ -2142,9 +2142,6 @@ Cannot write the wiki file
 Cap update rate to save power
 == 限制更新頻率以節省功耗
 
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
-== 限制更新頻率會增加輸入延遲，只建議為省電開啟。獨占全螢幕失敗時，先切回視窗或無邊框模式。
-
 Capsule end strength
 == 膠囊端部強度
 
@@ -2487,8 +2484,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == 選擇要繪製哪些暱稱，並給暱稱加上戰隊、隊伍顏色、好友圖示、座標和客戶端 ID。
 
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
-== 設定視窗/全螢幕模式、顯示器與解析度，以及兩個幀節奏上限：渲染幀率與用戶端更新頻率。
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
+== 選擇視窗化或全螢幕模式、顯示器與解析度、垂直同步以及 Vulkan 呈現模式，並設定兩個幀節奏上限：渲染幀率上限與用戶端更新頻率。
 
 Chroma sampling
 == 色彩取樣
@@ -5910,6 +5907,9 @@ Feature Search
 Feet
 == 腳
 
+FIFO
+== FIFO
+
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Fifo 文件（非 Windows）或命名管道 (Windows) 用作伺服器控制台的輸入
 
@@ -7329,6 +7329,9 @@ IME selection background color
 IME text color
 == 輸入法文字顏色
 
+Immediate
+== Immediate
+
 Import and restart
 == 匯入並重新啟動
 
@@ -7817,6 +7820,9 @@ Kaomoji
 
 Kawase
 == Kawase
+
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
+== 預設保持自動呈現和垂直同步開啟，FIFO 最穩；高刷屏且 GPU 有餘力時可以試郵箱降低延遲，出現頓挫就切回自動。只在省電時限制更新頻率，因為它會增加輸入延遲；測原始幀時間才用立即。獨佔全螢幕失敗時先退回無邊框。
 
 Keep hook when teleporting
 == 傳送時保持鉤子
@@ -8528,6 +8534,9 @@ Lyrics translation
 
 Magic: Spirit Script
 == 魔法風：靈文游絲
+
+Mailbox
+== Mailbox
 
 Main Asset
 == 主材質
@@ -10635,8 +10644,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == 抽取結果：%s
 
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
-== 先選模式，再選顯示器與解析度。「渲染幀率上限」限制關閉垂直同步時每秒繪製多少幀；「用戶端更新頻率」限制遊戲邏輯與輸入的處理頻率，並連帶限制渲染。
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
+== 視窗模式決定交換鏈的建立方式：獨佔全螢幕直接接管顯示器，無邊框和視窗模式走桌面合成；切換模式會重建交換鏈，畫面可能短暫閃爍。「顯示器」「解析度」決定後備緩衝尺寸，非原生解析度由 GPU 縮放。「垂直同步」讓呈現等待螢幕重新整理；「呈現模式」只在 Vulkan 下出現：自動跟隨垂直同步（開 FIFO、關立即、macOS 郵箱），立即直接提交可能撕裂，郵箱用新幀替換等待幀且不阻塞，FIFO 等重新整理不撕裂但最多多一幀延遲。「渲染幀率上限」在提交前限制繪製幀數，「使用者端更新頻率」限制邏輯與輸入 tick 並連帶降低渲染；兩者獨立，實際取更嚴格者。
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == 「訊息顏色」「隊伍訊息」「系統訊息」「使用者端訊息」分別決定普通、隊伍、伺服器和使用者端提示的文字顏色；「漸變」為對應文字疊加第二色，並按字元位置插值。「好友訊息」單獨啟用好友名字著色和愛心，愛心顏色獨立於文字顏色；「高亮」用於命中關鍵詞的訊息；「隱藏伺服器字首」只去掉伺服器訊息前的星號，不改變訊息來源。
@@ -11198,6 +11207,9 @@ Preparing chat export: %d%%
 
 Preparing demo playback
 == 正在準備回放
+
+Present mode
+== 呈現模式
 
 Preset %d
 == 預設 %d
@@ -17831,6 +17843,9 @@ Voting
 
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
 == Vulkan API 版本：14 = 優先使用 1.4、再用 1.3 與 1.1，13 = 優先使用 1.3、再用 1.1，11 = 強制使用 1.1
+
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
+== Vulkan 呈現模式：0=自動，1=Immediate，2=Mailbox，3=FIFO
 
 Wait for current vote to end before calling a new one.
 == 請先等待當前投票結束，再發起新的投票

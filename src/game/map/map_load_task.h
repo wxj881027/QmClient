@@ -96,4 +96,29 @@ private:
 	THandle m_Handle{};
 };
 
+// 单块地图准备工作的连续占用预算：大地图的一整层扫描、纹理坐标生成等
+// 循环在到达预算时主动让出，避免 RunUntil 的 2ms 切片被单个长循环打穿。
+class CMapLoadSliceBudget
+{
+public:
+	explicit CMapLoadSliceBudget(std::chrono::microseconds Budget = std::chrono::microseconds(1000)) :
+		m_Budget(Budget),
+		m_NextYield(CMapLoadTask::TClock::now() + Budget)
+	{
+	}
+
+	bool Expired()
+	{
+		const auto Now = CMapLoadTask::TClock::now();
+		if(Now < m_NextYield)
+			return false;
+		m_NextYield = Now + m_Budget;
+		return true;
+	}
+
+private:
+	std::chrono::microseconds m_Budget;
+	CMapLoadTask::TClock::time_point m_NextYield;
+};
+
 #endif

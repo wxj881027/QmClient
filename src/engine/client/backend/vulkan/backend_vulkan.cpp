@@ -1279,6 +1279,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	uint32_t m_RequestedApiVersion = VK_API_VERSION_1_1;
 	uint32_t m_EffectiveApiVersion = VK_API_VERSION_1_1;
 	VkPresentModeKHR m_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
+	int m_LastVulkanPresentModeConfig = -1;
 	VkResult m_LastVulkanInstanceCreateResult = VK_SUCCESS;
 	bool m_RequiredVulkanVersionUnavailable = false;
 
@@ -3065,6 +3066,9 @@ protected:
 		m_ForceSingleThreadedRender = false;
 		m_FrameProfilingActive = FrameProfilingEnabled();
 		ResetFrameProfileData();
+
+		if(m_LastVulkanPresentModeConfig != g_Config.m_GfxVulkanPresentMode)
+			m_RecreateSwapChain = true;
 
 		if(m_RecreateSwapChain)
 		{
@@ -5206,11 +5210,22 @@ public:
 			return false;
 		}
 
+		const int RequestedMode = g_Config.m_GfxVulkanPresentMode;
 		std::array<VkPresentModeKHR, 2> aPreferredModes;
-		if(g_Config.m_GfxVsync)
+		size_t PreferredModeCount = 0;
+		if(RequestedMode == 1)
+			aPreferredModes[PreferredModeCount++] = VK_PRESENT_MODE_IMMEDIATE_KHR;
+		else if(RequestedMode == 2)
+			aPreferredModes[PreferredModeCount++] = VK_PRESENT_MODE_MAILBOX_KHR;
+		else if(RequestedMode == 3)
+			aPreferredModes[PreferredModeCount++] = VK_PRESENT_MODE_FIFO_KHR;
+		else if(g_Config.m_GfxVsync)
+		{
 			aPreferredModes = {
 				VK_PRESENT_MODE_FIFO_KHR,
 				VK_PRESENT_MODE_FIFO_RELAXED_KHR};
+			PreferredModeCount = aPreferredModes.size();
+		}
 		else
 #if defined(CONF_PLATFORM_MACOS)
 			// MoltenVK 通常不提供 MAILBOX；FIFO 会让 vsync=0 的输入轮询
@@ -5223,13 +5238,29 @@ public:
 				VK_PRESENT_MODE_IMMEDIATE_KHR,
 				VK_PRESENT_MODE_MAILBOX_KHR};
 #endif
-		for(const VkPresentModeKHR PreferredMode : aPreferredModes)
+		if(PreferredModeCount == 0)
+			PreferredModeCount = aPreferredModes.size();
+		for(size_t PreferredModeIndex = 0; PreferredModeIndex < PreferredModeCount; PreferredModeIndex++)
 		{
+			const VkPresentModeKHR PreferredMode = aPreferredModes[PreferredModeIndex];
 			for(const VkPresentModeKHR AvailableMode : vPresentModeList)
 			{
 				if(AvailableMode == PreferredMode)
 				{
 					VKIOMode = PreferredMode;
+					return true;
+				}
+			}
+		}
+
+		if(RequestedMode != 0)
+		{
+			for(const VkPresentModeKHR AvailableMode : vPresentModeList)
+			{
+				if(AvailableMode == VK_PRESENT_MODE_FIFO_KHR)
+				{
+					log_warn("gfx/vulkan", "Requested presentation mode %d is unavailable. Falling back to FIFO.", RequestedMode);
+					VKIOMode = VK_PRESENT_MODE_FIFO_KHR;
 					return true;
 				}
 			}
@@ -5453,6 +5484,8 @@ public:
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the swap chain failed.");
 			return false;
 		}
+		m_LastVulkanPresentModeConfig = g_Config.m_GfxVulkanPresentMode;
+		dbg_msg("vulkan", "swapchain present: requested_mode=%d vsync=%d present_mode=%d images=%u", g_Config.m_GfxVulkanPresentMode, g_Config.m_GfxVsync, (int)PresentMode, SwapImgCount);
 
 		return true;
 	}

@@ -513,6 +513,16 @@ private:
 	CQmPerfFrameBatch m_QmPerfFrameBatch; // 逐帧阶段日志攒批：容量或耗时到阈值即落盘
 	int64_t m_QmPerfLastConfigCheck = 0; // 上次写入配置增量快照的时间
 	int64_t m_QmPerfLastFrameEnd = 0; // 上一渲染帧结束时间；0 表示会话刚开始
+	double m_QmPerfLastSnapshotPredictMs = 0.0;
+	// 单次 Update 的子阶段耗时；update_ms 超阈值时由主循环一次性汇总成 update_spike_detail。
+	double m_QmPerfUpdatePumpMs = 0.0;
+	double m_QmPerfUpdatePollMapLoadMs = 0.0;
+	double m_QmPerfUpdateRedundancyMs = 0.0;
+	double m_QmPerfUpdateResourcePrepareMs = 0.0;
+	double m_QmPerfUpdateGameClientMs = 0.0;
+	double m_QmPerfUpdateEditorMs = 0.0;
+	double m_QmPerfUpdateServerBrowserMs = 0.0;
+	double m_QmPerfUpdateDiscordSteamMs = 0.0;
 	void FinishQmPerfSession(bool Shutdown);
 	int m_QmPerfLogReopenCounter = 0; // 本进程内第几次开启性能日志（文件名序号，避免覆盖旧日志）
 

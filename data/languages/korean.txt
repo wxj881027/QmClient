@@ -2142,9 +2142,6 @@ Cannot write the wiki file
 Cap update rate to save power
 == 전력 절약을 위해 업데이트 속도 제한
 
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
-== 업데이트 속도 제한은 입력 지연을 늘리므로 전력 절약 목적에만 사용하세요. 전용 전체 화면이 실패하면 먼저 창 또는 테두리 없는 모드로 돌아가세요.
-
 Capsule end strength
 == 캡슐 끝 강도
 
@@ -2487,8 +2484,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == 어떤 이름표를 그릴지 고르고, 여기에 클랜, 팀 색상, 친구 아이콘, 좌표, 클라이언트 ID를 더합니다.
 
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
-== 창/전체 화면 모드, 모니터, 해상도와 함께 렌더링 프레임 속도와 클라이언트 업데이트 속도라는 두 가지 상한을 설정합니다.
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
+== 창 모드 또는 전체 화면 모드, 모니터와 해상도, V-Sync, Vulkan 표시 모드를 선택하고 렌더링 프레임 속도와 클라이언트 업데이트 속도 두 가지 프레임 페이싱 상한을 설정합니다.
 
 Chroma sampling
 == 색차 샘플링
@@ -5910,6 +5907,9 @@ Feature Search
 Feet
 == 발
 
+FIFO
+== FIFO
+
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == 서버 콘솔 입력용 Fifo 파일 (비 Windows) 또는 네임드 파이프 (Windows)
 
@@ -7329,6 +7329,9 @@ IME selection background color
 IME text color
 == IME 글자색
 
+Immediate
+== Immediate
+
 Import and restart
 == 가져오고 다시 시작
 
@@ -7817,6 +7820,9 @@ Kaomoji
 
 Kawase
 == Kawase
+
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
+== 특별한 이유가 없다면 "자동"을 유지하세요. "FIFO"는 페이싱이 가장 안정적이고 화면이 찢어지지 않습니다. "Mailbox"는 고주사율 화면에서 지연을 낮추지만 GPU가 따라오지 못하면 끊길 수 있습니다. "Immediate"는 V-Sync를 끄고 원래 프레임 시간을 측정할 때 유용하지만 눈에 보이는 찢어짐이 생깁니다. 선택한 모드를 지원하지 않으면 클라이언트는 FIFO로 대체하고 실제 모드를 로그에 남깁니다.
 
 Keep hook when teleporting
 == 순간이동 시 갈고리 유지
@@ -8528,6 +8534,9 @@ Lyrics translation
 
 Magic: Spirit Script
 == 마법풍: 영혼의 문자
+
+Mailbox
+== Mailbox
 
 Main Asset
 == 메인 에셋
@@ -10635,8 +10644,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == 추첨 결과: %s
 
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
-== 먼저 모드를 고른 뒤 모니터와 해상도를 선택하세요. "렌더링 프레임 속도 상한"은 수직 동기화가 꺼졌을 때 그리는 프레임 수를 제한하고, "클라이언트 업데이트 속도"는 게임 로직과 입력 처리 빈도를 제한하며 렌더링도 함께 제한합니다.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
+== 먼저 모드를 고르고 모니터와 해상도를 선택하세요. "렌더링 프레임 속도 상한"은 V-Sync가 꺼져 있을 때 그리는 프레임 수를 제한하고, "클라이언트 업데이트 속도"는 게임 로직과 입력 처리 빈도를 제한하며 렌더링도 함께 제한합니다. "표시 모드"는 Vulkan에서만 나타납니다. "자동"은 V-Sync를 따르고(켜짐: FIFO, 꺼짐: Immediate, macOS: Mailbox), "Immediate"는 최신 프레임을 바로 표시해 화면이 찢어질 수 있으며, "Mailbox"는 대기 중인 프레임을 막지 않고 교체해 찢어짐은 줄지만 한 프레임이 더 대기하고, "FIFO"는 다음 화면 갱신을 기다려 찢어짐은 없지만 최대 한 프레임의 지연이 생깁니다.
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == 색을 입힐 부분을 고른 뒤 그라데이션 모드와 색상을 선택하세요.
@@ -11198,6 +11207,9 @@ Preparing chat export: %d%%
 
 Preparing demo playback
 == 데모 재생 준비 중
+
+Present mode
+== 표시 모드
 
 Preset %d
 == 프리셋 %d
@@ -17831,6 +17843,9 @@ Voting
 
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
 == Vulkan API 버전: 14 = 1.4, 1.3, 1.1 순으로 우선, 13 = 1.3, 1.1 순으로 우선, 11 = 1.1 강제
+
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
+== Vulkan 표시 모드: 0=자동, 1=Immediate, 2=Mailbox, 3=FIFO
 
 Wait for current vote to end before calling a new one.
 == 새 투표를 요청하기 전에 현재 투표가 끝날 때까지 기다리세요.

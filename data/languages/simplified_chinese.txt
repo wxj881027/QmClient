@@ -2229,9 +2229,6 @@ Cannot write the wiki file
 Cap update rate to save power
 == 限制更新频率以节约功耗
 
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
-== 限制更新频率会增加输入延迟，只建议为省电开启。独占全屏失败时，先切回窗口或无边框模式。
-
 Capsule end strength
 == 胶囊端部强度
 
@@ -2577,8 +2574,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == 选择要绘制哪些昵称，并给昵称加上战队、队伍颜色、好友图标、坐标和客户端 ID。
 
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
-== 设置窗口/全屏模式、显示器与分辨率，以及两个帧节奏上限：渲染帧率和客户端更新频率。
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
+== 选择窗口化或全屏模式、显示器和分辨率、垂直同步以及 Vulkan 呈现模式，并设置两个帧节奏上限：渲染帧率上限和客户端更新频率。
 
 Chroma sampling
 == 色彩采样
@@ -6114,6 +6111,9 @@ Feature Search
 Feet
 == 脚
 
+FIFO
+== FIFO
+
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Fifo 文件（非 Windows）或命名管道（Windows）用于服务器控制台输入
 
@@ -7587,6 +7587,9 @@ IME selection background color
 IME text color
 == 输入法文字颜色
 
+Immediate
+== Immediate
+
 Import and restart
 == 导入并重启
 
@@ -8090,6 +8093,9 @@ Kaomoji
 
 Kawase
 == Kawase
+
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
+== 默认保持自动呈现和垂直同步开启，FIFO 最稳；高刷屏且 GPU 有余力时可以试邮箱降低延迟，出现顿挫就切回自动。只在省电时限制更新频率，因为它会增加输入延迟；测原始帧时间才用立即。独占全屏失败时先退回无边框。
 
 Keep hook when teleporting
 == 传送时保持钩子
@@ -8849,6 +8855,9 @@ Lyrics translation
 
 Magic: Spirit Script
 == 魔法风：灵文游丝
+
+Mailbox
+== Mailbox
 
 Main Asset
 == 主材质
@@ -11079,8 +11088,8 @@ Pick result: %s
 Pick the key that starts this flow.
 == 选择启动这条流程的按键。
 
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
-== 先选模式，再选显示器与分辨率。「渲染帧率上限」限制关闭垂直同步时每秒画多少帧；「客户端更新频率」限制游戏逻辑与输入的处理频率，并连带限制渲染。
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
+== 窗口模式决定交换链的创建方式：独占全屏直接接管显示器，无边框和窗口模式走桌面合成；切换模式会重建交换链，画面可能短暂闪烁。「显示器」「分辨率」决定后备缓冲尺寸，非原生分辨率由 GPU 缩放。「垂直同步」让呈现等待屏幕刷新；「呈现模式」只在 Vulkan 下出现：自动跟随垂直同步（开 FIFO、关立即、macOS 邮箱），立即直接提交可能撕裂，邮箱用新帧替换等待帧且不阻塞，FIFO 等刷新不撕裂但最多多一帧延迟。「渲染帧率上限」在提交前限制绘制帧数，「客户端更新频率」限制逻辑与输入 tick 并连带降低渲染；两者独立，实际取更严格者。
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == 「消息颜色」「队伍消息」「系统消息」「客户端消息」分别决定普通、队伍、服务器和客户端提示的文字颜色；「渐变」为对应文字叠加第二色，并按字符位置插值。「好友消息」单独启用好友名字着色和爱心，爱心颜色独立于文字颜色；「高亮」用于命中关键词的消息；「隐藏服务器前缀」只去掉服务器消息前的星号，不改变消息来源。
@@ -11651,6 +11660,9 @@ Preparing chat export: %d%%
 
 Preparing demo playback
 == 正在准备回放
+
+Present mode
+== 呈现模式
 
 Preset %d
 == 预设 %d
@@ -18470,6 +18482,9 @@ Voting
 
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
 == Vulkan API 版本：14 = 优先使用 1.4、再用 1.3 和 1.1，13 = 优先使用 1.3、再用 1.1，11 = 强制使用 1.1
+
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
+== Vulkan 呈现模式：0=自动，1=Immediate，2=Mailbox，3=FIFO
 
 Wait for current vote to end before calling a new one.
 == 请先等待当前投票结束，再发起新的投票

@@ -2888,8 +2888,8 @@ namespace
 		}
 		const std::string Base = json_string_get(pBase);
 		const std::string Suffix = pSuffix != &json_value_none && pSuffix->type == json_string && json_string_get(pSuffix)[0] != '\0' ?
-										   json_string_get(pSuffix) :
-										   "!/format/webp";
+						   json_string_get(pSuffix) :
+						   "!/format/webp";
 
 		vOut.reserve(pAssets->u.array.length);
 		for(unsigned i = 0; i < pAssets->u.array.length; ++i)

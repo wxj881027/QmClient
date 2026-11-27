@@ -252,9 +252,9 @@ namespace
 		},
 		{
 			"deck:graphics-display",
-			Localizable("Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate."),
-			Localizable("Pick the mode first, then the monitor and resolution. \"Render frame rate limit\" caps how many frames are drawn when V-Sync is off; \"Client update rate\" caps how often game logic and input are processed and throttles rendering with it."),
-			Localizable("Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first."),
+			Localizable("Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate."),
+			Localizable("Pick the mode first, then the monitor and resolution. \"Render frame rate limit\" caps how many frames are drawn when V-Sync is off; \"Client update rate\" caps how often game logic and input are processed and throttles rendering with it. \"Present mode\" only appears on Vulkan: \"Auto\" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), \"Immediate\" presents the newest frame right away and may tear, \"Mailbox\" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and \"FIFO\" waits for the next display refresh so it never tears but adds up to one frame of latency."),
+			Localizable("Keep \"Auto\" unless you need something specific. \"FIFO\" gives the most stable pacing with no tearing; \"Mailbox\" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; \"Immediate\" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode."),
 		},
 		{
 			"deck:graphics-icons",

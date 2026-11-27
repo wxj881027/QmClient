@@ -1437,6 +1437,7 @@ public:
 	float ButtonColorMul(const void *pId);
 
 	const CUIRect *Screen();
+	vec2 UiTextPixelScale() const;
 	void MapScreen();
 	float PixelSize();
 

@@ -859,6 +859,10 @@ public:
 			return NewFromSave;
 		return !SkinNameHasUpperCase(pExistingName) && SkinNameHasUpperCase(pNewName);
 	}
+	static bool ShouldRemoveStaleCatalogOnly(bool CatalogOnly, bool HasLoadedSkin, ESkinSource Source, bool Referenced, bool InAnyCatalog)
+	{
+		return CatalogOnly && !HasLoadedSkin && Source == ESkinSource::UNKNOWN && !Referenced && !InAnyCatalog;
+	}
 
 	/**
 	 * 本地皮肤按磁盘上的 canonical 名称读取；下载容器仍使用请求名生成缓存身份。
@@ -1081,15 +1085,37 @@ private:
 		qm_skin_catalog::TEntryMap m_Entries;
 	};
 
+	// 目录解析（DDNet JSON / DDStats / directory HTML）在主线程外完成；
+	// 结果只在主线程发布，避免 HTTP 完成那一帧出现 10ms+ 的解析停顿。
+	class CSkinCatalogParseJob : public IJob
+	{
+	public:
+		CSkinCatalogParseJob(SSkinCatalogSource Source, std::vector<unsigned char> vData);
+
+		SSkinCatalogSnapshot TakeSnapshot() { return std::move(m_Snapshot); }
+		bool Success() const { return m_Success; }
+
+	protected:
+		void Run() override;
+
+	private:
+		SSkinCatalogSource m_Source;
+		std::vector<unsigned char> m_vData;
+		SSkinCatalogSnapshot m_Snapshot;
+		bool m_Success = false;
+	};
+
 	struct SSkinCatalogRuntime
 	{
 		SSkinCatalogSource m_Source;
 		SSkinCatalogSnapshot m_Snapshot;
 		std::shared_ptr<IHttpRequest> m_pRequest;
+		std::shared_ptr<CSkinCatalogParseJob> m_pParseJob;
 		bool m_RequestIssued = false;
 	};
 
 	static bool PrepareSkinData(const char *pName, CSkinLoadData &Data);
+	static bool ParseSkinCatalogData(const SSkinCatalogSource &Source, const void *pFileData, size_t FileSize, SSkinCatalogSnapshot &Snapshot);
 	void LoadSkinFinish(CSkinContainer *pSkinContainer, CSkinLoadData &Data);
 	bool BeginSkinPreviewUpload(CSkinContainer *pSkinContainer, CSkinLoadData &&Data);
 	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer, size_t *pPreparedBytes = nullptr);
@@ -1102,6 +1128,8 @@ private:
 	void UpdateUnloadSkins(CSkinLoadingStats &Stats);
 	void UnloadLoadedSkinTextures(CSkinContainer *pSkinContainer);
 	void QueueSkinTexturesUnloaded(const char *pSkinName);
+	bool CatalogOnlySkinReferenced(const CSkinContainer *pSkinContainer) const;
+	void RemoveSkinContainer(const char *pSkinName);
 	bool ReclaimBackgroundSkinForPriorityRequest(const char *pRequesterName, int CountFuseLimit);
 	void ReleaseSettingsSkinRequest(const char *pSkinName);
 	void ReleaseSettingsSkinLoadRequests();

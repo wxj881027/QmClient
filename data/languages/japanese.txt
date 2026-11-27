@@ -2142,9 +2142,6 @@ Cannot write the wiki file
 Cap update rate to save power
 == 更新レートを制限して消費電力を抑える
 
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
-== 更新レートの制限は入力遅延を増やします。省電力目的以外では使わないでください。排他全画面に失敗したら、まずウィンドウまたはボーダーレスに戻してください。
-
 Capsule end strength
 == カプセル端の強さ
 
@@ -2487,8 +2484,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == どのネームプレートを描くかを選び、クラン、チームカラー、フレンドアイコン、座標、クライアント ID を付け加えます。
 
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
-== ウィンドウ/全画面モード、モニター、解像度に加え、描画フレームレートとクライアント更新レートの 2 つの上限を設定します。
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
+== ウィンドウ／フルスクリーンモード、モニター、解像度、V-Sync、Vulkan の表示モードを選び、フレームペーシングの上限（描画フレームレートとクライアント更新レート）も設定します。
 
 Chroma sampling
 == 色差サンプリング
@@ -5910,6 +5907,9 @@ Feature Search
 Feet
 == 足
 
+FIFO
+== FIFO
+
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == サーバーコンソール入力用の Fifo ファイル（非 Windows）または名前付きパイプ（Windows）
 
@@ -7329,6 +7329,9 @@ IME selection background color
 IME text color
 == IME の文字色
 
+Immediate
+== Immediate
+
 Import and restart
 == インポートして再起動
 
@@ -7817,6 +7820,9 @@ Kaomoji
 
 Kawase
 == Kawase
+
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
+== 特別な理由がなければ「自動」のままにしてください。「FIFO」は最も安定したペースでティアリングもありません。「Mailbox」は高リフレッシュレート画面で遅延を抑えますが、GPU が追いつかないと引っかかることがあります。「Immediate」は V-Sync オフで生のフレーム時間を測るのに向きますが、目に見えるティアリングが発生します。選択したモードが非対応の場合、クライアントは FIFO にフォールバックし、実際のモードをログに記録します。
 
 Keep hook when teleporting
 == テレポート時にフックを維持する
@@ -8528,6 +8534,9 @@ Lyrics translation
 
 Magic: Spirit Script
 == 魔法風：精霊の筆跡
+
+Mailbox
+== Mailbox
 
 Main Asset
 == メインアセット
@@ -10635,8 +10644,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == 抽選結果：%s
 
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
-== まずモード、次にモニターと解像度を選びます。「描画フレームレート上限」は垂直同期オフ時に描画するフレーム数を制限し、「クライアント更新レート」はゲームロジックと入力の処理頻度を制限して描画も一緒に絞ります。
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
+== まずモード、次にモニターと解像度を選びます。「描画フレームレート上限」は V-Sync オフ時に描画するフレーム数を制限し、「クライアント更新レート」はゲームロジックと入力の処理頻度を制限して描画も間引きます。「表示モード」は Vulkan のみに表示されます。「自動」は V-Sync に従い（オン: FIFO、オフ: Immediate、macOS: Mailbox）、「Immediate」は最新フレームをすぐ表示するためティアリングが起こり、「Mailbox」は待機中のフレームをブロックせず置き換えるのでティアリングは減りますが 1 フレーム多く待ち、「FIFO」は次の画面更新まで待つためティアリングはありませんが最大 1 フレームの遅延が加わります。
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == 色を付ける部分を選び、グラデーションモードと色を選びます。
@@ -11198,6 +11207,9 @@ Preparing chat export: %d%%
 
 Preparing demo playback
 == デモ再生を準備中
+
+Present mode
+== 表示モード
 
 Preset %d
 == プリセット %d
@@ -17831,6 +17843,9 @@ Voting
 
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
 == Vulkan API バージョン：14 = 1.4、次に 1.3、1.1 を優先、13 = 1.3、次に 1.1 を優先、11 = 1.1 を強制
+
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
+== Vulkan の表示モード：0=自動、1=Immediate、2=Mailbox、3=FIFO
 
 Wait for current vote to end before calling a new one.
 == 現在の投票が終了してから新しい投票を呼び出してください。

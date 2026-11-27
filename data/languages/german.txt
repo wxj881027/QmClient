@@ -2142,9 +2142,6 @@ Cannot write the wiki file
 Cap update rate to save power
 == Aktualisierungsrate zur Stromersparnis begrenzen
 
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
-== Eine Begrenzung der Aktualisierungsrate erhöht die Eingabelatenz; nur zur Stromersparnis verwenden. Wenn exklusiver Vollbildmodus scheitert, zuerst auf Fenster- oder rahmenlosen Modus zurückschalten.
-
 Capsule end strength
 == Stärke der Kapselenden
 
@@ -2487,8 +2484,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == Wählt, welche Namensschilder gezeichnet werden, und ergänzt Clan, Teamfarbe, Freundessymbol, Koordinaten und Client-IDs.
 
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
-== Wählt Fenster-/Vollbildmodus, Monitor und Auflösung sowie zwei Obergrenzen für den Bildtakt: Bildwiederholrate und Client-Aktualisierungsrate.
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
+== Legt Fenster- oder Vollbildmodus, Monitor, Auflösung, V-Sync und den Vulkan-Präsentationsmodus fest und setzt zwei Bildtakt-Grenzen: Render-Bildrate und Client-Aktualisierungsrate.
 
 Chroma sampling
 == Farbabtastung
@@ -5910,6 +5907,9 @@ Feature Search
 Feet
 == Füße
 
+FIFO
+== FIFO
+
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Fifo-Datei (nicht Windows) oder Named Pipe (Windows) für die Serverkonsoleneingabe
 
@@ -7329,6 +7329,9 @@ IME selection background color
 IME text color
 == IME-Textfarbe
 
+Immediate
+== Immediate
+
 Import and restart
 == Importieren und neu starten
 
@@ -7817,6 +7820,9 @@ Kaomoji
 
 Kawase
 == Kawase
+
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
+== Lass „Auto“ stehen, solange du nichts Bestimmtes brauchst. „FIFO“ liefert den stabilsten Takt ohne Reißen; „Mailbox“ hält die Latenz auf Displays mit hoher Bildrate niedrig, kann aber ruckeln, wenn die GPU nicht hinterherkommt; „Immediate“ eignet sich zum Messen der rohen Bildzeit bei ausgeschaltetem V-Sync, erzeugt aber sichtbares Reißen. Wird der gewählte Modus nicht unterstützt, fällt der Client auf FIFO zurück und protokolliert den tatsächlichen Modus.
 
 Keep hook when teleporting
 == Haken beim Teleportieren behalten
@@ -8528,6 +8534,9 @@ Lyrics translation
 
 Magic: Spirit Script
 == Magie: Geisterschrift
+
+Mailbox
+== Mailbox
 
 Main Asset
 == Haupt-Asset
@@ -10635,8 +10644,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == Ziehungsergebnis: %s
 
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
-== Zuerst den Modus wählen, dann Monitor und Auflösung. „Limit der Bildwiederholrate“ begrenzt die Bilder pro Sekunde bei ausgeschaltetem V-Sync; „Client-Aktualisierungsrate“ begrenzt die Verarbeitung von Spiellogik und Eingaben und drosselt damit auch das Rendern.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
+== Wähle zuerst den Modus, dann Monitor und Auflösung. „Limit der Bildwiederholrate“ begrenzt die Zahl der gezeichneten Bilder bei ausgeschaltetem V-Sync; „Client-Aktualisierungsrate“ begrenzt die Verarbeitung von Spiellogik und Eingaben und drosselt damit auch das Rendern. „Präsentationsmodus“ erscheint nur unter Vulkan: „Auto“ folgt V-Sync (an: FIFO, aus: Immediate, unter macOS: Mailbox), „Immediate“ zeigt das neueste Bild direkt an und kann Reißen erzeugen, „Mailbox“ ersetzt das wartende Bild ohne Blockieren, sodass Reißen seltener auftritt, aber ein Bild mehr in der Warteschlange bleibt, und „FIFO“ wartet auf die nächste Bildschirmaktualisierung – kein Reißen, aber bis zu ein Bild Verzögerung.
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == Wähle die Teile zum Einfärben und dann Verlaufsmodus und Farben.
@@ -11198,6 +11207,9 @@ Preparing chat export: %d%%
 
 Preparing demo playback
 == Bereite Demowiedergabe vor
+
+Present mode
+== Präsentationsmodus
 
 Preset %d
 == Voreinstellung %d
@@ -17831,6 +17843,9 @@ Voting
 
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
 == Vulkan-API-Version: 14 = 1.4, dann 1.3 und 1.1 bevorzugen, 13 = 1.3, dann 1.1 bevorzugen, 11 = 1.1 erzwingen
+
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
+== Vulkan-Präsentationsmodus: 0=Auto, 1=Immediate, 2=Mailbox, 3=FIFO
 
 Wait for current vote to end before calling a new one.
 == Warte, bis die aktuelle Abstimmung beendet ist, bevor du eine neue aufrufst.

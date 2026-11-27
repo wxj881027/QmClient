@@ -171,6 +171,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		s_GraphicsModeDriverBlocked = g_Config.m_GfxDriverIsBlocked;
 	}
 	const bool ShowGraphicsMode = s_ShowGraphicsMode;
+	const bool VulkanPresentModeVisible = str_comp_nocase(g_Config.m_GfxBackend, "Vulkan") == 0;
 	const auto &GpuList = Graphics()->GetGpus();
 	const int OldWindowMode = g_Config.m_GfxFullscreen ? (g_Config.m_GfxFullscreen == 1 ? 4 : (g_Config.m_GfxFullscreen == 2 ? 3 : 2)) : (g_Config.m_GfxBorderless ? 1 : 0);
 #if defined(CONF_FAMILY_WINDOWS)
@@ -199,7 +200,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	// 与 Deck 的高度轨道叠加后产生双重缓动和背景闪动。
 	const uint64_t GraphicsModesMeasureRevision = static_cast<uint64_t>(std::max(0, s_NumNodes));
 	const bool BackgroundRefreshCustomVisible = g_Config.m_QmBackgroundRefreshMode == 1;
-	const int GraphicsDisplayRowCount = 8 + (BackgroundRefreshCustomVisible ? 1 : 0) + (Graphics()->GetNumScreens() > 1 ? 1 : 0) + GraphicsBackendRowCount;
+	const int GraphicsDisplayRowCount = 8 + (VulkanPresentModeVisible ? 1 : 0) + (BackgroundRefreshCustomVisible ? 1 : 0) + (Graphics()->GetNumScreens() > 1 ? 1 : 0) + GraphicsBackendRowCount;
 	uint64_t GraphicsDisplayMeasureRevision = (static_cast<uint64_t>(std::max(0, GraphicsDisplayRowCount)) << 32) ^ static_cast<uint64_t>(std::max(0, OldWindowMode));
 	GraphicsDisplayMeasureRevision = GraphicsDisplayMeasureRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_QmBackgroundRefreshMode);
 	GraphicsDisplayMeasureRevision = GraphicsDisplayMeasureRevision * 1099511628211ULL ^ static_cast<uint64_t>(GpuList.m_CanSelect);
@@ -221,7 +222,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	static CButtonContainer s_GraphicsSignalIconColorResetId;
 
 	const bool RenderOnly = Ui()->RenderOnly();
-	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pCardEffectsDefault, pThemeDefault, pIconsDefault, pInteractionDefault, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, ShowGraphicsMode, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
+	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pCardEffectsDefault, pThemeDefault, pIconsDefault, pInteractionDefault, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, ShowGraphicsMode, VulkanPresentModeVisible, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(6);
 		const SSettingsCardSpec ModesSpec{pModesDefault->m_pStableId, Localize(pModesDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pModesDefault)};
 		// 副标题以注册表描述为唯一来源，与其他卡片一致；不再对本卡单独关闭副标题。
@@ -336,7 +337,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				Graphics()->ResizeToScreen();
 			}
 		} });
-		const FSettingsCardRenderMeasured RenderDisplay = [this, GraphicsMetrics, ShowGraphicsMode, BodySize, DoGraphicsNumericField, OldWindowMode](CUIRect &ContentRect) {
+		const FSettingsCardRenderMeasured RenderDisplay = [this, GraphicsMetrics, ShowGraphicsMode, VulkanPresentModeVisible, BodySize, DoGraphicsNumericField, OldWindowMode](CUIRect &ContentRect) {
 			char aBuf[128];
 			CSettingsContentLayoutFlow Flow(ContentRect);
 			const auto RowAction = [&](const char *pId, float Height, auto &&Action) {
@@ -403,6 +404,23 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				if(NewValue != Current)
 					OnChanged(NewValue);
 			};
+
+			if(VulkanPresentModeVisible)
+			{
+				RowAction("graphics-present-mode", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
+					static CUi::SDropDownState s_PresentModeDropDownState;
+					static CScrollRegion s_PresentModeDropDownScrollRegion;
+					const char *apPresentModeNames[] = {
+						Localize("Auto"),
+						Localize("Immediate"),
+						Localize("Mailbox"),
+						Localize("FIFO"),
+					};
+					DoGraphicsChoiceRow(Row, Localize("Present mode"), "graphics-present-mode", apPresentModeNames, std::size(apPresentModeNames), g_Config.m_GfxVulkanPresentMode, s_PresentModeDropDownState, s_PresentModeDropDownScrollRegion, &g_Config.m_GfxVulkanPresentMode, [](int NewValue) {
+						g_Config.m_GfxVulkanPresentMode = NewValue;
+					});
+				});
+			}
 
 			RowAction("graphics-fsaa", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 				str_format(aBuf, sizeof(aBuf), "%s (%s)", Localize("FSAA samples"), Localize("may cause delay"));

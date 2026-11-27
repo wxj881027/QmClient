@@ -1435,10 +1435,12 @@ void CGameClient::OnConnectionResourceUpdate()
 
 void CGameClient::OnUpdate()
 {
+	CPerfTimer UpdateTimer(QmPerfEnabled());
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		m_LocalServer.Update();
-		LogPerfStage(this, "onupdate_local_server", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_LocalServerMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_local_server", m_QmUpdatePhaseTimes.m_LocalServerMs);
 	}
 	// 返回客户端后先交接输入，再向组件分发这一帧的事件。
 	m_QmImeManager.SetClientOwnership(true);
@@ -1447,18 +1449,21 @@ void CGameClient::OnUpdate()
 		CPerfTimer Timer(QmPerfEnabled());
 		SyncQmUiIconWeight();
 		SyncQmCustomFontWeight();
-		LogPerfStage(this, "onupdate_sync_font_weight", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_SyncFontMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_sync_font_weight", m_QmUpdatePhaseTimes.m_SyncFontMs);
 	}
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		PrewarmQmIconGlyphs(24, time_freq() / 1000);
-		LogPerfStage(this, "onupdate_prewarm_icon_glyphs", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_PrewarmIconsMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_prewarm_icon_glyphs", m_QmUpdatePhaseTimes.m_PrewarmIconsMs);
 	}
 	// 实体纹理解码在 worker，主线程每帧最多构建一层并上传，避免进服首帧长阻塞。
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		m_MapImages.AdvanceEntitiesPrewarm();
-		LogPerfStage(this, "onupdate_entities_prewarm", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_EntitiesPrewarmMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_entities_prewarm", m_QmUpdatePhaseTimes.m_EntitiesPrewarmMs);
 	}
 
 	const bool TeeSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_TEE;
@@ -1466,7 +1471,8 @@ void CGameClient::OnUpdate()
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		m_Skins.PrepareSettingsThroughputForFrame();
-		LogPerfStage(this, "onupdate_skins_prepare", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_SkinsPrepareMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_skins_prepare", m_QmUpdatePhaseTimes.m_SkinsPrepareMs);
 	}
 	const int FrameGpuUploadLimit = m_Menus.SettingsGpuUploadLimitForFrame(TeeSettingsActive, AssetsSettingsActive, m_Skins.SettingsGpuUploadLimiterUnitsForFrame());
 	const int FrameSkinUploadBudget = TeeSettingsActive ? m_Skins.SettingsGpuUploadFrameBudgetForFrame() : -1;
@@ -1476,24 +1482,28 @@ void CGameClient::OnUpdate()
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		HandleLanguageChanged();
-		LogPerfStage(this, "onupdate_language_changed", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_LanguageMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_language_changed", m_QmUpdatePhaseTimes.m_LanguageMs);
 	}
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		RefreshStreamerSkinPrivacyAfterStateChange();
-		LogPerfStage(this, "onupdate_streamer_privacy", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_StreamerPrivacyMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_streamer_privacy", m_QmUpdatePhaseTimes.m_StreamerPrivacyMs);
 	}
 	// 自杀保护的自动开启计时：按墙钟推进，与渲染帧率无关。
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		UpdateQmSelfKillProtection();
-		LogPerfStage(this, "onupdate_selfkill_protection", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_SelfKillProtectionMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_selfkill_protection", m_QmUpdatePhaseTimes.m_SelfKillProtectionMs);
 	}
 
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		CUIElementBase::Init(Ui()); // update static pointer because game and editor use separate UI
-		LogPerfStage(this, "onupdate_ui_element_base", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_UiElementBaseMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_ui_element_base", m_QmUpdatePhaseTimes.m_UiElementBaseMs);
 	}
 
 	// handle mouse movement
@@ -1528,7 +1538,8 @@ void CGameClient::OnUpdate()
 			// 打开或关闭聊天、菜单的按键不属于游戏操作，但仍要同步按下状态。
 			m_InputOverlay.ObservePhysicalInput(Event, HadCountingFocus);
 		});
-		LogPerfStage(this, "onupdate_input_events", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_InputEventsMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_input_events", m_QmUpdatePhaseTimes.m_InputEventsMs);
 	}
 
 	if(g_Config.m_ClSubTickAiming)
@@ -1541,6 +1552,8 @@ void CGameClient::OnUpdate()
 		}
 	}
 
+	const char *apTopComponentNames[3] = {};
+	double aTopComponentMs[3] = {};
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		if(g_Config.m_QmPerfEnabled)
@@ -1552,11 +1565,25 @@ void CGameClient::OnUpdate()
 				m_vpAll[i]->OnUpdate();
 				const double ComponentMs = ComponentTimer.ElapsedMs();
 				m_QmStutterCapture.RecordUpdate(i, ComponentMs);
-				if(QmPerfShouldLogDuration(ComponentMs))
+				const char *pComponentName = i < m_vpAllPerfNames.size() ? m_vpAllPerfNames[i] : "unknown";
+				for(int Slot = 0; Slot < 3; ++Slot)
 				{
-					char aExtra[192];
-					str_format(aExtra, sizeof(aExtra), "component=%s", i < m_vpAllPerfNames.size() ? m_vpAllPerfNames[i] : "unknown");
-					QmPerfLogStage("perf/gameclient", "onupdate_component", ComponentMs, true, Client(), nullptr, nullptr, aExtra);
+					if(ComponentMs <= aTopComponentMs[Slot])
+						continue;
+					for(int Shift = 2; Shift > Slot; --Shift)
+					{
+						aTopComponentMs[Shift] = aTopComponentMs[Shift - 1];
+						apTopComponentNames[Shift] = apTopComponentNames[Shift - 1];
+					}
+					aTopComponentMs[Slot] = ComponentMs;
+					apTopComponentNames[Slot] = pComponentName;
+					break;
+				}
+				if(ComponentMs >= 4.0)
+				{
+					char aPayload[256];
+					str_format(aPayload, sizeof(aPayload), "event=slow_update_component duration_ms=%.3f component=%s", ComponentMs, i < m_vpAllPerfNames.size() ? m_vpAllPerfNames[i] : "unknown");
+					QmPerfLogPayload("perf/gameclient", aPayload, Client());
 				}
 			}
 		}
@@ -1565,26 +1592,120 @@ void CGameClient::OnUpdate()
 			for(auto &pComponent : m_vpAll)
 				pComponent->OnUpdate();
 		}
-		LogPerfStage(this, "onupdate_components_total", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_ComponentsTotalMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_components_total", m_QmUpdatePhaseTimes.m_ComponentsTotalMs);
 	}
 
 	// 皮肤组件的 OnUpdate 已处理卸载/加载通知，绘制前再修复失效句柄。
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		RepairStaleTeeRenderInfos();
-		LogPerfStage(this, "onupdate_repair_tee_infos", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_RepairTeeMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_repair_tee_infos", m_QmUpdatePhaseTimes.m_RepairTeeMs);
 	}
 
 	{
 		CPerfTimer Timer(QmPerfEnabled());
 		RefreshPredictionAfterConfigChange();
-		LogPerfStage(this, "onupdate_prediction_refresh", Timer.ElapsedMs());
+		m_QmUpdatePhaseTimes.m_PredictionRefreshMs = Timer.ElapsedMs();
+		LogPerfStage(this, "onupdate_prediction_refresh", m_QmUpdatePhaseTimes.m_PredictionRefreshMs);
 	}
 
 	RecordDemoHudState(false);
 	RecordDemoInputState(false);
 	RecordDemoGamepadState(false);
 	RecordDemoInputWheelEvent();
+
+	const double TotalMs = UpdateTimer.ElapsedMs();
+	if(QmPerfEnabled() && TotalMs >= 8.0)
+	{
+		char aPayload[1024];
+		str_format(aPayload, sizeof(aPayload),
+			"event=gameclient_update_spike_detail total_ms=%.3f local_server_ms=%.3f sync_font_ms=%.3f prewarm_icons_ms=%.3f entities_prewarm_ms=%.3f skins_prepare_ms=%.3f language_ms=%.3f streamer_privacy_ms=%.3f selfkill_ms=%.3f ui_base_ms=%.3f input_ms=%.3f components_ms=%.3f repair_tee_ms=%.3f prediction_ms=%.3f top1_ms=%.3f top1_name=%s top2_ms=%.3f top2_name=%s top3_ms=%.3f top3_name=%s state=%d",
+			TotalMs,
+			m_QmUpdatePhaseTimes.m_LocalServerMs,
+			m_QmUpdatePhaseTimes.m_SyncFontMs,
+			m_QmUpdatePhaseTimes.m_PrewarmIconsMs,
+			m_QmUpdatePhaseTimes.m_EntitiesPrewarmMs,
+			m_QmUpdatePhaseTimes.m_SkinsPrepareMs,
+			m_QmUpdatePhaseTimes.m_LanguageMs,
+			m_QmUpdatePhaseTimes.m_StreamerPrivacyMs,
+			m_QmUpdatePhaseTimes.m_SelfKillProtectionMs,
+			m_QmUpdatePhaseTimes.m_UiElementBaseMs,
+			m_QmUpdatePhaseTimes.m_InputEventsMs,
+			m_QmUpdatePhaseTimes.m_ComponentsTotalMs,
+			m_QmUpdatePhaseTimes.m_RepairTeeMs,
+			m_QmUpdatePhaseTimes.m_PredictionRefreshMs,
+			aTopComponentMs[0],
+			apTopComponentNames[0] != nullptr ? apTopComponentNames[0] : "none",
+			aTopComponentMs[1],
+			apTopComponentNames[1] != nullptr ? apTopComponentNames[1] : "none",
+			aTopComponentMs[2],
+			apTopComponentNames[2] != nullptr ? apTopComponentNames[2] : "none",
+			Client()->State());
+		QmPerfLogPayloadForce("perf/gameclient", aPayload, Client());
+	}
+
+	if(QmPerfEnabled())
+	{
+		const double aPhaseMs[] = {
+			m_QmUpdatePhaseTimes.m_LocalServerMs,
+			m_QmUpdatePhaseTimes.m_SyncFontMs,
+			m_QmUpdatePhaseTimes.m_PrewarmIconsMs,
+			m_QmUpdatePhaseTimes.m_EntitiesPrewarmMs,
+			m_QmUpdatePhaseTimes.m_SkinsPrepareMs,
+			m_QmUpdatePhaseTimes.m_LanguageMs,
+			m_QmUpdatePhaseTimes.m_StreamerPrivacyMs,
+			m_QmUpdatePhaseTimes.m_SelfKillProtectionMs,
+			m_QmUpdatePhaseTimes.m_UiElementBaseMs,
+			m_QmUpdatePhaseTimes.m_InputEventsMs,
+			m_QmUpdatePhaseTimes.m_ComponentsTotalMs,
+			m_QmUpdatePhaseTimes.m_RepairTeeMs,
+			m_QmUpdatePhaseTimes.m_PredictionRefreshMs,
+		};
+		double AccountedMs = 0.0;
+		for(const double PhaseMs : aPhaseMs)
+			AccountedMs += PhaseMs;
+		const double UnaccountedMs = maximum(0.0, TotalMs - AccountedMs);
+		SQmUpdatePhaseSummary &Summary = m_QmUpdatePhaseSummary;
+		if(Summary.m_Start == 0)
+			Summary.m_Start = time_get();
+		++Summary.m_Samples;
+		Summary.m_TotalMs += TotalMs;
+		Summary.m_SumUnaccountedMs += UnaccountedMs;
+		Summary.m_MaxTotalMs = maximum(Summary.m_MaxTotalMs, TotalMs);
+		Summary.m_MaxUnaccountedMs = maximum(Summary.m_MaxUnaccountedMs, UnaccountedMs);
+		for(size_t Index = 0; Index < std::size(aPhaseMs); ++Index)
+			Summary.m_aSumMs[Index] += aPhaseMs[Index];
+		if(time_get() - Summary.m_Start >= time_freq())
+		{
+			const double Samples = maximum(1, Summary.m_Samples);
+			char aPayload[1024];
+			str_format(aPayload, sizeof(aPayload),
+				"event=gameclient_update_phase_summary samples=%d avg_total_ms=%.3f max_total_ms=%.3f avg_unaccounted_ms=%.3f max_unaccounted_ms=%.3f avg_local_server_ms=%.3f avg_sync_font_ms=%.3f avg_prewarm_icons_ms=%.3f avg_entities_prewarm_ms=%.3f avg_skins_prepare_ms=%.3f avg_language_ms=%.3f avg_streamer_privacy_ms=%.3f avg_selfkill_ms=%.3f avg_ui_base_ms=%.3f avg_input_ms=%.3f avg_components_ms=%.3f avg_repair_tee_ms=%.3f avg_prediction_ms=%.3f state=%d",
+				Summary.m_Samples,
+				Summary.m_TotalMs / Samples,
+				Summary.m_MaxTotalMs,
+				Summary.m_SumUnaccountedMs / Samples,
+				Summary.m_MaxUnaccountedMs,
+				Summary.m_aSumMs[0] / Samples,
+				Summary.m_aSumMs[1] / Samples,
+				Summary.m_aSumMs[2] / Samples,
+				Summary.m_aSumMs[3] / Samples,
+				Summary.m_aSumMs[4] / Samples,
+				Summary.m_aSumMs[5] / Samples,
+				Summary.m_aSumMs[6] / Samples,
+				Summary.m_aSumMs[7] / Samples,
+				Summary.m_aSumMs[8] / Samples,
+				Summary.m_aSumMs[9] / Samples,
+				Summary.m_aSumMs[10] / Samples,
+				Summary.m_aSumMs[11] / Samples,
+				Summary.m_aSumMs[12] / Samples,
+				Client()->State());
+			QmPerfLogPayloadForce("perf/gameclient", aPayload, Client());
+			Summary = {};
+		}
+	}
 }
 
 void CGameClient::PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks)
@@ -2353,6 +2474,10 @@ void CGameClient::OnRender()
 
 	const bool PerfEnabled = QmPerfEnabled();
 	CPerfTimer FrameTimer(PerfEnabled);
+	// 仅性能日志开启时记录逐组件渲染耗时，供 render_spike_detail 使用。
+	std::vector<double> vComponentRenderMs;
+	if(PerfEnabled)
+		vComponentRenderMs.assign(m_vpAll.size(), 0.0);
 
 	m_pFrameScheduler->BeginFrame(Client()->PerfFrame());
 	if(m_TClient.IsPreparingUpdateForShutdown())
@@ -2484,7 +2609,9 @@ void CGameClient::OnRender()
 		{
 			CPerfTimer ComponentTimer;
 			RenderComponent(m_vpAll[i]);
-			m_QmStutterCapture.RecordRender(i, ComponentTimer.ElapsedMs());
+			const double ComponentMs = ComponentTimer.ElapsedMs();
+			vComponentRenderMs[i] = ComponentMs;
+			m_QmStutterCapture.RecordRender(i, ComponentMs);
 		}
 	}
 	else
@@ -2493,7 +2620,8 @@ void CGameClient::OnRender()
 			RenderComponent(pComponent);
 	}
 	m_UI.OnRenderTooltip();
-	LogPerfStage(this, "components_total", ComponentsTimer.ElapsedMs());
+	const double ComponentsTotalMs = ComponentsTimer.ElapsedMs();
+	LogPerfStage(this, "components_total", ComponentsTotalMs);
 
 	// clear all events/input for this frame
 	{
@@ -2526,7 +2654,30 @@ void CGameClient::OnRender()
 	if(m_QmImeGradientProbeEnabled)
 		QmImeGradientProbeDraw(this);
 
+	CPerfTimer EndFrameTimer(PerfEnabled);
 	m_pFrameScheduler->EndFrame();
+	const double EndFrameMs = EndFrameTimer.ElapsedMs();
+	if(PerfEnabled)
+	{
+		const double RenderTotalMs = FrameTimer.ElapsedMs();
+		if(RenderTotalMs >= 8.0)
+		{
+			char aPayload[1536];
+			str_format(aPayload, sizeof(aPayload),
+				"event=render_spike_detail total_ms=%.3f components_ms=%.3f endframe_ms=%.3f state=%d editor=%d",
+				RenderTotalMs, ComponentsTotalMs, EndFrameMs, Client()->State(), g_Config.m_ClEditor ? 1 : 0);
+			for(size_t i = 0; i < vComponentRenderMs.size(); ++i)
+			{
+				if(vComponentRenderMs[i] < 1.0)
+					continue;
+				const char *pName = i < m_vpAllPerfNames.size() ? m_vpAllPerfNames[i] : "unknown";
+				char aField[96];
+				str_format(aField, sizeof(aField), " c_%s_ms=%.3f", pName, vComponentRenderMs[i]);
+				str_append(aPayload, aField, sizeof(aPayload));
+			}
+			QmPerfLogPayloadForce("perf/gameclient", aPayload, Client());
+		}
+	}
 	// resend player and dummy info if it was filtered by server
 	if(m_aLocalIds[0] >= 0 && Client()->State() == IClient::STATE_ONLINE && !m_Menus.IsActive() && WasNewTick)
 	{

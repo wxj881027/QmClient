@@ -181,6 +181,12 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 	const int KeyModifierMask = GetModifierMaskOfKey(Event.m_Key);
 	const int ModifierMask = GetModifierMask(Input()) & ~KeyModifierMask;
 
+	// Ctrl/GUI+Shift+G 由 CClient::Run 在主循环里全局处理（菜单、编辑器、游戏内一致）。
+	// 这里吞掉同一组合，避免旧配置里残留的显式绑定再触发一次来回切换。
+	if(IsFixedPerfGraphShortcut(Event.m_Key, ModifierMask) &&
+		(Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) != 0)
+		return true;
+
 	bool Handled = false;
 
 	if(Event.m_Flags & IInput::FLAG_PRESS)
@@ -445,9 +451,6 @@ void CBinds::SetDefaults()
 
 	Bind(KEY_F3, "vote yes");
 	Bind(KEY_F4, "vote no");
-	Bind(KEY_G, "toggle cl_show_perf 0 1", false, (1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT));
-	Bind(KEY_G, "toggle cl_show_perf 0 1", false, (1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT));
-
 	Bind(KEY_K, "kill");
 	Bind(KEY_Q, "say /spec");
 	Bind(KEY_P, "say /pause");

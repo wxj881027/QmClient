@@ -108,6 +108,16 @@ TEST(SkinSources, ScanPrefersUserSkinOverPackagedCaseVariant)
 	EXPECT_FALSE(CSkins::PreferScannedSkin("PaladiN", Save, 1, "paladin", Save, 0));
 }
 
+TEST(SkinSources, StaleCatalogOnlyEntriesAreRemovedWithoutDiscardingReferencedSkins)
+{
+	EXPECT_TRUE(CSkins::ShouldRemoveStaleCatalogOnly(true, false, ESkinSource::UNKNOWN, false, false));
+	EXPECT_FALSE(CSkins::ShouldRemoveStaleCatalogOnly(false, false, ESkinSource::UNKNOWN, false, false));
+	EXPECT_FALSE(CSkins::ShouldRemoveStaleCatalogOnly(true, true, ESkinSource::UNKNOWN, false, false));
+	EXPECT_FALSE(CSkins::ShouldRemoveStaleCatalogOnly(true, false, ESkinSource::DDSTATS, false, false));
+	EXPECT_FALSE(CSkins::ShouldRemoveStaleCatalogOnly(true, false, ESkinSource::UNKNOWN, true, false));
+	EXPECT_FALSE(CSkins::ShouldRemoveStaleCatalogOnly(true, false, ESkinSource::UNKNOWN, false, true));
+}
+
 TEST(SkinSources, LocalLoadUsesCanonicalDiskName)
 {
 	using EType = CSkins::CSkinContainer::EType;

@@ -741,7 +741,6 @@ Cannot update public words. Previous words remain active.
 Cannot write cfg file
 Cannot write the wiki file
 Cap update rate to save power
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
 Capsule end strength
 Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
@@ -857,7 +856,7 @@ Chooses the font family and weight used by the menus.
 Chooses the language used by every menu, setting and message in the client.
 Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
 Chroma sampling
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
@@ -2036,6 +2035,7 @@ feat-003 dogfood: tokens + 12 widgets
 Feature guide and announcements
 Feature Search
 Feet
+FIFO
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 Fifo file (non-Windows) or named pipe (Windows) used as input for client console
 File
@@ -2527,6 +2527,7 @@ IME gradient vertical position percentage
 IME selected text color
 IME selection background color
 IME text color
+Immediate
 Import and restart
 Import configuration package
 Import friend code
@@ -2695,6 +2696,7 @@ Jump hint vertical position (% of screen height)
 k = Resend loss
 Kaomoji
 Kawase
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
 Keep hook when teleporting
 Keep inside game window
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
@@ -2948,6 +2950,7 @@ Lyrics language (0=Original, 1=Translation, 2=Original and translation)
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 Lyrics translation
 Magic: Spirit Script
+Mailbox
 Main Asset
 Main menu
 Main only
@@ -3691,7 +3694,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 Pick result: %s
 Pick the key that starts this flow.
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
 Pick the parts to colorize, then choose a gradient mode and colors.
 Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 Pickups
@@ -3882,6 +3885,7 @@ Prediction time
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 Preparing chat export: %d%%
 Preparing demo playback
+Present mode
 Preset %d
 Preset bar
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
@@ -6155,6 +6159,7 @@ Vote yes/no
 Votes often appear while you are still moving, so keep both keys easy to reach.
 Voting
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
 Wait for current vote to end before calling a new one.
 Wait time before a player can rejoin after being voted to spectators (in minutes)
 Wait time before triggering auto vote

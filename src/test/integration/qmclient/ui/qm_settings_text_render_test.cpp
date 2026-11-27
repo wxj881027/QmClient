@@ -76,7 +76,7 @@ TEST_F(QmSettingsTextRender, FontPreviewKeepsItsOwnCachedDraw)
 	EXPECT_EQ(UiGraphics()->m_BufferBytes, PreviewBytes);
 }
 
-TEST_F(QmSettingsTextRender, ChangedProjectionRebuildsRetainedLabel)
+TEST_F(QmSettingsTextRender, ChangedProjectionReusesRetainedLabel)
 {
 	m_Ui.MapScreen();
 	CUIElement Element;
@@ -90,11 +90,14 @@ TEST_F(QmSettingsTextRender, ChangedProjectionRebuildsRetainedLabel)
 	ASSERT_TRUE(Recreated);
 	Prepare();
 	ASSERT_FALSE(Recreated);
+	const vec2 StableScale = Element.Rect(0)->m_TextPixelScale;
 	UiGraphics()->MapScreen(0, 0, 1920, 1080);
 	Prepare();
-	EXPECT_TRUE(Recreated);
-	Prepare();
 	EXPECT_FALSE(Recreated);
+	EXPECT_EQ(Element.Rect(0)->m_TextPixelScale, StableScale);
+	g_Config.m_QmUiScale = 125;
+	Prepare();
+	EXPECT_TRUE(Recreated);
 }
 
 TEST_F(QmSettingsTextRender, PrewarmUsesMenuPixelsAndRestoresPerformanceGraphProjection)
@@ -120,6 +123,6 @@ TEST_F(QmSettingsTextRender, PrewarmUsesMenuPixelsAndRestoresPerformanceGraphPro
 	ASSERT_TRUE(Cached.m_UITextContainer.Valid());
 	EXPECT_EQ(Cached.m_Cursor.m_LineCount, 1);
 	m_Ui.MapScreen();
-	EXPECT_EQ(Cached.m_TextPixelScale, Graphics.ScreenPixelScale());
+	EXPECT_EQ(Cached.m_TextPixelScale, m_Ui.UiTextPixelScale());
 	EXPECT_FLOAT_EQ(Cached.m_Cursor.m_LongestLineWidth, m_Ui.TextRender()->TextWidth(Size, pTitle));
 }

@@ -1568,6 +1568,15 @@ const CUIRect *CUi::Screen()
 	return &m_Screen;
 }
 
+vec2 CUi::UiTextPixelScale() const
+{
+	const float ScreenHeight = QmUiVirtualScreenHeight(g_Config.m_QmUiScale);
+	const float ScreenWidth = Graphics()->ScreenAspect() * ScreenHeight;
+	return vec2(
+		ScreenWidth > 0.0f ? Graphics()->ScreenWidth() / ScreenWidth : 1.0f,
+		ScreenHeight > 0.0f ? Graphics()->ScreenHeight() / ScreenHeight : 1.0f);
+}
+
 void CUi::MapScreen()
 {
 	const CUIRect *pScreen = Screen();
@@ -2318,7 +2327,7 @@ void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, cons
 	// 布局的残留，套用到本段会整体错位，所以这里总是按本次调用重新指定。
 	Cursor.m_vColorSplits = LabelProps.m_vColorSplits;
 
-	RectEl.m_TextPixelScale = Graphics()->ScreenPixelScale();
+	RectEl.m_TextPixelScale = UiTextPixelScale();
 	RectEl.m_TextAlign = Align;
 	RectEl.m_LabelMaxWidth = LabelProps.m_MaxWidth;
 	RectEl.m_LabelFlags = Flags;
@@ -2393,7 +2402,7 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	// 没变也必须继续复用（色段相同的标签不逐帧重建）。比较只对着缓存里烘入的
 	// 那一份做，没有逐帧文本扫描。
 	const bool BakedColorChanged = !RectEl.BakedColorMatches(LabelProps.m_vColorSplits, TextRender()->GetTextColor());
-	bool StyleChanged = BakedColorChanged || RectEl.m_TextPixelScale != Graphics()->ScreenPixelScale() || RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
+	bool StyleChanged = BakedColorChanged || RectEl.m_TextPixelScale != UiTextPixelScale() || RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
 
 	if(ColorChanged)
 	{

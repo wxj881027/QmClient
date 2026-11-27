@@ -4459,6 +4459,15 @@ void CClient::UpdateUpstreamRedundancy()
 
 void CClient::Update()
 {
+	m_QmPerfLastSnapshotPredictMs = 0.0;
+	m_QmPerfUpdatePumpMs = 0.0;
+	m_QmPerfUpdatePollMapLoadMs = 0.0;
+	m_QmPerfUpdateRedundancyMs = 0.0;
+	m_QmPerfUpdateResourcePrepareMs = 0.0;
+	m_QmPerfUpdateGameClientMs = 0.0;
+	m_QmPerfUpdateEditorMs = 0.0;
+	m_QmPerfUpdateServerBrowserMs = 0.0;
+	m_QmPerfUpdateDiscordSteamMs = 0.0;
 	m_LinkProbeTracker.OnFrame(time_get(), time_freq());
 
 	// 点了垂直同步开关后固定等 2 秒再真正切换：交换链重建必然停顿一下，
@@ -4490,6 +4499,13 @@ void CClient::Update()
 	// 记录到 perf/main_thread，避免定位 [client_update] 长帧时必须开启 graphics trace。
 	const bool UpdateStagePerf = GraphicsTrace || PerfRuntime;
 	const bool MainThreadStagePerf = PerfRuntime && !GraphicsTrace;
+	auto LogSlowUpdatePhase = [this, PerfRuntime](const char *pStage, double DurationMs) {
+		if(!PerfRuntime || DurationMs < 4.0)
+			return;
+		char aPayload[192];
+		str_format(aPayload, sizeof(aPayload), "event=slow_update_phase stage=%s duration_ms=%.3f state=%d editor=%d", pStage, DurationMs, State(), m_EditorActive ? 1 : 0);
+		QmPerfLogPayload("perf/main_thread", aPayload, this);
+	};
 	const auto PumpStart = GraphicsTrace ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 	const int64_t PumpGapNs = GraphicsTrace && m_QmGraphicsLastPumpNetworkNs != 0 ? PumpStart.count() - m_QmGraphicsLastPumpNetworkNs : 0;
 	if(UpdateStagePerf)
@@ -4497,6 +4513,7 @@ void CClient::Update()
 		CPerfTimer PumpTimer;
 		PumpNetwork();
 		const double PumpMs = PumpTimer.ElapsedMs();
+		m_QmPerfUpdatePumpMs = PumpMs;
 		if(GraphicsTrace)
 		{
 			const double GapMs = PumpGapNs > 0 ? (double)PumpGapNs / 1000000.0 : 0.0;
@@ -4517,11 +4534,32 @@ void CClient::Update()
 	}
 	else
 		PumpNetwork();
-	PollMapLoad();
+	if(UpdateStagePerf)
+	{
+		CPerfTimer PollMapLoadTimer;
+		PollMapLoad();
+		m_QmPerfUpdatePollMapLoadMs = PollMapLoadTimer.ElapsedMs();
+	}
+	else
+		PollMapLoad();
 
-	UpdateUpstreamRedundancy();
+	if(UpdateStagePerf)
+	{
+		CPerfTimer RedundancyTimer;
+		UpdateUpstreamRedundancy();
+		m_QmPerfUpdateRedundancyMs = RedundancyTimer.ElapsedMs();
+	}
+	else
+		UpdateUpstreamRedundancy();
 
-	GameClient()->OnConnectionResourceUpdate();
+	if(UpdateStagePerf)
+	{
+		CPerfTimer ResourcePrepareTimer;
+		GameClient()->OnConnectionResourceUpdate();
+		m_QmPerfUpdateResourcePrepareMs = ResourcePrepareTimer.ElapsedMs();
+	}
+	else
+		GameClient()->OnConnectionResourceUpdate();
 	if(GameClient()->ConnectionResourcePreparationFailed())
 	{
 		DisconnectWithReason(gs_aMapResourcePreparationError);
@@ -4550,10 +4588,13 @@ void CClient::Update()
 		{
 			CPerfTimer StageTimer;
 			m_pEditor->OnUpdate();
+			const double DurationMs = StageTimer.ElapsedMs();
+			m_QmPerfUpdateEditorMs = DurationMs;
+			LogSlowUpdatePhase("editor_onupdate", DurationMs);
 			if(GraphicsTrace)
-				QmPerfLogStageForce("perf/graphics/update", "editor_onupdate", StageTimer.ElapsedMs(), this);
+				QmPerfLogStageForce("perf/graphics/update", "editor_onupdate", DurationMs, this);
 			else
-				QmPerfLogStage("perf/main_thread", "editor_onupdate", StageTimer.ElapsedMs(), false, this);
+				QmPerfLogStage("perf/main_thread", "editor_onupdate", DurationMs, false, this);
 		}
 		else
 			m_pEditor->OnUpdate();
@@ -4564,10 +4605,13 @@ void CClient::Update()
 		{
 			CPerfTimer StageTimer;
 			GameClient()->OnUpdate();
+			const double DurationMs = StageTimer.ElapsedMs();
+			m_QmPerfUpdateGameClientMs = DurationMs;
+			LogSlowUpdatePhase("gameclient_onupdate", DurationMs);
 			if(GraphicsTrace)
-				QmPerfLogStageForce("perf/graphics/update", "gameclient_onupdate", StageTimer.ElapsedMs(), this);
+				QmPerfLogStageForce("perf/graphics/update", "gameclient_onupdate", DurationMs, this);
 			else
-				QmPerfLogStage("perf/main_thread", "gameclient_onupdate", StageTimer.ElapsedMs(), false, this);
+				QmPerfLogStage("perf/main_thread", "gameclient_onupdate", DurationMs, false, this);
 		}
 		else
 			GameClient()->OnUpdate();
@@ -4821,7 +4865,10 @@ void CClient::Update()
 	}
 
 	if(PerfEnabled)
-		QmPerfLogStage("perf/main_thread", "update_snapshot_predict", SnapshotPredictTimer->ElapsedMs(), false, this);
+	{
+		m_QmPerfLastSnapshotPredictMs = SnapshotPredictTimer->ElapsedMs();
+		QmPerfLogStage("perf/main_thread", "update_snapshot_predict", m_QmPerfLastSnapshotPredictMs, false, this);
+	}
 
 	// STRESS TEST: join the server again
 	if(g_Config.m_DbgStress)
@@ -4915,12 +4962,13 @@ void CClient::Update()
 	{
 		CPerfTimer StageTimer;
 		m_ServerBrowser.Update();
+		m_QmPerfUpdateServerBrowserMs = StageTimer.ElapsedMs();
 		char aExtra[96];
 		str_format(aExtra, sizeof(aExtra), "servers=%d sorted=%d", m_ServerBrowser.NumServers(), m_ServerBrowser.NumSortedServers());
 		if(GraphicsTrace)
-			QmPerfLogStageForce("perf/graphics/update", "serverbrowser_update", StageTimer.ElapsedMs(), this, nullptr, nullptr, aExtra);
+			QmPerfLogStageForce("perf/graphics/update", "serverbrowser_update", m_QmPerfUpdateServerBrowserMs, this, nullptr, nullptr, aExtra);
 		else
-			QmPerfLogStage("perf/main_thread", "serverbrowser_update", StageTimer.ElapsedMs(), false, this, nullptr, nullptr, aExtra);
+			QmPerfLogStage("perf/main_thread", "serverbrowser_update", m_QmPerfUpdateServerBrowserMs, false, this, nullptr, nullptr, aExtra);
 	}
 	else
 		m_ServerBrowser.Update();
@@ -4930,9 +4978,10 @@ void CClient::Update()
 		CPerfTimer StageTimer;
 		Discord()->Update(g_Config.m_QmDiscordRPC);
 		Steam()->Update();
+		m_QmPerfUpdateDiscordSteamMs = StageTimer.ElapsedMs();
 		char aExtra[64];
 		str_format(aExtra, sizeof(aExtra), "rpc=%d", g_Config.m_QmDiscordRPC);
-		QmPerfLogStage("perf/main_thread", "discord_steam_update", StageTimer.ElapsedMs(), false, this, nullptr, nullptr, aExtra);
+		QmPerfLogStage("perf/main_thread", "discord_steam_update", m_QmPerfUpdateDiscordSteamMs, false, this, nullptr, nullptr, aExtra);
 	}
 	else
 	{
@@ -5229,6 +5278,7 @@ void CClient::Run()
 
 	bool LastD = false;
 	bool LastE = false;
+	bool LastG = false;
 
 	auto LastTime = time_get_nanoseconds();
 	int64_t LastRenderTime = time_get();
@@ -5236,6 +5286,24 @@ void CClient::Run()
 	int64_t NextRenderTime = time_get();
 	int LastIdleRenderThrottleRate = -1;
 	int LastRequestedRenderThrottleRate = -1;
+	bool LastPerfLoggerActive = false;
+	int64_t LastTickDiagnosticTime = 0;
+	int LastTickDiagnosticState = -1;
+	int LastTickDiagnosticGameTick = -1;
+	int LastTickDiagnosticPredTick = -1;
+	int TickDiagnosticFrameCount = 0;
+	double TickDiagnosticFrameMsMax = 0.0;
+	double TickDiagnosticUpdateMs = 0.0;
+	int TickDiagnosticUpdateCalls = 0;
+	double TickDiagnosticMaxUpdateMs = 0.0;
+	double TickDiagnosticSnapshotPredictMs = 0.0;
+	double TickDiagnosticRenderMs = 0.0;
+	double TickDiagnosticSwapMs = 0.0;
+	double FrameAccumulatedUpdateMs = 0.0;
+	int FrameUpdateCalls = 0;
+	double FrameMaxUpdateMs = 0.0;
+	double FrameAccumulatedSnapshotPredictMs = 0.0;
+	double FrameAccumulatedRenderMs = 0.0;
 
 	// 没有加载帧的启动路径也走同一入口，避免后台渲染关闭时窗口始终隐藏。
 	EnsureWindowShown();
@@ -5244,6 +5312,27 @@ void CClient::Run()
 	{
 		const bool PerfEnabled = QmPerfEnabled();
 		UpdateQmPerfFileLogger(); // 游戏内开关立即开/关性能日志文件（状态无变化时仅几次内存读）
+		if(LastPerfLoggerActive != m_QmPerfFileLoggerActive)
+		{
+			LastPerfLoggerActive = m_QmPerfFileLoggerActive;
+			LastTickDiagnosticTime = 0;
+			LastTickDiagnosticState = -1;
+			LastTickDiagnosticGameTick = -1;
+			LastTickDiagnosticPredTick = -1;
+			TickDiagnosticFrameCount = 0;
+			TickDiagnosticFrameMsMax = 0.0;
+			TickDiagnosticUpdateMs = 0.0;
+			TickDiagnosticUpdateCalls = 0;
+			TickDiagnosticMaxUpdateMs = 0.0;
+			TickDiagnosticSnapshotPredictMs = 0.0;
+			TickDiagnosticRenderMs = 0.0;
+			TickDiagnosticSwapMs = 0.0;
+			FrameAccumulatedUpdateMs = 0.0;
+			FrameUpdateCalls = 0;
+			FrameMaxUpdateMs = 0.0;
+			FrameAccumulatedSnapshotPredictMs = 0.0;
+			FrameAccumulatedRenderMs = 0.0;
+		}
 		// QmClient：日志开启期间按秒把生效配置的增量变化写进性能日志（见 perf_diagnostics.h）。
 		if(m_QmPerfFileLoggerActive && time_get() - m_QmPerfLastConfigCheck >= time_freq())
 		{
@@ -5376,6 +5465,10 @@ void CClient::Run()
 		if(CtrlShiftKey(KEY_D, LastD))
 			g_Config.m_Debug ^= 1;
 
+		// 调试图表与 Ctrl+Shift+D 同级：主循环全局处理，菜单/编辑器/游戏内都能切换。
+		if(CtrlShiftKey(KEY_G, LastG))
+			g_Config.m_ClShowPerf ^= 1;
+
 		if(CtrlShiftKey(KEY_E, LastE))
 		{
 			if(g_Config.m_ClEditor)
@@ -5404,16 +5497,49 @@ void CClient::Run()
 				m_EditorActive = false;
 			}
 
+			double ClientUpdateMs = 0.0;
 			if(PerfEnabled)
 			{
 				CPerfTimer StageTimer;
 				Update();
+				ClientUpdateMs = StageTimer.ElapsedMs();
 				char aExtra[96];
 				str_format(aExtra, sizeof(aExtra), "state=%d editor=%d", State(), m_EditorActive ? 1 : 0);
-				QmPerfLogStage("perf/main_thread", "client_update", StageTimer.ElapsedMs(), false, this, nullptr, nullptr, aExtra);
+				QmPerfLogStage("perf/main_thread", "client_update", ClientUpdateMs, false, this, nullptr, nullptr, aExtra);
 			}
 			else
 				Update();
+			if(PerfEnabled && ClientUpdateMs >= 8.0)
+			{
+				const double AccountedMs = m_QmPerfUpdatePumpMs + m_QmPerfUpdatePollMapLoadMs + m_QmPerfUpdateRedundancyMs +
+							   m_QmPerfUpdateResourcePrepareMs + m_QmPerfUpdateGameClientMs + m_QmPerfUpdateEditorMs +
+							   m_QmPerfLastSnapshotPredictMs + m_QmPerfUpdateServerBrowserMs + m_QmPerfUpdateDiscordSteamMs;
+				const double OtherMs = maximum(0.0, ClientUpdateMs - AccountedMs);
+				char aPayload[512];
+				str_format(aPayload, sizeof(aPayload),
+					"event=update_spike_detail total_ms=%.3f pump_ms=%.3f poll_map_load_ms=%.3f redundancy_ms=%.3f resource_prepare_ms=%.3f gameclient_ms=%.3f editor_ms=%.3f snapshot_predict_ms=%.3f serverbrowser_ms=%.3f discord_steam_ms=%.3f other_ms=%.3f state=%d editor=%d",
+					ClientUpdateMs,
+					m_QmPerfUpdatePumpMs,
+					m_QmPerfUpdatePollMapLoadMs,
+					m_QmPerfUpdateRedundancyMs,
+					m_QmPerfUpdateResourcePrepareMs,
+					m_QmPerfUpdateGameClientMs,
+					m_QmPerfUpdateEditorMs,
+					m_QmPerfLastSnapshotPredictMs,
+					m_QmPerfUpdateServerBrowserMs,
+					m_QmPerfUpdateDiscordSteamMs,
+					OtherMs,
+					State(),
+					m_EditorActive ? 1 : 0);
+				QmPerfLogPayloadForce("perf/main_thread", aPayload, this);
+			}
+			if(m_QmPerfFileLoggerActive)
+			{
+				FrameAccumulatedUpdateMs += ClientUpdateMs;
+				++FrameUpdateCalls;
+				FrameMaxUpdateMs = maximum(FrameMaxUpdateMs, ClientUpdateMs);
+				FrameAccumulatedSnapshotPredictMs += m_QmPerfLastSnapshotPredictMs;
+			}
 			int64_t Now = time_get();
 
 			bool IsRenderActive = (g_Config.m_GfxBackgroundRender || m_pGraphics->WindowOpen());
@@ -5573,16 +5699,20 @@ void CClient::Run()
 					m_VideoOffscreenFailed = false;
 				}
 #endif
+				double FrameRenderMs = 0.0;
 				if(PerfEnabled)
 				{
 					CPerfTimer StageTimer;
 					Render();
+					FrameRenderMs = StageTimer.ElapsedMs();
 					char aExtra[96];
 					str_format(aExtra, sizeof(aExtra), "state=%d render_rate=%d throttle=%d", State(), GfxRefreshRate, RequestedRenderThrottleRate);
-					QmPerfLogStage("perf/main_thread", "frame_render", StageTimer.ElapsedMs(), false, this, nullptr, nullptr, aExtra);
+					QmPerfLogStage("perf/main_thread", "frame_render", FrameRenderMs, false, this, nullptr, nullptr, aExtra);
 				}
 				else
 					Render();
+				if(m_QmPerfFileLoggerActive)
+					FrameAccumulatedRenderMs += FrameRenderMs;
 #if defined(CONF_VIDEORECORDER)
 				// 离屏帧收尾：结束目标（含 MSAA resolve）、回绘窗口保持预览；读回是
 				// 异步的（一帧延迟），这里拿到的是上一帧的像素——首帧没有在途读回，
@@ -5698,6 +5828,102 @@ void CClient::Run()
 					const double FrameMs = m_QmPerfLastFrameEnd != 0 ? (FrameEnd - m_QmPerfLastFrameEnd) * 1000.0 / time_freq() : 0.0;
 					m_QmPerfLastFrameEnd = FrameEnd;
 					m_QmPerfFrameBatch.RecordAndLog(PerfFrame(), FrameMs, this);
+
+					const int Conn = g_Config.m_ClDummy;
+					const int CurrentTick = GameTick(Conn);
+					const int PredTick = PredGameTick(Conn);
+					const int CurrentState = State();
+					const bool EditorActive = m_EditorActive;
+					const double IntervalUpdateMs = FrameAccumulatedUpdateMs;
+					const int IntervalUpdateCalls = FrameUpdateCalls;
+					const double IntervalMaxUpdateMs = FrameMaxUpdateMs;
+					const double IntervalSnapshotPredictMs = FrameAccumulatedSnapshotPredictMs;
+					const double IntervalRenderMs = FrameAccumulatedRenderMs;
+					const double IntervalSwapMs = MainThreadSwapMs;
+					FrameAccumulatedUpdateMs = 0.0;
+					FrameUpdateCalls = 0;
+					FrameMaxUpdateMs = 0.0;
+					FrameAccumulatedSnapshotPredictMs = 0.0;
+					FrameAccumulatedRenderMs = 0.0;
+
+					if(FrameMs >= 3.333333)
+					{
+						char aPayload[512];
+						str_format(aPayload, sizeof(aPayload),
+							"event=slow_frame_diag frame_ms=%.3f update_ms=%.3f update_calls=%d update_max_ms=%.3f snapshot_predict_ms=%.3f render_ms=%.3f swap_ms=%.3f state=%d editor=%d game_tick=%d prev_game_tick=%d pred_tick=%d intra_tick=%.4f pred_intra_tick=%.4f game_tick_time_ms=%.3f prediction_lead_ms=%.3f prediction_margin_ms=%.3f",
+							FrameMs,
+							IntervalUpdateMs,
+							IntervalUpdateCalls,
+							IntervalMaxUpdateMs,
+							IntervalSnapshotPredictMs,
+							IntervalRenderMs,
+							IntervalSwapMs,
+							CurrentState,
+							EditorActive ? 1 : 0,
+							CurrentTick,
+							PrevGameTick(Conn),
+							PredTick,
+							IntraGameTick(Conn),
+							PredIntraGameTick(Conn),
+							GameTickTime(Conn) * 1000.0f,
+							CurrentState == IClient::STATE_ONLINE ? PredictionLeadMs() : -1.0f,
+							CurrentState == IClient::STATE_ONLINE ? PredictionMarginMs() : -1.0f);
+						QmPerfLogPayload("perf/tick", aPayload, this);
+					}
+
+					TickDiagnosticFrameCount++;
+					TickDiagnosticFrameMsMax = maximum(TickDiagnosticFrameMsMax, FrameMs);
+					TickDiagnosticUpdateMs += IntervalUpdateMs;
+					TickDiagnosticUpdateCalls += IntervalUpdateCalls;
+					TickDiagnosticMaxUpdateMs = maximum(TickDiagnosticMaxUpdateMs, IntervalMaxUpdateMs);
+					TickDiagnosticSnapshotPredictMs += IntervalSnapshotPredictMs;
+					TickDiagnosticRenderMs += IntervalRenderMs;
+					TickDiagnosticSwapMs += IntervalSwapMs;
+					if(LastTickDiagnosticTime == 0)
+						LastTickDiagnosticTime = FrameEnd;
+					if(FrameEnd - LastTickDiagnosticTime >= time_freq() / 4)
+					{
+						const double SampleIntervalMs = (FrameEnd - LastTickDiagnosticTime) * 1000.0 / time_freq();
+						const int GameTickDelta = LastTickDiagnosticState == CurrentState && LastTickDiagnosticGameTick >= 0 && CurrentState == IClient::STATE_ONLINE ? CurrentTick - LastTickDiagnosticGameTick : -1;
+						const int PredTickDelta = LastTickDiagnosticState == CurrentState && LastTickDiagnosticPredTick >= 0 && CurrentState == IClient::STATE_ONLINE ? PredTick - LastTickDiagnosticPredTick : -1;
+						char aPayload[640];
+						str_format(aPayload, sizeof(aPayload),
+							"event=render_tick_sample interval_ms=%.1f render_frames=%d max_frame_ms=%.3f update_ms=%.3f update_calls=%d max_update_ms=%.3f snapshot_predict_ms=%.3f render_ms=%.3f swap_ms=%.3f state=%d editor=%d game_tick=%d game_tick_delta=%d prev_game_tick=%d pred_tick=%d pred_tick_delta=%d intra_tick=%.4f pred_intra_tick=%.4f game_tick_time_ms=%.3f prediction_lead_ms=%.3f prediction_margin_ms=%.3f",
+							SampleIntervalMs,
+							TickDiagnosticFrameCount,
+							TickDiagnosticFrameMsMax,
+							TickDiagnosticUpdateMs,
+							TickDiagnosticUpdateCalls,
+							TickDiagnosticMaxUpdateMs,
+							TickDiagnosticSnapshotPredictMs,
+							TickDiagnosticRenderMs,
+							TickDiagnosticSwapMs,
+							CurrentState,
+							EditorActive ? 1 : 0,
+							CurrentTick,
+							GameTickDelta,
+							PrevGameTick(Conn),
+							PredTick,
+							PredTickDelta,
+							IntraGameTick(Conn),
+							PredIntraGameTick(Conn),
+							GameTickTime(Conn) * 1000.0f,
+							CurrentState == IClient::STATE_ONLINE ? PredictionLeadMs() : -1.0f,
+							CurrentState == IClient::STATE_ONLINE ? PredictionMarginMs() : -1.0f);
+						QmPerfLogPayload("perf/tick", aPayload, this);
+						LastTickDiagnosticTime = FrameEnd;
+						LastTickDiagnosticState = CurrentState;
+						LastTickDiagnosticGameTick = CurrentTick;
+						LastTickDiagnosticPredTick = PredTick;
+						TickDiagnosticFrameCount = 0;
+						TickDiagnosticFrameMsMax = 0.0;
+						TickDiagnosticUpdateMs = 0.0;
+						TickDiagnosticUpdateCalls = 0;
+						TickDiagnosticMaxUpdateMs = 0.0;
+						TickDiagnosticSnapshotPredictMs = 0.0;
+						TickDiagnosticRenderMs = 0.0;
+						TickDiagnosticSwapMs = 0.0;
+					}
 				}
 				// 只在连接/加载阶段记录，避免菜单和游戏内每帧刷屏
 				if(g_Config.m_QmGraphicsTrace >= 3 &&
