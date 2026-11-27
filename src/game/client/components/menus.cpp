@@ -8849,8 +8849,8 @@ void CMenus::BuildSettingsMenuTextGlyphDemand()
 		{
 			const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(VisibleViewport.w);
 			const uint8_t Priority = 0;
-			const auto SplashPixelSize = SettingsGlyphPixelSize(14.0f * Metrics.m_UiScale, (float)(ScreenY1 - ScreenY0), (float)GraphicsHeight);
-			const auto PlaceholderPixelSize = SettingsGlyphPixelSize(Metrics.m_BodySize * 1.2f, (float)(ScreenY1 - ScreenY0), (float)GraphicsHeight);
+			const auto SplashPixelSize = SettingsGlyphPixelSize(14.0f * Metrics.m_UiScale, MenuHeight, (float)GraphicsHeight);
+			const auto PlaceholderPixelSize = SettingsGlyphPixelSize(Metrics.m_BodySize * 1.2f, MenuHeight, (float)GraphicsHeight);
 			qm_search_header::ForEachGlyphPrewarmText(
 				[&vInputs](const char *pText, int PixelSize, uint8_t TextPriority) {
 					vInputs.push_back({pText, PixelSize, TextPriority});
