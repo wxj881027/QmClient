@@ -8,10 +8,28 @@
 #include <utility>
 #include <vector>
 
+// 空闲预热可能紧跟像素坐标的性能图。测量和建容器都用当前菜单投影，结束后归还外层投影。
+class CSettingsTextScreenScope
+{
+	IGraphics &m_Graphics;
+	const CScreenRect m_Previous;
+
+public:
+	explicit CSettingsTextScreenScope(CUi &Ui) :
+		m_Graphics(*Ui.Graphics()), m_Previous(m_Graphics.GetScreen())
+	{
+		Ui.MapScreen();
+	}
+	~CSettingsTextScreenScope() { m_Graphics.MapScreen(m_Previous); }
+	CSettingsTextScreenScope(const CSettingsTextScreenScope &) = delete;
+	CSettingsTextScreenScope &operator=(const CSettingsTextScreenScope &) = delete;
+};
+
 // 测量退出本身仍可抛错，显式收尾避免在异常展开中的析构再次抛出而终止进程。
 template<typename FRender>
 void RunSettingsTextPlanMeasurement(CUi *pUi, FRender &&Render)
 {
+	const CSettingsTextScreenScope Screen(*pUi);
 	pUi->BeginRenderOnly();
 	try
 	{

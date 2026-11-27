@@ -574,6 +574,12 @@ public:
 	int ScreenWidth() const { return m_RenderScreenSize.x > 0 ? m_RenderScreenSize.x : m_ScreenWidth; }
 	int ScreenHeight() const { return m_RenderScreenSize.y > 0 ? m_RenderScreenSize.y : m_ScreenHeight; }
 	vec2 ScreenSize() const { return vec2(ScreenWidth(), ScreenHeight()); }
+	vec2 ScreenPixelScale() const
+	{
+		const vec2 Extent = GetScreen().Size();
+		return vec2(Extent.x > 0.0f ? ScreenWidth() / Extent.x : 1.0f,
+			Extent.y > 0.0f ? ScreenHeight() / Extent.y : 1.0f);
+	}
 	float ScreenAspect() const { return (float)ScreenWidth() / (float)ScreenHeight(); }
 	float GameScreenAspect() const { return m_GameScreenAspectOverride > 0.0f ? m_GameScreenAspectOverride : ScreenAspect(); }
 	float ScreenHiDPIScale() const { return m_ScreenHiDPIScale; }
@@ -983,6 +989,7 @@ public:
 	{
 		float m_X, m_Y, m_Width, m_Height;
 		CQuadItem() = default;
+		bool operator==(const CQuadItem &) const = default;
 		CQuadItem(float x, float y, float w, float h) :
 			m_X(x), m_Y(y), m_Width(w), m_Height(h) {}
 		CQuadItem(vec2 Position, vec2 Size) :

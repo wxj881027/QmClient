@@ -350,6 +350,8 @@ struct STextColorSplit
 	// QmClient：字符内横向渐变的右边缘色。默认等于 m_Color，此时顶点色与旧行为逐字节一致。
 	ColorRGBA m_ColorEnd;
 
+	bool operator==(const STextColorSplit &) const = default;
+
 	STextColorSplit(int CharIndex, int Length, const ColorRGBA &Color) :
 		m_CharIndex(CharIndex), m_Length(Length), m_Color(Color), m_ColorEnd(Color) {}
 
@@ -367,6 +369,8 @@ struct STextCharOffset
 	float m_YOffset;
 	float m_Scale;
 
+	bool operator==(const STextCharOffset &) const = default;
+
 	STextCharOffset(int CharIndex, float XOffset, float YOffset, float Scale = 1.0f) :
 		m_CharIndex(CharIndex), m_XOffset(XOffset), m_YOffset(YOffset), m_Scale(Scale) {}
 
@@ -382,6 +386,8 @@ struct STextCharOffset
 class CTextCursor
 {
 public:
+	bool operator==(const CTextCursor &) const = default;
+
 	int m_Flags = TEXTFLAG_RENDER;
 	int m_LineCount = 1;
 	int m_GlyphCount = 0;
@@ -541,7 +547,29 @@ constexpr bool QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult Result)
 class ITextRender : public IInterface
 {
 	MACRO_INTERFACE("textrender")
+protected:
+	bool m_CacheTextDraws = false;
+
 public:
+	class CScopedDrawCache
+	{
+		bool &m_Enabled;
+		bool m_Previous;
+
+	public:
+		explicit CScopedDrawCache(ITextRender &TextRender, bool Enable = true) :
+			m_Enabled(TextRender.m_CacheTextDraws), m_Previous(m_Enabled)
+		{
+			m_Enabled = m_Previous || Enable;
+		}
+		~CScopedDrawCache() { m_Enabled = m_Previous; }
+		CScopedDrawCache(const CScopedDrawCache &) = delete;
+		CScopedDrawCache &operator=(const CScopedDrawCache &) = delete;
+	};
+
+	// 返回借用的绘制容器，并推进调用方光标；借用只持续到下次查询。未启用时返回空指针。
+	virtual const STextContainerIndex *CachedDrawContainer(CTextCursor *, const char *, int = -1) { return nullptr; }
+
 	virtual std::vector<std::string> *GetCustomFaces() = 0; // TClient
 	virtual std::vector<std::string> *GetCustomFontStyles(const char *pFamily) = 0; // TClient
 	// 查询真实 face 的排版族与样式；不切换字体、不加载文件，名称缺失时清空输出。

@@ -186,11 +186,17 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`DoSettingsMenuLabel(...)`（`src/game/client/components/menus.cpp`）、`CQmLocalizedLabelCache`（`src/game/client/QmUi/QmLocalizedLabels.h`）、`SLabelProperties`（`m_MaxWidth`、`m_EllipsisAtEnd`、`m_vColorSplits`）、字体档 `ui_token::font::*`。
 - 禁止的反面写法：`Ui()->DoLabel` 里写死字号与颜色；标签宽度自己量；同一行两种截断策略。
 
+#### 设置文字绘制缓存（settings text draw cache）
+
+- 定义：设置菜单的标签、数值、预览和弹层复用已排版的字形。文本、排版状态或投影像素比例变化时重新构建。
+- 唯一实现：稳定标签由 `CMenus::DoSettingsMenuLabel` 持有。其余可见文字由 `ITextRender::CScopedDrawCache` 启用绘制缓存。`CSettingsTextScreenScope` 在预热和测量时切到菜单投影，退出时恢复原投影。
+- 禁止的反面写法：使用上一帧性能图的像素坐标预热设置标签，或为设置页的同一段文字逐帧创建并释放一次性容器。
+
 ### 2.11 页面主标题（page title）
 
 - 定义：页面级标题（设置页顶部「设置」、收藏地图工作区标题）共用一个字号与行高档，图标与文字作为一个整体对齐；标题不再借用正文标尺。
-- 唯一实现：`ui_token::page_title::{FONT_SIZE, HEIGHT, ICON_SIZE, ICON_GAP, ICON_Y_OFFSET, TEXT_WIDTH_SLACK}` + `ResolveTitleGroup` / `ResolveTitleTextMaxWidth`（`UiTokens.h`，一次算出图标与文字两个矩形并给出文字的最大宽度） + `ui_widget::PageTitle(...)`（`src/game/client/QmUi/UiOverlays.h`）；设置页接入点 `menus_settings.cpp`，标题样式键 `CMenus::BuildSettingsShellTitleTextStyle`（`menus.cpp`）读同一档字号。水平居中由组几何保证，垂直由 `ICON_Y_OFFSET` 做字形留白的视觉下沉。
-- **文字矩形取实测自然宽度，不裁到「行宽 − 图标 − 缝」**；行宽不足时整组居中溢出到两侧空白，字号与单行都不变。传给标签的最大宽度必须走 `ResolveTitleTextMaxWidth(实测宽)`：它加 `TEXT_WIDTH_SLACK` 并**向上取整**。
+- 唯一实现：`ui_token::page_title` 定义字号、行高与图标间距。`ResolveTitleGroup` 按文字自然宽度将图标和文字整体居中。`CMenus::RenderSettings` 用稳定 ID 缓存标题，保持单行和标题字号。`ui_widget::PageTitle` 提供工作区标题。
+- 设置页在菜单坐标下测量和预热文字。屏幕变窄时，居中的标题组可以向两侧延伸。
 - 禁止的反面写法：标题字号写死 16 或 `font::HEADLINE_LG`（曾把「设置」压成正文观感）；标题前面自己 `DoLabel` 画图标导致换语言后错位；工作区标题用 `h * 0.72f` 按行高反推字号；**文字按整行 MC 单独居中、图标再挂到左边**（组重心偏左 (图标宽+缝)/2，实机看着就是没对齐）；**把实测宽度直接塞给标签当最大宽度，或用 `(int)` 向下截断**（中文无空格，宽度差半个像素就被 `text.cpp` 的 "word can't be fitted" 分支在字间断开——「设置」变成上下两行，且与窗口比例无关）；长语言标题把文字矩形裁到行宽以内（同一处断行的另一条路径）。
 
 ### 2.12 页面页签字号（page tab font）

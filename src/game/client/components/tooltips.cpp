@@ -383,9 +383,11 @@ void CTooltips::OnRender()
 	Background.a *= AlphaFactor;
 	Rect.Draw(Background, IGraphics::CORNER_ALL, ui_token::tooltip::RADIUS * UiScale * Scale);
 
+	const ITextRender::CScopedDrawCache SettingsText(*TextRender(), GameClient()->m_Menus.IsSettingsPageActive());
 	STextContainerIndex EllipsisIndex;
+	const STextContainerIndex *pCachedEllipsis = nullptr;
 	if(QmTooltipDrawEllipsis(Facts, BodyGlyphCount))
-		QmTooltipCreateText(*TextRender(), Layout, "…", TextPosition + vec2(0.0f, (Layout.m_VisibleLines - 1) * Layout.m_LineHeight), EllipsisIndex, true);
+		QmTooltipCreateText(*TextRender(), Layout, "…", TextPosition + vec2(0.0f, (Layout.m_VisibleLines - 1) * Layout.m_LineHeight), EllipsisIndex, true, &pCachedEllipsis);
 
 	ColorRGBA TextColor = Theme.m_TextBody;
 	TextColor.a *= AlphaFactor;
@@ -399,8 +401,9 @@ void CTooltips::OnRender()
 	const CUIRect Projection = QmTooltipTextProjection({X0, Y0, X1 - X0, Y1 - Y0}, FixedRect, Rect);
 	Graphics()->MapScreen(Projection.x, Projection.y, Projection.x + Projection.w, Projection.y + Projection.h);
 	TextRender()->RenderTextContainer(m_TextCache.Index(), TextColor, OutlineColor, FixedRect.x + TextPosition.x, FixedRect.y + TextPosition.y);
-	if(EllipsisIndex.Valid())
-		TextRender()->RenderTextContainer(EllipsisIndex, TextColor, OutlineColor, FixedRect.x, FixedRect.y);
+	const auto &Marker = pCachedEllipsis ? *pCachedEllipsis : EllipsisIndex;
+	if(Marker.Valid())
+		TextRender()->RenderTextContainer(Marker, TextColor, OutlineColor, FixedRect.x, FixedRect.y);
 	Graphics()->MapScreen(X0, Y0, X1, Y1);
 	Ui()->ClipDisable();
 	TextRender()->DeleteTextContainer(EllipsisIndex);

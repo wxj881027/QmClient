@@ -110,6 +110,7 @@ void CQmImeManager::RenderCandidatePopup()
 {
 	if(!m_TextInputSession.ClientOwnsInput())
 		return;
+	const ITextRender::CScopedDrawCache SettingsText(*m_pGameClient->TextRender(), m_pGameClient->m_Menus.IsSettingsPageActive());
 	CUiScopedGaussianBlur GaussianBlurScope(m_pGameClient->Ui());
 	const EQmImeCandidateRenderAction RenderAction = QmImeComputeCandidateRenderAction(QmImeShouldRenderCustomCandidateUi(m_pGameClient->Input()->UsesNativeImeUi()), g_Config.m_QmNewIme);
 

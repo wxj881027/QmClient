@@ -1039,6 +1039,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 
 void CMenus::RenderSettings(CUIRect MainView)
 {
+	const ITextRender::CScopedDrawCache SettingsText(*TextRender(), !Ui()->DrawingSuppressed());
 	const bool CollectingMenuTextPlan = m_MenuTextPlanCollecting;
 	const bool Interactive = !CollectingMenuTextPlan && !Ui()->RenderOnly();
 	const bool SettingsPerfEnabled = PerfDebugEnabled() && !CollectingMenuTextPlan;
@@ -1131,7 +1132,6 @@ void CMenus::RenderSettings(CUIRect MainView)
 
 	TabBar.Margin(ui_token::panel::PADDING, &TabBar);
 	TabBar.HSplitTop(ui_token::page_title::HEIGHT, &Button, &TabBar);
-	// 页面主标题：字号取 ui_token::page_title（标题样式函数也读同一档）。
 	// 「齿轮 + 文字」作为一个**整体**在标题行里居中。以前文字按整行 MC 单独居中、
 	// 图标再挂到它左边，整组重心会偏左 (图标宽+缝)/2，实机看着始终没对齐；
 	// 垂直方向已由 ICON_Y_OFFSET 做视觉下沉，这里只修水平。
@@ -1139,10 +1139,10 @@ void CMenus::RenderSettings(CUIRect MainView)
 		const float TitleTextWidth = TextRender()->TextWidth(ui_token::page_title::FONT_SIZE, Localize("Settings"));
 		const ui_token::page_title::STitleGroupLayout Group = ui_token::page_title::ResolveTitleGroup(Button, TitleTextWidth);
 		Ui()->DoLabel_QmIcon(&Group.m_Icon, EQmIcon::GEAR, FontIcons::FONT_ICON_GEAR, ui_token::page_title::ICON_SIZE, TEXTALIGN_MC);
-		// 文字矩形只有自己那一段宽，MC 在这段里居中即左缘贴住 Gap；组中心落在行中心。
-		// 最大宽度必须比自然宽度多留 1px 并向上取整：标签渲染器按这个宽度断行，中文
-		// 没有空格，等宽或向下截断（(int)40.6 → 40）都会把「设置」拆成上下两行。
-		DoSettingsMenuLabel(SETTINGS_GENERAL, -1, -1, "settings-shell-title", &Group.m_Text, Localize("Settings"), ui_token::page_title::FONT_SIZE, TEXTALIGN_MC, {}, ui_token::page_title::ResolveTitleTextMaxWidth(TitleTextWidth));
+		// 文字矩形用于整组居中；标题始终按自然字号单行排版。
+		SLabelProperties TitleProps;
+		TitleProps.m_EnableWidthCheck = false;
+		DoSettingsMenuLabel(SETTINGS_GENERAL, -1, -1, "settings-shell-title", &Group.m_Text, Localize("Settings"), ui_token::page_title::FONT_SIZE, TEXTALIGN_MC, TitleProps);
 	}
 	if(SettingsPerfEnabled)
 	{
