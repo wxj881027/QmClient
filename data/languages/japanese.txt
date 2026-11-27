@@ -2454,9 +2454,6 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == ロゴを選択 (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
-== オフ・簡易・フルから選びます。すべてのアニメーションはこの 1 つのスイッチで動きます。次に設定・コンソール・チャット入力欄のカーソル形状を選びます。
-
 Choose the language used by the client
 == Choose the language used by the client
 
@@ -2726,9 +2723,6 @@ Client uptime
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
-
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
-== クライアント側予測と遅延補正：予測マージン、AntiPing とその予測対象、予測イベント、上りパケット冗長化、DSCP トラフィックマーキング。
 
 Client-side self-kill protection
 == クライアント側自殺保護
@@ -3299,9 +3293,6 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 他のプレイヤーの名前の横に表示するもの（クランタグ、フレンドマーク、クライアント識別子など）を制御します。
-
-Convenience options for chat, the scoreboard and tune zones.
-== チャット、スコアボード、調整ゾーンの便利な設定。
 
 Converse
 == 会話を続ける
@@ -4937,9 +4928,6 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 3D 背景パーティクルを有効化
-
-Enable a music source to display its lyrics.
-== 歌詞を表示する音楽ソースを有効にします。
 
 Enable absolute controller aiming in game
 == ゲーム内で絶対コントローラー照準を有効にする
@@ -6618,9 +6606,6 @@ Go forward the specified duration
 Go to keyframe
 == キーフレームへ移動
 
-Good to know
-== 知っておきたいこと
-
 Gores
 == ゴア
 
@@ -7161,6 +7146,9 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == トラクターが Tee を追跡する距離
 
+How it works
+== 仕組みと動作
+
 How long expression lasts
 == 表情の持続時間
 
@@ -7181,9 +7169,6 @@ How often the broadcast time updates
 
 How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)
 == 非アクティブプレイヤーの処理方法（0 = 観戦者へ移動、1 = 空き観戦スロットへ移動/キック、2 = キック）
-
-How to use it
-== 使い方
 
 HTTP is not available
 == HTTP を利用できません
@@ -10038,9 +10023,6 @@ Ok
 Old chat style: no tee icons, no background
 == 古いチャットスタイル: ティーアイコンなし、背景なし
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
-== 保存数の上限に達すると古いファイルが削除されます。残したいデモは別の場所へコピーしてください。ポーズスクリーンショットの画素予算はここではなく、.poses ファイルのレンダーダイアログにある出力和オプションです。
-
 Old single-segment hook collision line
 == 旧式の単一セグメントフック衝突線
 
@@ -10406,9 +10388,6 @@ Overwrite clan even if empty
 
 Own hook line width
 == 自分のフックラインの幅
-
-Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
-== 「自分」にはメイン Tee とダミーが含まれます。他のプレイヤーの表示は同じチームで、サーバーが事前入力に対応している場合に限ります。
 
 p = Ping latency
 == p = Ping レイテンシ
@@ -11211,9 +11190,6 @@ Prediction margin when frozen
 Prediction time
 == 予測時間
 
-Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
-== 予測は正確さと応答性のトレードオフです。上り冗長化は送信量を 3 倍にします。「ゲームトラフィックを優先」は Windows でパケットに印を付けるだけで、QoS 対応ルーターがなければ効果ありません。
-
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 == 起動時やメニューの待機中に設定画面を数フレームに分けて準備し、初めて開くときの引っかかりを減らします。
 
@@ -11912,6 +11888,9 @@ Receiving
 
 Recent
 == 最近
+
+Recommended settings
+== おすすめ設定
 
 Reconnect in %d sec
 == %d 秒後に再接続
@@ -13476,9 +13455,6 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == エンコーダー・コンテナ・画質を一度に設定します。日常向けは H.264 + MP4、高画質はより小さい HEVC + MP4、編集向けは全フレーム内 H.264 + MP4（どこでも即座にシーク）、交換用は他の編集ソフト向けの ProRes 422 HQ + MOV です。
 
-Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
-== インターフェースの動きの量（遷移・カードの登場・並べ替え・スクロール感）と、各入力欄のカーソル形状を設定します。
-
 Sets laser colors for weapons and entities.
 == 武器とエンティティのレーザーの色を設定します。
 
@@ -14666,9 +14642,6 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == ランキングのチーム順位（またはプレイヤー順位）を i 位から 5 件表示（デフォルト 1、-1 は最下位）
-
-Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
-== FPS、フレーム時間、RTT、予測リードを表示します。ガイド線を超えるバーは 60 FPS のフレーム予算を超えています。
 
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == エッジジャンプ用の小数の位置数値を画面テキストで表示し、正しい位置でジャンプのタイミングを取れるようにします。
@@ -16080,9 +16053,6 @@ The card only appears while such a bind exists; click its key field to change th
 The command is empty, incomplete, or exceeds the local config line limit.
 == コマンドが空、不完全、またはローカル設定行の上限を超えています。
 
-The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
-== 表示対象は Tee の色とアイコンの両方に適用されます。各アイコンは方向キー表示と独立して切り替えられます。
-
 The downloaded file is not a valid demo
 == ダウンロードしたファイルは有効なデモではありません
 
@@ -16157,9 +16127,6 @@ The server rejected the map upload.
 
 The two keys that cast your vote: one for yes and one for no.
 == 投票用のキーは二つ。賛成用と反対用が一つずつです。
-
-The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
-== 更新レートとフレームレートの上限は画像ページへ移しました。描画設定の隣にあるべき項目で、ここには属しません。
 
 The watermarked screenshot was saved next to the original
 == ウォーターマーク付きのスクリーンショットを元画像の隣に保存しました
@@ -16349,9 +16316,6 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == 「他のプレイヤーを表示」を有効にすると他のチームが半透明で描画されます。その下の依存行で影の不透明度を設定し、「背景クアッドを表示」と「デフォルトのズーム」で表示を調整できます。
-
-Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== 「メインメニューをスキップ」にチェックを入れ、「設定ファイル」や「テーマディレクトリ」から各場所を開けます。
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == キーの引っかかり表示、ハンマー状態を表示、dummy 操作状態を表示、dummy コピー状態を表示のうち、必要なものをオンにします。
@@ -16884,9 +16848,6 @@ Tune zone (map / override)
 Tuning parameter
 == 調整パラメーター
 
-Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
-== 非力な環境ではオフにしてください。カードは即座に開き、スクロールも即時になります。カーソル形状は見た目だけで、3 種とも同じ文字枠に収まります。
-
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 == 「メインワールドのゴーストを表示」をオフにすると、他のプレイヤーを含むサーバー側の Tee がすべて隠れます。オンのままなら不透明度スライダーで見え方を調整できます。バインド行は練習メニューと同じコマンドを送るので、チャット欄を開く必要はありません。
 
@@ -16931,9 +16892,6 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 
 Turn on "Message merging" in Dream Features.
 == 「ドリーム機能」で「Message merging」をオンにします。
-
-Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== 「ネームプレートのテキスト効果」をオンにし、「個別調整」を開いてから「枠線」「グラデーション」「レインボー」「発光」を有効にし、対応する範囲と色を設定してください。
 
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == 新しいバーには新しい IME をオンにし、チャット欄に合わせて入力モードを切り替えるには入力中に IME を自動管理の項目をオンにします。色は色を編集で変更します。
@@ -17429,9 +17387,6 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == タイトルのアニメーションスタイルを使う（qm_title_color_mode を上書き）
-
-Use cl_show_perf 1 to show the panel.
-== cl_show_perf 1 を入力するとパネルが表示されます。
 
 Use colored skins for frozen tees
 == 凍結 Tee にカラースキンを使用
@@ -18039,9 +17994,6 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace バインディングが設定されているレベル（自動設定のため、使用する必要はありません）。
 
-What this controls
-== これは何か
-
 Wheel
 == ホイール
 
@@ -18098,9 +18050,6 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == デフォルトで他のプレイヤーを表示するかどうか（自チームは 2）
-
-Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
-== メインメニューをスキップするか、コミュニティのマップタグ、起動時のクラッシュレポート、設定・セーブ・テーマのフォルダを開く入口です。
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == ダミーを同時に制御するかどうか（cl_dummy_jump、cl_dummy_fire、cl_dummy_hook）
@@ -18817,6 +18766,74 @@ Train
 [Bind keyboard key]
 Menu
 == メニューキー
+
+[card-wiki]
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== オフ・簡易・フルから選びます。すべてのアニメーションはこの 1 つのスイッチで動きます。次に設定・コンソール・チャット入力欄のカーソル形状を選びます。
+
+[card-wiki]
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== クライアント側予測と遅延補正：予測マージン、AntiPing とその予測対象、予測イベント、上りパケット冗長化、DSCP トラフィックマーキング。
+
+[card-wiki]
+Convenience options for chat, the scoreboard and tune zones.
+== チャット、スコアボード、調整ゾーンの便利な設定。
+
+[card-wiki]
+Enable a music source to display its lyrics.
+== 歌詞を表示する音楽ソースを有効にします。
+
+[card-wiki]
+Highlight held hammer and hook inputs while frozen
+== 凍結中に押したままのハンマーとフックを強調表示
+
+[card-wiki]
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== 保存数の上限に達すると古いファイルが削除されます。残したいデモは別の場所へコピーしてください。ポーズスクリーンショットの画素予算はここではなく、.poses ファイルのレンダーダイアログにある出力和オプションです。
+
+[card-wiki]
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== 「自分」にはメイン Tee とダミーが含まれます。他のプレイヤーの表示は同じチームで、サーバーが事前入力に対応している場合に限ります。
+
+[card-wiki]
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== 予測は正確さと応答性のトレードオフです。上り冗長化は送信量を 3 倍にします。「ゲームトラフィックを優先」は Windows でパケットに印を付けるだけで、QoS 対応ルーターがなければ効果ありません。
+
+[card-wiki]
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== インターフェースの動きの量（遷移・カードの登場・並べ替え・スクロール感）と、各入力欄のカーソル形状を設定します。
+
+[card-wiki]
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== FPS、フレーム時間、RTT、予測リードを表示します。ガイド線を超えるバーは 60 FPS のフレーム予算を超えています。
+
+[card-wiki]
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== 表示対象は Tee の色とアイコンの両方に適用されます。各アイコンは方向キー表示と独立して切り替えられます。
+
+[card-wiki]
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== 更新レートとフレームレートの上限は画像ページへ移しました。描画設定の隣にあるべき項目で、ここには属しません。
+
+[card-wiki]
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== 「メインメニューをスキップ」にチェックを入れ、「設定ファイル」や「テーマディレクトリ」から各場所を開けます。
+
+[card-wiki]
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== 非力な環境ではオフにしてください。カードは即座に開き、スクロールも即時になります。カーソル形状は見た目だけで、3 種とも同じ文字枠に収まります。
+
+[card-wiki]
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== 「ネームプレートのテキスト効果」をオンにし、「個別調整」を開いてから「枠線」「グラデーション」「レインボー」「発光」を有効にし、対応する範囲と色を設定してください。
+
+[card-wiki]
+Use cl_show_perf 1 to show the panel.
+== cl_show_perf 1 を入力するとパネルが表示されます。
+
+[card-wiki]
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== メインメニューをスキップするか、コミュニティのマップタグ、起動時のクラッシュレポート、設定・セーブ・テーマのフォルダを開く入口です。
 
 [Collision hitbox]
 All players

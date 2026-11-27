@@ -166,8 +166,9 @@ std::string qm_wiki_store::ComposeFromDocument(const SWikiDocument &Document)
 		const SWikiSection &Section = Document.m_pSections[SectionIndex];
 		if(Section.m_pHeading != nullptr && Section.m_pHeading[0] != '\0')
 		{
-			Text += "## ";
-			Text += Localize(Section.m_pHeading);
+			// 卡片与内置文档的分节都是顶层内容，用 H1 保持目录层级一致。
+			Text += "# ";
+			Text += Localize(Section.m_pHeading, Section.m_pContext);
 			Text += "\n\n";
 		}
 		for(int ParagraphIndex = 0; ParagraphIndex < Section.m_ParagraphCount; ++ParagraphIndex)
@@ -176,7 +177,13 @@ std::string qm_wiki_store::ComposeFromDocument(const SWikiDocument &Document)
 			if(pParagraph == nullptr || pParagraph[0] == '\0')
 				continue;
 			// 一段里写了多个步骤时（分号分隔），拆成要点更好读；只有一句时保持整段。
-			const std::string Paragraph = Localize(pParagraph);
+			const std::string Paragraph = Localize(pParagraph, Section.m_pContext);
+			if(!Section.m_SplitSemicolons)
+			{
+				Text += Paragraph;
+				Text += "\n\n";
+				continue;
+			}
 			std::vector<std::string> vParts;
 			size_t PartStart = 0;
 			for(size_t Index = 0; Index < Paragraph.size(); ++Index)

@@ -2454,9 +2454,6 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Logo seç (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
-== Kapalı, azaltılmış veya tam seçin; tüm animasyonlar bu tek anahtarla çalışır. Ardından ayarlar, konsol ve sohbet giriş alanları için imleç biçimini seçin.
-
 Choose the language used by the client
 == Choose the language used by the client
 
@@ -2726,9 +2723,6 @@ Client uptime
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
-
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
-== İstemci tarafı tahmin ve gecikme telafisi: tahmin payı, AntiPing ve tahmin edilen varlıklar, tahmin edilen olaylar, yukarı yönlü paket yedekliliği ve DSCP trafik işaretleme.
 
 Client-side self-kill protection
 == İstemci tarafı intihar koruması
@@ -3299,9 +3293,6 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Diğer oyuncuların adlarının yanında görünenleri denetler: klan etiketleri, arkadaş işaretleri ve istemci tanımlayıcıları gibi.
-
-Convenience options for chat, the scoreboard and tune zones.
-== Sohbet, skor tablosu ve ayar bölgeleri için kolaylık seçenekleri.
 
 Converse
 == Özel sohbete devam et
@@ -4937,9 +4928,6 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 3D arka plan parçacıklarını etkinleştir
-
-Enable a music source to display its lyrics.
-== Şarkı sözlerini göstermek için bir müzik kaynağını etkinleştirin.
 
 Enable absolute controller aiming in game
 == Oyunda mutlak kontrolör nişan almayı etkinleştir
@@ -6618,9 +6606,6 @@ Go forward the specified duration
 Go to keyframe
 == Anahtar kareye git
 
-Good to know
-== Bilmekte fayda var
-
 Gores
 == Gores
 
@@ -7161,6 +7146,9 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Traktörün bir tee'yi ne kadar takip edeceği
 
+How it works
+== Nasıl çalışır
+
 How long expression lasts
 == İfadenin ne kadar süreceği
 
@@ -7181,9 +7169,6 @@ How often the broadcast time updates
 
 How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)
 == Aktif olmayan oyuncular nasıl işlenir (0 = izleyiciye taşı, 1 = boş izleyici yuvasına taşı/at, 2 = at)
-
-How to use it
-== Nasıl kullanılır
 
 HTTP is not available
 == HTTP kullanılamıyor
@@ -10038,9 +10023,6 @@ Ok
 Old chat style: no tee icons, no background
 == Eski sohbet stili: tee simgesi yok, arka plan yok
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
-== Kayıt sınırına ulaşıldığında eski dosyalar silinir; saklamak istediğiniz demoları başka yere kopyalayın. Poz ekran görüntüsü piksel bütçesi burada değil, .poses dosyası render penceresindeki bir çıktı seçeneğidir.
-
 Old single-segment hook collision line
 == Eski tek parçalı kanca çarpışma çizgisi
 
@@ -10406,9 +10388,6 @@ Overwrite clan even if empty
 
 Own hook line width
 == Kendi kanca çizgisi genişliği
-
-Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
-== Kendin, ana Tee’ni ve kuklanı kapsar. Diğer oyuncular takımında olmalı ve sunucu ön girdiyi desteklemelidir.
 
 p = Ping latency
 == p = Ping gecikmesi
@@ -11211,9 +11190,6 @@ Prediction margin when frozen
 Prediction time
 == Tahmin süresi
 
-Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
-== Tahmin doğruluğu tepki hızıyla takas eder; yukarı yönlü yedeklilik uploadı üç katına çıkarır. "Oyun trafiğini önceliklendir" yalnızca Windows'ta paketleri işaretler ve QoS destekli bir yönlendirici gerektirir.
-
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 == Ayar sayfalarını başlangıçta ve menü boştayken birkaç kareye yayarak hazırlar, böylece ilk açılıştaki takılmalar azalır.
 
@@ -11912,6 +11888,9 @@ Receiving
 
 Recent
 == Son
+
+Recommended settings
+== Önerilen ayarlar
 
 Reconnect in %d sec
 == %d sn sonra yeniden bağlan
@@ -13476,9 +13455,6 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Kodlayıcı, kapsayıcı ve kaliteyi tek adımda ayarlar: Günlük H.264 + MP4, Yüksek kalite daha küçük boyutta HEVC + MP4, Kurgu anında atlama sağlayan tam iç H.264 + MP4, Değişim ise diğer kurgu programları için ProRes 422 HQ + MOV.
 
-Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
-== Arayüzün ne kadar hareket göstereceğini (geçişler, kart girişi, yeniden sıralama, kaydırma hissi) ve tüm giriş alanlarındaki imleç biçimini ayarlar.
-
 Sets laser colors for weapons and entities.
 == Silahlar ve varlıklar için lazer renklerini ayarlar.
 
@@ -14666,9 +14642,6 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == Sıralamanın veya bir oyuncunun takım sıralamasında i sırasından başlayarak 5 takım derecesini gösterir (varsayılan 1, en kötü için -1)
-
-Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
-== FPS, kare süresi, RTT ve tahmin öncülüğünü gösterir. Kılavuzun üstündeki çubuklar 60 FPS kare bütçesini aşar.
 
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == Kenar zıplamaları için ondalık konum sayılarını ekran metni olarak gösterir; doğru noktada zıplama zamanlaması yaparsınız.
@@ -16080,9 +16053,6 @@ The card only appears while such a bind exists; click its key field to change th
 The command is empty, incomplete, or exceeds the local config line limit.
 == Komut boş, eksik veya yerel yapılandırma satırı sınırını aşıyor.
 
-The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
-== Gösterim kapsamı Tee renkleri ve simgeler için geçerlidir. Her simge yön tuşu göstergesinden bağımsız olarak açılıp kapatılabilir.
-
 The downloaded file is not a valid demo
 == İndirilen dosya geçerli bir demo değil
 
@@ -16157,9 +16127,6 @@ The server rejected the map upload.
 
 The two keys that cast your vote: one for yes and one for no.
 == Oyunu veren iki tuş: biri evet, biri hayır için.
-
-The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
-== Güncelleme ve kare hızı sınırları Grafik sayfasına taşındı; işleme ayarlarının yanında olmalı, burada değil.
 
 The watermarked screenshot was saved next to the original
 == Filigranlı ekran görüntüsü orijinalin yanına kaydedildi
@@ -16349,9 +16316,6 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == Diğer takımları yarı saydam çizmek için „Diğerlerini göster“i işaretleyin, gölge opaklıklarını altındaki bağımlı satırda ayarlayın ve görünüm için „Arka plan dörtlülerini göster“ ile „Varsayılan yakınlaştırma“yı kullanın.
-
-Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== "Ana menüyü atla" seçeneğini işaretleyin ve "Ayarlar dosyası" veya "Temalar klasörü" ile konumları açın.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Tuş takılı durumunu göster, çekiç durumunu göster, dummy kontrol durumunu göster veya dummy kopya durumunu göster seçeneklerinden istediklerini işaretle.
@@ -16884,9 +16848,6 @@ Tune zone (map / override)
 Tuning parameter
 == Ayar parametresi
 
-Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
-== Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırılır. İmleç biçimi yalnızca görseldir: üç stil de aynı karakter hücresine sığar.
-
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 == "Ana dünya hayaletini göster"i kapatınca diğer oyuncular dahil sunucudan gelen tüm Tee'ler gizlenir; açıkken opaklık kaydırıcısı ne kadar görüneceklerini belirler. Bağlantı satırları pratik menüsüyle aynı komutları gönderir, sohbet penceresini açmanız gerekmez.
 
@@ -16931,9 +16892,6 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 
 Turn on "Message merging" in Dream Features.
 == "Dream Features" bölümünde "Message merging" seçeneğini aç.
-
-Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== "İsim plakası metin efektleri"ni açın, "Kişisel ayarlar"ı açıp "Kenarlık", "Gradyan", "Gökkuşağı" veya "Parlama"yı etkinleştirin ve ilgili aralıkları ve renkleri ayarlayın.
 
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == Yeni çubuk için yeni IME seçeneğini, giriş modunun sohbet kutusunu izlemesi için yazarken IME otomatik yönet seçeneğini açın; renkler renk düzenle altında değişir.
@@ -17429,9 +17387,6 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Animasyonlu unvan stili kullan (qm_title_color_mode'u geçersiz kılar)
-
-Use cl_show_perf 1 to show the panel.
-== Paneli göstermek için cl_show_perf 1 yazın.
 
 Use colored skins for frozen tees
 == Donmuş teeler için renkli görünümler kullan
@@ -18039,9 +17994,6 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace bağlamasının hangi seviyeye ayarlandığı (otomatiktir, kullanmanız gerekmez).
 
-What this controls
-== Ne ayarlar
-
 Wheel
 == Tekerlek
 
@@ -18098,9 +18050,6 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == Oyuncuların varsayılan olarak diğerlerini görüp görmediği (kendi takımı = 2)
-
-Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
-== Ana menünün atlanması, topluluk harita etiketleri, açılışta çökme raporları ve ayarlar/kayıtlar/temalar klasörleri.
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == Dummy'yi aynı anda kontrol edip etmeme (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
@@ -18817,6 +18766,74 @@ Train
 [Bind keyboard key]
 Menu
 == Menü tuşu
+
+[card-wiki]
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Kapalı, azaltılmış veya tam seçin; tüm animasyonlar bu tek anahtarla çalışır. Ardından ayarlar, konsol ve sohbet giriş alanları için imleç biçimini seçin.
+
+[card-wiki]
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== İstemci tarafı tahmin ve gecikme telafisi: tahmin payı, AntiPing ve tahmin edilen varlıklar, tahmin edilen olaylar, yukarı yönlü paket yedekliliği ve DSCP trafik işaretleme.
+
+[card-wiki]
+Convenience options for chat, the scoreboard and tune zones.
+== Sohbet, skor tablosu ve ayar bölgeleri için kolaylık seçenekleri.
+
+[card-wiki]
+Enable a music source to display its lyrics.
+== Şarkı sözlerini göstermek için bir müzik kaynağını etkinleştirin.
+
+[card-wiki]
+Highlight held hammer and hook inputs while frozen
+== Donmuşken basılı tutulan çekiç ve kanca girişlerini vurgula
+
+[card-wiki]
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== Kayıt sınırına ulaşıldığında eski dosyalar silinir; saklamak istediğiniz demoları başka yere kopyalayın. Poz ekran görüntüsü piksel bütçesi burada değil, .poses dosyası render penceresindeki bir çıktı seçeneğidir.
+
+[card-wiki]
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== Kendin, ana Tee’ni ve kuklanı kapsar. Diğer oyuncular takımında olmalı ve sunucu ön girdiyi desteklemelidir.
+
+[card-wiki]
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== Tahmin doğruluğu tepki hızıyla takas eder; yukarı yönlü yedeklilik uploadı üç katına çıkarır. "Oyun trafiğini önceliklendir" yalnızca Windows'ta paketleri işaretler ve QoS destekli bir yönlendirici gerektirir.
+
+[card-wiki]
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Arayüzün ne kadar hareket göstereceğini (geçişler, kart girişi, yeniden sıralama, kaydırma hissi) ve tüm giriş alanlarındaki imleç biçimini ayarlar.
+
+[card-wiki]
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== FPS, kare süresi, RTT ve tahmin öncülüğünü gösterir. Kılavuzun üstündeki çubuklar 60 FPS kare bütçesini aşar.
+
+[card-wiki]
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== Gösterim kapsamı Tee renkleri ve simgeler için geçerlidir. Her simge yön tuşu göstergesinden bağımsız olarak açılıp kapatılabilir.
+
+[card-wiki]
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== Güncelleme ve kare hızı sınırları Grafik sayfasına taşındı; işleme ayarlarının yanında olmalı, burada değil.
+
+[card-wiki]
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== "Ana menüyü atla" seçeneğini işaretleyin ve "Ayarlar dosyası" veya "Temalar klasörü" ile konumları açın.
+
+[card-wiki]
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırılır. İmleç biçimi yalnızca görseldir: üç stil de aynı karakter hücresine sığar.
+
+[card-wiki]
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== "İsim plakası metin efektleri"ni açın, "Kişisel ayarlar"ı açıp "Kenarlık", "Gradyan", "Gökkuşağı" veya "Parlama"yı etkinleştirin ve ilgili aralıkları ve renkleri ayarlayın.
+
+[card-wiki]
+Use cl_show_perf 1 to show the panel.
+== Paneli göstermek için cl_show_perf 1 yazın.
+
+[card-wiki]
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== Ana menünün atlanması, topluluk harita etiketleri, açılışta çökme raporları ve ayarlar/kayıtlar/temalar klasörleri.
 
 [Collision hitbox]
 All players

@@ -58,10 +58,10 @@ namespace
 		float m_UiScale = 1.0f;
 		ESettingsSecondaryPanelKind m_Kind = ESettingsSecondaryPanelKind::LIBRARY;
 
-		// 内置兜底内容（卡片三段或长文档），同时用于“还原内置”。
+		// 内置兜底内容（卡片两段或长文档），同时用于“还原内置”。
 		SWikiDocument m_Fallback{};
 		const char *m_apCardParagraphs[3]{};
-		SWikiSection m_aCardSections[3]{};
+		SWikiSection m_aCardSections[2]{};
 		char m_aTitle[96] = "";
 		ui_widget::SSecondaryPanelLabel m_TitleLabel;
 		bool m_IsCard = true;
@@ -118,13 +118,13 @@ namespace
 			return;
 		const auto *pDefault = qm_card_registry::FindByStableId(pCopy->m_pStableId);
 		const char *pTitleKey = pDefault != nullptr ? pDefault->m_pTitle : nullptr;
-		pPopup->m_apCardParagraphs[0] = pCopy->m_pWhat;
-		pPopup->m_apCardParagraphs[1] = pCopy->m_pHow;
-		pPopup->m_apCardParagraphs[2] = pCopy->m_pAdvice;
-		const char *apHeadings[3] = {Localizable("What this controls"), Localizable("How to use it"), Localizable("Good to know")};
-		for(int Index = 0; Index < 3; ++Index)
-			pPopup->m_aCardSections[Index] = {apHeadings[Index], &pPopup->m_apCardParagraphs[Index], 1};
-		pPopup->m_Fallback = {pCopy->m_pStableId, pTitleKey, pPopup->m_aCardSections, 3};
+		pPopup->m_apCardParagraphs[0] = pCopy->m_pSummary;
+		pPopup->m_apCardParagraphs[1] = pCopy->m_pMechanism;
+		pPopup->m_apCardParagraphs[2] = pCopy->m_pRecommendation;
+		const char *apHeadings[2] = {Localizable("How it works"), Localizable("Recommended settings")};
+		pPopup->m_aCardSections[0] = {apHeadings[0], &pPopup->m_apCardParagraphs[0], 2, "card-wiki", false};
+		pPopup->m_aCardSections[1] = {apHeadings[1], &pPopup->m_apCardParagraphs[2], 1, "card-wiki", false};
+		pPopup->m_Fallback = {pCopy->m_pStableId, pTitleKey, pPopup->m_aCardSections, 2};
 		pPopup->m_IsCard = true;
 		str_copy(pPopup->m_aTitle, pTitleKey != nullptr ? Localize(pTitleKey) : pCopy->m_pStableId, sizeof(pPopup->m_aTitle));
 		pPopup->m_Editor.LeaveEditing();
@@ -483,15 +483,15 @@ void OpenCardWikiPopup(const IUiContext &Ctx, const char *pStableId, const char 
 	const SCardWikiCopy *pCopy = FindCardWikiCopy(pStableId);
 	if(pCopy == nullptr)
 		return;
-	gs_WikiPopupContext.m_apCardParagraphs[0] = pCopy->m_pWhat;
-	gs_WikiPopupContext.m_apCardParagraphs[1] = pCopy->m_pHow;
-	gs_WikiPopupContext.m_apCardParagraphs[2] = pCopy->m_pAdvice;
+	gs_WikiPopupContext.m_apCardParagraphs[0] = pCopy->m_pSummary;
+	gs_WikiPopupContext.m_apCardParagraphs[1] = pCopy->m_pMechanism;
+	gs_WikiPopupContext.m_apCardParagraphs[2] = pCopy->m_pRecommendation;
 	// 标题也必须是可提取的 i18n source（Localizable 只做标记），
 	// 否则运行时查不到译文，面板会直接显示英文标题。
-	const char *apHeadings[3] = {Localizable("What this controls"), Localizable("How to use it"), Localizable("Good to know")};
-	for(int Index = 0; Index < 3; ++Index)
-		gs_WikiPopupContext.m_aCardSections[Index] = {apHeadings[Index], &gs_WikiPopupContext.m_apCardParagraphs[Index], 1};
-	SWikiDocument Document = {pStableId, pTitle, gs_WikiPopupContext.m_aCardSections, 3};
+	const char *apHeadings[2] = {Localizable("How it works"), Localizable("Recommended settings")};
+	gs_WikiPopupContext.m_aCardSections[0] = {apHeadings[0], &gs_WikiPopupContext.m_apCardParagraphs[0], 2, "card-wiki", false};
+	gs_WikiPopupContext.m_aCardSections[1] = {apHeadings[1], &gs_WikiPopupContext.m_apCardParagraphs[2], 1, "card-wiki", false};
+	SWikiDocument Document = {pStableId, pTitle, gs_WikiPopupContext.m_aCardSections, 2};
 	// 卡片说明较短，沿用资源库面板尺寸；标题直接用卡片自己已本地化的标题。
 	StartWikiPopup(Ctx, Document, pStableId, pTitle, ESettingsSecondaryPanelKind::LIBRARY, true);
 }

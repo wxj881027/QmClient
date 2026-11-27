@@ -13,7 +13,7 @@
 namespace
 {
 	// 全量卡片 Wiki：条目按 stableId 升序排列（二分查找的前提，顺序错了测试会红）。
-	// 三段文案都是 i18n source（Localizable 只做提取标记），展示前由面板本地化。
+	// 摘要、机制和建议都是 i18n source（Localizable 只做提取标记），展示前由面板本地化。
 	// 引号内是界面上真实存在的控件名，改文案时必须和卡片里的标签保持一致。
 	const SCardWikiCopy s_aCardWikiCopies[] = {
 		{
@@ -109,7 +109,7 @@ namespace
 		{
 			"deck:appearance-name-plate-text",
 			Localizable("Adds border, gradient, rainbow and glow effects to nameplate text, with separate scopes for play, spectating and demos."),
-			Localizable("Turn on \"Nameplate text effects\", open \"Personal adjustments\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors."),
+			Localizable("Turn on \"Nameplate text effects\", open \"Personal adjustments\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors.", "card-wiki"),
 			Localizable("Effects are heavy on crowded servers, so keep \"Automatic effect LOD when crowded\" enabled."),
 		},
 		{
@@ -204,15 +204,15 @@ namespace
 		},
 		{
 			"deck:ddnet-prediction",
-			Localizable("Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking."),
+			Localizable("Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.", "card-wiki"),
 			Localizable("Set \"Prediction margin\" in milliseconds, tick \"AntiPing (latency compensation)\" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections."),
-			Localizable("Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. \"Prioritize game traffic\" only tags packets on Windows and needs a QoS-aware router to have any effect."),
+			Localizable("Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. \"Prioritize game traffic\" only tags packets on Windows and needs a QoS-aware router to have any effect.", "card-wiki"),
 		},
 		{
 			"deck:general-client",
-			Localizable("Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes."),
-			Localizable("Tick \"Skip the main menu\", and use \"Settings file\" or \"Themes directory\" to open those locations."),
-			Localizable("The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here."),
+			Localizable("Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.", "card-wiki"),
+			Localizable("Tick \"Skip the main menu\", and use \"Settings file\" or \"Themes directory\" to open those locations.", "card-wiki"),
+			Localizable("The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.", "card-wiki"),
 		},
 		{
 			"deck:general-game",
@@ -230,7 +230,7 @@ namespace
 			"deck:general-recording",
 			Localizable("Automatic demos, game-end screenshots and CSV exports, their file limits and save folders, plus screenshot watermarks."),
 			Localizable("Turn on \"Automatically record demos\" or a screenshot option, set \"Max demos\" or \"Max Screenshots\", and fill \"Demo directory\" or \"Screenshot directory\" to move the files."),
-			Localizable("Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog."),
+			Localizable("Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.", "card-wiki"),
 		},
 		{
 			"deck:global-search-input",
@@ -264,9 +264,9 @@ namespace
 		},
 		{
 			"deck:graphics-interaction",
-			Localizable("Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field."),
-			Localizable("Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields."),
-			Localizable("Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell."),
+			Localizable("Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.", "card-wiki"),
+			Localizable("Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.", "card-wiki"),
+			Localizable("Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.", "card-wiki"),
 		},
 		{
 			"deck:graphics-modes",
@@ -516,8 +516,8 @@ namespace
 		},
 		{
 			"qm:debug_graph",
-			Localizable("Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget."),
-			Localizable("Use cl_show_perf 1 to show the panel."),
+			Localizable("Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.", "card-wiki"),
+			Localizable("Use cl_show_perf 1 to show the panel.", "card-wiki"),
 			Localizable("It is a diagnostic overlay, not gameplay data; lower the opacity when it covers the map."),
 		},
 		{
@@ -619,7 +619,7 @@ namespace
 		{
 			"qm:lyrics",
 			Localizable("Shows the current song's lyric line in the Dynamic Island and lets you pick which music app supplies it."),
-			Localizable("Enable a music source to display its lyrics."),
+			Localizable("Enable a music source to display its lyrics.", "card-wiki"),
 			Localizable("Lyrics live in the Dynamic Island, so they stay hidden until that option is on."),
 		},
 		{
@@ -630,7 +630,7 @@ namespace
 		},
 		{
 			"qm:mini_features",
-			Localizable("Convenience options for chat, the scoreboard and tune zones."),
+			Localizable("Convenience options for chat, the scoreboard and tune zones.", "card-wiki"),
 			Localizable("Switch on only the ones you recognize; chat completion affects the chat input, and \"Show Qm badge\" adds the Qm marker next to names on the scoreboard."),
 			Localizable("These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered."),
 		},
@@ -708,9 +708,9 @@ namespace
 		},
 		{
 			"qm:water_hammer",
-			Localizable("Highlight held hammer and hook inputs while frozen"),
-			Localizable("The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys."),
-			Localizable("Own includes your main tee and dummy. Other players must be on your team and require server preinput support."),
+			Localizable("Highlight held hammer and hook inputs while frozen", "card-wiki"),
+			Localizable("The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.", "card-wiki"),
+			Localizable("Own includes your main tee and dummy. Other players must be on your team and require server preinput support.", "card-wiki"),
 		},
 		{
 			"qm:weapon_animation",

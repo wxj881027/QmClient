@@ -2454,9 +2454,6 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Escolher logotipo (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
-== Escolha desligado, reduzido ou completo; este único interruptor controla todas as animações. Depois escolha a forma do cursor para ajustes, console e chat.
-
 Choose the language used by the client
 == Choose the language used by the client
 
@@ -2726,9 +2723,6 @@ Client uptime
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
-
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
-== Predição do cliente e compensação de latência: margem de predição, AntiPing e suas entidades previstas, eventos previstos, redundância de pacotes de upload e marcação DSCP.
 
 Client-side self-kill protection
 == Proteção contra morte iniciada pelo cliente
@@ -3299,9 +3293,6 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Controla o que aparece ao lado dos nomes de outros jogadores, como tags de clã, marcas de amigo e identificadores de cliente.
-
-Convenience options for chat, the scoreboard and tune zones.
-== Opções práticas para o chat, o placar e as zonas de ajuste.
 
 Converse
 == Responder
@@ -4937,9 +4928,6 @@ Enable /team0 mode
 
 Enable 3D background particles
 == Ativar partículas de fundo 3D
-
-Enable a music source to display its lyrics.
-== Ative uma fonte de música para mostrar as letras.
 
 Enable absolute controller aiming in game
 == Habilitar mira absoluta do controle no jogo
@@ -6618,9 +6606,6 @@ Go forward the specified duration
 Go to keyframe
 == Ir ao quadro-chave
 
-Good to know
-== Vale saber
-
 Gores
 == Gores
 
@@ -7161,6 +7146,9 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Distância que o trator rastreia um tee
 
+How it works
+== Como funciona
+
 How long expression lasts
 == Duração da expressão facial
 
@@ -7181,9 +7169,6 @@ How often the broadcast time updates
 
 How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)
 == Como lidar com jogadores inativos (0 = mover para espectadores, 1 = mover para slot de espectador livre/expulsar, 2 = expulsar)
-
-How to use it
-== Como usar
 
 HTTP is not available
 == HTTP não está disponível
@@ -10038,9 +10023,6 @@ Ok
 Old chat style: no tee icons, no background
 == Estilo de chat antigo: sem ícones de tee, sem fundo
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
-== Ao atingir o limite, arquivos antigos são excluídos; copie as demos que quiser manter. O orçamento de pixels para capturas de pose não fica aqui: é uma opção de saída na janela de renderização de .poses.
-
 Old single-segment hook collision line
 == Linha de colisão de gancho antiga de segmento único
 
@@ -10406,9 +10388,6 @@ Overwrite clan even if empty
 
 Own hook line width
 == Largura da linha de gancho própria
-
-Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
-== Próprios inclui seu Tee principal e seu dummy. Para exibir outros jogadores, eles precisam estar na sua equipe e o servidor deve oferecer suporte a pré-entrada.
 
 p = Ping latency
 == p = Latência de ping
@@ -11211,9 +11190,6 @@ Prediction margin when frozen
 Prediction time
 == Tempo de previsão
 
-Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
-== A predição troca precisão por resposta; a redundância pode triplicar o tráfego de upload. "Priorizar tráfego de jogo" apenas marca pacotes no Windows e exige um roteador com QoS.
-
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 == Prepara as páginas de opções ao longo de vários quadros na inicialização e quando o menu está inativo, reduzindo as pausas na primeira abertura.
 
@@ -11912,6 +11888,9 @@ Receiving
 
 Recent
 == Recente
+
+Recommended settings
+== Configurações recomendadas
 
 Reconnect in %d sec
 == Reconectar em %d seg
@@ -13476,9 +13455,6 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Define codificador, contêiner e qualidade de uma vez: Diário é H.264 + MP4, Alta qualidade é HEVC + MP4 em tamanho menor, Edição é todos intra H.264 + MP4 com busca instantânea, e Intercâmbio é ProRes 422 HQ + MOV para outros editores.
 
-Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
-== Define quanto movimento a interface exibe (transições, entrada de cartões, reordenação, sensação de rolagem) e a forma do cursor em todos os campos de entrada.
-
 Sets laser colors for weapons and entities.
 == Define as cores do laser para armas e entidades.
 
@@ -14666,9 +14642,6 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == Mostra 5 posições de equipe da classificação ou de um jogador começando pela posição i (1 por padrão, -1 para a pior)
-
-Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
-== Mostra FPS, tempo de quadro, RTT e vantagem de predição. Barras acima da guia excedem o orçamento de 60 FPS.
 
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == Mostra na tela números de posição fracionários para saltos de borda, para você saltar no ponto certo.
@@ -16080,9 +16053,6 @@ The card only appears while such a bind exists; click its key field to change th
 The command is empty, incomplete, or exceeds the local config line limit.
 == O comando está vazio, incompleto ou excede o limite da linha de configuração local.
 
-The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
-== O escopo se aplica às cores dos Tee e aos ícones. Cada ícone pode ser ativado independentemente das teclas de direção.
-
 The downloaded file is not a valid demo
 == O arquivo baixado não é uma demo válida
 
@@ -16157,9 +16127,6 @@ The server rejected the map upload.
 
 The two keys that cast your vote: one for yes and one for no.
 == As duas teclas que dão o seu voto: uma para sim e outra para não.
-
-The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
-== Os limites de atualização e de quadros foram movidos para a página de gráficos: pertencem às configurações de renderização, não aqui.
 
 The watermarked screenshot was saved next to the original
 == A captura com marca d'água foi salva ao lado da original
@@ -16349,9 +16316,6 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == Marque 'Mostrar outros' para desenhar outras equipes de forma translúcida, defina a opacidade das sombras na linha dependente abaixo e use 'Mostrar quads de fundo' e 'Zoom padrão' para a visualização.
-
-Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== Marque "Pular o menu principal" e use "Arquivo de configurações" ou "Diretório de temas" para abrir esses locais.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Marque o que quiser: mostrar teclas presas, mostrar estado do martelo, mostrar controle do dummy ou mostrar cópia do dummy.
@@ -16884,9 +16848,6 @@ Tune zone (map / override)
 Tuning parameter
 == Parâmetro de ajuste
 
-Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
-== Em máquinas modestas, desligue: os cartões abrem e rolam imediatamente. A forma do cursor é só estética: os três estilos ocupam a mesma célula.
-
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 == Desative "Mostrar fantasma do mundo principal" para ocultar todos os Tee que vêm do servidor, incluindo outros jogadores; enquanto estiver ativo, o controle de opacidade define o quanto eles aparecem. As linhas de atalho enviam os mesmos comandos do menu de prática, então não é preciso abrir o chat.
 
@@ -16931,9 +16892,6 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 
 Turn on "Message merging" in Dream Features.
 == Ative "Message merging" em "Dream Features".
-
-Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== Ative "Efeitos de texto da placa de nome", abra "Ajustes pessoais" e ative "Borda", "Gradiente", "Arco-íris" ou "Brilho", ajustando as faixas e cores correspondentes.
 
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == Ative IME novo para a barra nova e gerenciar IME automaticamente ao digitar para o modo de entrada seguir a caixa de chat; as cores mudam em editar cor.
@@ -17429,9 +17387,6 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Usar estilo de título animado (substitui qm_title_color_mode)
-
-Use cl_show_perf 1 to show the panel.
-== Use cl_show_perf 1 para mostrar o painel.
 
 Use colored skins for frozen tees
 == Usar peles coloridas para tees congelados
@@ -18039,9 +17994,6 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == Para qual nível o binding DDRace está definido (automático, você não precisa usá-lo).
 
-What this controls
-== O que ele controla
-
 Wheel
 == Roda
 
@@ -18098,9 +18050,6 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == Se os jogadores veem outros por padrão (própria equipe = 2)
-
-Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
-== Se o menu principal é ignorado, as tags de mapas da comunidade, relatórios de falha na inicialização e as pastas de configurações, saves e temas.
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == Se deve controlar o Dummy simultaneamente (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
@@ -18817,6 +18766,74 @@ Train
 [Bind keyboard key]
 Menu
 == Tecla de menu
+
+[card-wiki]
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Escolha desligado, reduzido ou completo; este único interruptor controla todas as animações. Depois escolha a forma do cursor para ajustes, console e chat.
+
+[card-wiki]
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== Predição do cliente e compensação de latência: margem de predição, AntiPing e suas entidades previstas, eventos previstos, redundância de pacotes de upload e marcação DSCP.
+
+[card-wiki]
+Convenience options for chat, the scoreboard and tune zones.
+== Opções práticas para o chat, o placar e as zonas de ajuste.
+
+[card-wiki]
+Enable a music source to display its lyrics.
+== Ative uma fonte de música para mostrar as letras.
+
+[card-wiki]
+Highlight held hammer and hook inputs while frozen
+== Destacar martelo e gancho mantidos durante o congelamento
+
+[card-wiki]
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== Ao atingir o limite, arquivos antigos são excluídos; copie as demos que quiser manter. O orçamento de pixels para capturas de pose não fica aqui: é uma opção de saída na janela de renderização de .poses.
+
+[card-wiki]
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== Próprios inclui seu Tee principal e seu dummy. Para exibir outros jogadores, eles precisam estar na sua equipe e o servidor deve oferecer suporte a pré-entrada.
+
+[card-wiki]
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== A predição troca precisão por resposta; a redundância pode triplicar o tráfego de upload. "Priorizar tráfego de jogo" apenas marca pacotes no Windows e exige um roteador com QoS.
+
+[card-wiki]
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Define quanto movimento a interface exibe (transições, entrada de cartões, reordenação, sensação de rolagem) e a forma do cursor em todos os campos de entrada.
+
+[card-wiki]
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== Mostra FPS, tempo de quadro, RTT e vantagem de predição. Barras acima da guia excedem o orçamento de 60 FPS.
+
+[card-wiki]
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== O escopo se aplica às cores dos Tee e aos ícones. Cada ícone pode ser ativado independentemente das teclas de direção.
+
+[card-wiki]
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== Os limites de atualização e de quadros foram movidos para a página de gráficos: pertencem às configurações de renderização, não aqui.
+
+[card-wiki]
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== Marque "Pular o menu principal" e use "Arquivo de configurações" ou "Diretório de temas" para abrir esses locais.
+
+[card-wiki]
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== Em máquinas modestas, desligue: os cartões abrem e rolam imediatamente. A forma do cursor é só estética: os três estilos ocupam a mesma célula.
+
+[card-wiki]
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== Ative "Efeitos de texto da placa de nome", abra "Ajustes pessoais" e ative "Borda", "Gradiente", "Arco-íris" ou "Brilho", ajustando as faixas e cores correspondentes.
+
+[card-wiki]
+Use cl_show_perf 1 to show the panel.
+== Use cl_show_perf 1 para mostrar o painel.
+
+[card-wiki]
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== Se o menu principal é ignorado, as tags de mapas da comunidade, relatórios de falha na inicialização e as pastas de configurações, saves e temas.
 
 [Collision hitbox]
 All players
