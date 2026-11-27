@@ -4468,38 +4468,51 @@ void CChat::OnRender()
 		const float PreviewBottom = QmChatHistoryBottom(300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f)), ScaledFontSize);
 		// 行距与真实历史用同一条推进量：预览逐行上移 RowHeight + ExtraLineSpacing，
 		// 最后一行底部同样停在输入行上沿，改行距时编辑器不会和实机错位。
-		const float PreviewStep = RowHeight + ExtraLineSpacing;
-		const int PreviewRows = (int)std::floor((PreviewBottom - CHAT_HEIGHT_MIN) / maximum(1.0f, PreviewStep));
-		for(int PreviewIndex = 0; PreviewIndex < PreviewRows; ++PreviewIndex)
+		// 正文可用宽度与真实消息同一条换算，长句在这里也必须换行，
+		// 不能画成一条冲出聊天气泡和蓝框的长线。
+		const float PreviewTextMaxWidth = maximum(1.0f, ChatRect.w - x - RealMsgPaddingX * 2.0f - (g_Config.m_ClChatOld ? 0.0f : MessageTeeSize() + 2.0f));
+		float PreviewCursorY = PreviewBottom;
+		for(int PreviewIndex = 0; PreviewIndex < (int)std::size(s_aPreviewLines) && PreviewCursorY > CHAT_HEIGHT_MIN; ++PreviewIndex)
 		{
-			const float PreviewY = PreviewBottom - PreviewStep * (float)(PreviewIndex + 1);
 			// 数组按时间正序排列，底部（最新）从最后一条往前取，预览读起来才像一段真实聊天，
 			// 而不是从第一句开始循环。
 			const SPreviewLine &Line = s_aPreviewLines[(int)std::size(s_aPreviewLines) - 1 - PreviewIndex % (int)std::size(s_aPreviewLines)];
 			char aPreviewText[256];
 			str_format(aPreviewText, sizeof(aPreviewText), "%s: %s", Line.m_pPrefix, Line.m_pMessage);
-			const float TextWidth = TextRender()->TextWidth(FontSize(), aPreviewText, -1, -1.0f);
-			const float PreviewWidth = minimum(ChatRect.w - x, TextWidth + RealMsgPaddingX * 1.5f + (g_Config.m_ClChatOld ? 0.0f : MessageTeeSize() + 2.0f));
+			const STextBoundingBox TextBox = TextRender()->TextBoundingBox(FontSize(), aPreviewText, -1, PreviewTextMaxWidth);
+			const float LineHeight = maximum(RowHeight, TextBox.m_H + RealMsgPaddingY);
+			const float PreviewY = PreviewCursorY - LineHeight;
+			if(PreviewY < CHAT_HEIGHT_MIN)
+				break;
+			const float PreviewWidth = minimum(ChatRect.w - x, TextBox.m_W + RealMsgPaddingX * 1.5f + (g_Config.m_ClChatOld ? 0.0f : MessageTeeSize() + 2.0f));
 			ChatContentRight = maximum(ChatContentRight, x + PreviewWidth);
 
 			if(!g_Config.m_ClChatOld)
 			{
-				// 预览行都是单行，与真实单行气泡同一条半径派生，预览看起来才和实机一致。
-				const float PreviewRounding = ui_token::chat::BubbleRadius(true, RowHeight, RowHeight);
+				// 气泡按实际行高取单行/多行半径，和实机的换行消息一致。
+				const float PreviewRounding = ui_token::chat::BubbleRadius(ui_token::chat::BubbleIsSingleLine(LineHeight, RowHeight), LineHeight, RowHeight);
 				if(BackgroundBaseColor.a > 0.0f)
-					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, RowHeight}, 1.0f, IGraphics::CORNER_ALL, PreviewRounding);
+					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, LineHeight}, 1.0f, IGraphics::CORNER_ALL, PreviewRounding);
 				SRoundedSurfaceParams PreviewSurface;
 				PreviewSurface.m_Radius = PreviewRounding;
 				PreviewSurface.m_Corners = IGraphics::CORNER_ALL;
 				PreviewSurface.m_PixelSize = ChatPixelSize;
-				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, RowHeight}, BackgroundBaseColor, ui_token::color::COLOR_TRANSPARENT, PreviewSurface);
+				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, LineHeight}, BackgroundBaseColor, ui_token::color::COLOR_TRANSPARENT, PreviewSurface);
 			}
 
 			TextRender()->TextColor(Line.m_TextColor);
-			TextRender()->Text(x + (g_Config.m_ClChatOld ? 0.0f : RealMsgPaddingX), PreviewY + RealMsgPaddingY * 0.5f, FontSize(), aPreviewText, -1.0f);
+			TextRender()->Text(x + (g_Config.m_ClChatOld ? 0.0f : RealMsgPaddingX), PreviewY + RealMsgPaddingY * 0.5f, FontSize(), aPreviewText, PreviewTextMaxWidth);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
-			ExtendBounds(x, PreviewY, PreviewWidth, RowHeight);
+			ExtendBounds(x, PreviewY, PreviewWidth, LineHeight);
+			PreviewCursorY = PreviewY - ExtraLineSpacing;
 		}
+
+		// 实机只有在输入框打开、历史超过视口时才画滚动条；编辑器要预览的就是那个状态，
+		// 所以给一份固定几何（内容高度按视口两倍，停在最新一条），左右跟随配置。
+		const float PreviewHistoryHeight = maximum(0.0f, PreviewBottom - CHAT_HEIGHT_MIN);
+		const SQmChatScrollbarFrame PreviewScrollbar = QmResolveChatScrollbarFrame(ChatRect, CHAT_HEIGHT_MIN, PreviewHistoryHeight, PreviewHistoryHeight * 2.0f, 1.0f, ChatScrollbarOnRight);
+		if(PreviewScrollbar.m_Visible)
+			QmDrawChatScrollbar(Ui(), PreviewScrollbar.m_Rail, PreviewScrollbar.m_Thumb, false);
 	}
 	Graphics()->ClipDisable();
 
