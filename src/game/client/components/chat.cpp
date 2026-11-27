@@ -4268,8 +4268,8 @@ void CChat::OnRender()
 			continue;
 
 		const float RenderScale = maximum(0.0f, Line.m_Presentation.m_RenderScale);
-			const float RenderedContentWidth = Line.m_ContentWidth * RenderScale;
-			ChatContentRight = maximum(ChatContentRight, x + AnimOffsetX + RenderedContentWidth);
+		const float RenderedContentWidth = Line.m_ContentWidth * RenderScale;
+		ChatContentRight = maximum(ChatContentRight, x + AnimOffsetX + RenderedContentWidth);
 		const CUIRect RenderedTextRect = {x + AnimOffsetX, RenderY, RenderedContentWidth, LineHeight * RenderScale};
 		const bool MouseInsideLine = HistoryClipRect.Inside(MousePos) && IsChatLineHit(RenderedTextRect, MousePos);
 		if(CopyClickReleased && MouseInsideLine)
