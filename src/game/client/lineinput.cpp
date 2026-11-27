@@ -911,6 +911,14 @@ void CLineInput::OnActivate()
 
 void CLineInput::OnDeactivate()
 {
+	// 失焦前把未提交的组合串写回缓冲区：切换输入法或关闭输入框会取消组合，
+	// 不先落盘的话，用户已经打出来的拼音会跟着组合串一起消失。
+	if(Input()->HasComposition())
+	{
+		const char *pComposition = Input()->GetComposition();
+		if(pComposition != nullptr && pComposition[0] != '\0')
+			SetRange(pComposition, m_SelectionStart, m_SelectionEnd);
+	}
 	m_InputMotion.Reset();
 	if(!TextInputAutoManaged())
 		Input()->StopTextInput();
