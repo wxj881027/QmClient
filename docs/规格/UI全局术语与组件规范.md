@@ -482,7 +482,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`EVoteHudMode` / `QmVoteHudMode` / `QmVoteHudCoordScale` / `QmVoteHudDefaultRect` / `QmVoteHudLayoutFromRect` / `QmMiniVoteHudLayoutFromRect` / `QmScoreboardVoteLayout`（`components/qmclient/voting_hud.h`）+ `CVoting::RenderVoteHudPanel` / `CVoting::RenderMiniVoteHudPanel`（`components/voting.cpp`）+ `ui_token::vote_hud::*`（`QmUi/UiTokens.h`）。
 - 坐标与尺寸：非计分板完整面板处于游戏世界屏幕坐标，计分板处于 UI 坐标；`QmVoteHudCoordScale` 按两套坐标宽度折算，完整面板因此与计分板上方投票面板保持同一物理宽高。旧版紧凑状态条固定为 70×35，只缩小尺寸，不另起配色。计分板内始终使用完整面板，不受 `qm_mini_vote_hud` 开关影响。
 - 可见性：投票进行中且尚未选择时，按开关显示紧凑条或完整面板；投票后默认消失，只有 `cl_show_votes_after_voting=1` 才继续显示。计分板打开时普通 HUD 隐藏，由计分板内完整投票面板接管。
-- 底色与圆角取计分板同一份：完整面板、计分板内投票和旧版紧凑状态条都走同一个 `ResolveConfiguredInterfaceSurface()` 表面解析（`QmUi/UiTheme.h`，压暗比例取 `ui_token::panel::SURFACE_COLOR_SCALE`），圆角取 `ui_token::vote_hud::RADIUS`（与计分板主面板同为 `radius::CARD`）；完整面板按钮仍走 `ui_widget::DrawButtonSurface`。
+- 完整面板、计分板内投票和紧凑状态条统一使用小圆角 `ui_token::vote_hud::RADIUS`（`radius::TIGHT`）。底色与计分板共用 `ResolveConfiguredInterfaceSurface()`（`QmUi/UiTheme.h`），压暗比例取 `ui_token::panel::SURFACE_COLOR_SCALE`。完整面板按钮使用 `ui_widget::DrawButtonSurface`。
 - 禁止的反面写法：把完整面板的 `320×60` 直接塞进游戏世界坐标导致实机放大；投票进行中且尚未选择时返回“完全不画”；给非计分板投票框重新写 `SURFACE_GLASS` 或裸 `ColorRGBA`；新增第二个小 HUD 开关；用 `Ui()->RenderGaussianBlur(...)` 绕开 `CUiScopedGaussianBlur`。
 
 ### 3.12e 媒体封面（唱片自转 / cover spin）

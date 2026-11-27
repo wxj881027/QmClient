@@ -4,8 +4,8 @@
 
 #include <iterator>
 
-static_assert(ui_token::vote_hud::RADIUS == ui_token::radius::CARD,
-	"vote panel must share the scoreboard card radius");
+static_assert(ui_token::vote_hud::RADIUS == ui_token::radius::TIGHT,
+	"vote panels use tight corners in both compact and full layouts");
 
 TEST(QmVotingHud, ScoreboardOwnsVotePresentationWhileOpen)
 {

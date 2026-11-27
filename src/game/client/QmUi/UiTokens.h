@@ -1390,8 +1390,7 @@ namespace ui_token::vote_hud
 	inline constexpr float TIME_WIDTH_RATIO = 0.4f;
 	inline constexpr float TIME_GAP = 5.0f;
 	inline constexpr float BUTTON_TEXT_INSET = 3.0f;
-	// 与计分板主面板同一档圆角。
-	inline constexpr float RADIUS = radius::CARD;
+	inline constexpr float RADIUS = radius::TIGHT;
 } // namespace ui_token::vote_hud
 
 // 输入法（IME）候选面板：跟随系统输入法浮在光标下方的小面板。
