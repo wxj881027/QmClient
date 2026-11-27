@@ -1518,6 +1518,9 @@ Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
 == デモを自動録画
 
+Automatically record performance diagnostics on startup
+== 起動時にパフォーマンス診断を自動記録
+
 Automatically record replays
 == リプレイを自動録画
 
@@ -17532,8 +17535,8 @@ Use procedural ring pipeline
 Use public word filter
 == 共有NGワードを使用
 
-Use qm_pref <0|1> [20-400] (milliseconds)
-== 使い方：qm_pref <0|1> [20-400]（ミリ秒）
+Use qm_perf <0|1>
+== 使い方：qm_perf <0|1>
 
 Use server defaults
 == サーバーの既定値を使用

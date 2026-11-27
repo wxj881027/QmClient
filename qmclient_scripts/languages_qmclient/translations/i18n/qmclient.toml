@@ -10293,6 +10293,22 @@ turkish = "Başlangıçta istemci takılma tanılamasını etkinleştir"
 polish = "Włącz diagnostykę przycięć klienta przy uruchamianiu"
 
 [[message]]
+key = "Automatically record performance diagnostics on startup"
+[message.translations]
+simplified_chinese = "启动时自动记录性能诊断"
+traditional_chinese = "啟動時自動記錄效能診斷"
+japanese = "起動時にパフォーマンス診断を自動記録"
+korean = "시작 시 성능 진단 자동 기록"
+russian = "Автоматически записывать диагностику производительности при запуске"
+german = "Leistungsdiagnose beim Start automatisch aufzeichnen"
+spanish = "Registrar automáticamente el diagnóstico de rendimiento al iniciar"
+french = "Enregistrer automatiquement le diagnostic de performance au démarrage"
+brazilian_portuguese = "Registrar automaticamente o diagnóstico de desempenho na inicialização"
+portuguese = "Registar automaticamente o diagnóstico de desempenho no arranque"
+turkish = "Başlangıçta performans tanılamasını otomatik kaydet"
+polish = "Automatycznie zapisuj diagnostykę wydajności przy uruchomieniu"
+
+[[message]]
 key = "Enable collision hitboxes"
 [message.translations]
 simplified_chinese = "启用碰撞箱"
@@ -39453,20 +39469,20 @@ turkish = "Ortak kelime filtresini kullan"
 polish = "Używaj publicznego filtra słów"
 
 [[message]]
-key = "Use qm_pref <0|1> [20-400] (milliseconds)"
+key = "Use qm_perf <0|1>"
 [message.translations]
-simplified_chinese = "用法：qm_pref <0|1> [20-400]（毫秒）"
-traditional_chinese = "用法：qm_pref <0|1> [20-400]（毫秒）"
-japanese = "使い方：qm_pref <0|1> [20-400]（ミリ秒）"
-korean = "사용법: qm_pref <0|1> [20-400] (밀리초)"
-russian = "Синтаксис: qm_pref <0|1> [20-400] (миллисекунды)"
-german = "Verwendung: qm_pref <0|1> [20-400] (Millisekunden)"
-spanish = "Uso: qm_pref <0|1> [20-400] (milisegundos)"
-french = "Utilisation : qm_pref <0|1> [20-400] (millisecondes)"
-brazilian_portuguese = "Uso: qm_pref <0|1> [20-400] (milissegundos)"
-portuguese = "Utilização: qm_pref <0|1> [20-400] (milissegundos)"
-turkish = "Kullanım: qm_pref <0|1> [20-400] (milisaniye)"
-polish = "Użycie: qm_pref <0|1> [20-400] (milisekundy)"
+simplified_chinese = "用法：qm_perf <0|1>"
+traditional_chinese = "用法：qm_perf <0|1>"
+japanese = "使い方：qm_perf <0|1>"
+korean = "사용법: qm_perf <0|1>"
+russian = "Синтаксис: qm_perf <0|1>"
+german = "Verwendung: qm_perf <0|1>"
+spanish = "Uso: qm_perf <0|1>"
+french = "Utilisation : qm_perf <0|1>"
+brazilian_portuguese = "Uso: qm_perf <0|1>"
+portuguese = "Utilização: qm_perf <0|1>"
+turkish = "Kullanım: qm_perf <0|1>"
+polish = "Użycie: qm_perf <0|1>"
 
 [[message]]
 key = "Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active"

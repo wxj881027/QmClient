@@ -1518,6 +1518,9 @@ Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
 == Автоматически записывать демки
 
+Automatically record performance diagnostics on startup
+== Автоматически записывать диагностику производительности при запуске
+
 Automatically record replays
 == Автоматически записывать повторы
 
@@ -17532,8 +17535,8 @@ Use procedural ring pipeline
 Use public word filter
 == Использовать общий фильтр слов
 
-Use qm_pref <0|1> [20-400] (milliseconds)
-== Синтаксис: qm_pref <0|1> [20-400] (миллисекунды)
+Use qm_perf <0|1>
+== Синтаксис: qm_perf <0|1>
 
 Use server defaults
 == Использовать настройки сервера

@@ -152,7 +152,7 @@ def scene(build: Path, pngs: dict[str, Path], mode: str, args: argparse.Namespac
 					"ui_page 16",
 					"ui_settings_page 1",
 					"qm_settings_prewarm 0",
-					"qm_pref 1 400",
+					"qm_perf 1",
 					"qm_graphics_trace 3",
 					"stdout_output_level 1",
 					"http_allow_insecure 1",

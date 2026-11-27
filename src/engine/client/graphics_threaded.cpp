@@ -3065,7 +3065,7 @@ void CGraphics_Threaded::RenderMediaIslandSdf(const IGraphics::SMediaIslandSdfPa
 	m_pCommandBuffer->AddRenderCalls(1);
 }
 
-// 圆角绘制统计：只在 qm_pref 启用时累加，用于判断该不该做合批。
+// 圆角绘制统计：只在 qm_perf 启用时累加，用于判断该不该做合批。
 static int s_QmPerfSdfRects = 0;
 static int s_QmPerfSdfFlushes = 0;
 static int64_t s_QmPerfLastLog = 0;

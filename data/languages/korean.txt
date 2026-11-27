@@ -1518,6 +1518,9 @@ Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
 == 데모 자동 녹화
 
+Automatically record performance diagnostics on startup
+== 시작 시 성능 진단 자동 기록
+
 Automatically record replays
 == 리플레이 자동 녹화
 
@@ -17532,8 +17535,8 @@ Use procedural ring pipeline
 Use public word filter
 == 공용 금칙어 필터 사용
 
-Use qm_pref <0|1> [20-400] (milliseconds)
-== 사용법: qm_pref <0|1> [20-400] (밀리초)
+Use qm_perf <0|1>
+== 사용법: qm_perf <0|1>
 
 Use server defaults
 == 서버 기본값 사용

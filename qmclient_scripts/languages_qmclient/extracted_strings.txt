@@ -518,6 +518,7 @@ Automatically fall back to the default asset when a custom asset sprite is fully
 Automatically launch Steam when the client is started externally, so Steam can track your playtime
 Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
+Automatically record performance diagnostics on startup
 Automatically record replays
 Automatically reply to muted players
 Automatically reply while the window is unfocused
@@ -6048,7 +6049,7 @@ Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
 Use procedural ring pipeline
 Use public word filter
-Use qm_pref <0|1> [20-400] (milliseconds)
+Use qm_perf <0|1>
 Use server defaults
 Use skin color for frozen feet
 Use skin color for frozen Tee's feet

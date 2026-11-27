@@ -2490,7 +2490,7 @@ export function generateNarrative(p: Percentiles, spikes: SpikeInfo[], complianc
   lines.push(`本次 session 共采集 ${p.count} 帧渲染数据，整体 ${verdictText}。`);
 
   if (biased) {
-    lines.push(`注意：当前采样阈值估计 p5=${samplingThresholdMs.toFixed(1)}ms（旧版过滤阈值约 4ms），日志可能仅包含超过阈值的帧。实际合规率可能高于日志所示。建议使用统一诊断开关 qm_pref 1 50 重新采集完整帧分布。`);
+    lines.push(`注意：当前采样阈值估计 p5=${samplingThresholdMs.toFixed(1)}ms（旧版过滤阈值约 4ms），日志可能仅包含超过阈值的帧。实际合规率可能高于日志所示。建议使用统一诊断开关 qm_perf 1 重新采集完整帧分布。`);
   } else {
     lines.push(`帧预算合规率：240Hz (4.17ms) 为 ${compliance240.toFixed(1)}%，120Hz (8.33ms) 为 ${compliance120.toFixed(1)}%，60Hz (16.67ms) 为 ${compliance60.toFixed(1)}%。`);
   }

@@ -264,7 +264,7 @@ def scenario_invalid_statistics_preserved(env: ProcessEnvironment) -> None:
 
 def scenario_perf_log_persistence(env: ProcessEnvironment) -> None:
 	"""验证开启性能调试后真实进程写出带 stage 字段的日志。"""
-	env.start_client(["qm_pref 1 50"], connect=False)
+	env.start_client(["qm_perf 1"], connect=False)
 	env.client.wait_for(lambda line: "writing performance log to" in line, "performance log setup", 15)
 	perf_path = _wait_for_perf_log(env)
 	_quit_client(env)
@@ -405,7 +405,7 @@ def scenario_window_close_during_asset_loading(env: ProcessEnvironment) -> None:
 		from screenshot_viewer_smoke import Windows, wait_for
 
 	client = env.start_client(
-		["cl_show_welcome 1", "qm_steam_auto_launch 0", "qm_pref 1 50"],
+		["cl_show_welcome 1", "qm_steam_auto_launch 0", "qm_perf 1"],
 		connect=False,
 		env={"QMCLIENT_TEST_ASSET_LOAD_DELAY_MS": "1000", "QMCLIENT_TEST_HIDE_DIALOG": "1"},
 		startup_timeout=None,

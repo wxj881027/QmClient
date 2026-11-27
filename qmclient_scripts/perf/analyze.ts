@@ -34,7 +34,7 @@ function findLatestLog(): string {
   const files = listLogFiles();
   if (files.length === 0) {
     console.error('无法找到性能日志文件。请确保:');
-    console.error('  1. qm_pref 1 50 已启用');
+    console.error('  1. qm_perf 1 已启用');
     console.error('  2. 至少运行过一次游戏客户端');
     process.exit(1);
   }

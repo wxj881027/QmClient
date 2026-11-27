@@ -877,6 +877,7 @@ MACRO_CONFIG_INT(QmChatScrollbarRight, qm_chat_scrollbar_right, 0, 0, 1, CFGFLAG
 #endif
 MACRO_CONFIG_INT(QmChatRelatedOnly, qm_chat_related_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players")
 MACRO_CONFIG_INT(QmChatSaveDraft, qm_chat_save_draft, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep unsent message on chat close")
+MACRO_CONFIG_INT(QmPerfAutoRecord, qm_perf_auto_record, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically record performance diagnostics on startup")
 MACRO_CONFIG_INT(QmChatCommandCompletion, qm_chat_command_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show command completion in chat")
 MACRO_CONFIG_INT(QmChatEmojiCompletion, qm_chat_emoji_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show emoji completion in chat")
 MACRO_CONFIG_COL(QmChatCompletionBgColor, qm_chat_completion_bg_color, 0x00002C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat completion background color")

@@ -87,6 +87,11 @@
 			"note": "网易云助手路径，首次使用时自动探测"
 		},
 		{
+			"name": "qm_perf_auto_record",
+			"category": "console-only",
+			"note": "性能诊断开关由 qm_perf 1/0 写入并记忆，刻意不做设置页入口"
+		},
+		{
 			"name": "qm_ping_cache_max_age_hours",
 			"category": "internal",
 			"note": "服务器 ping 缓存过期策略，内部参数"

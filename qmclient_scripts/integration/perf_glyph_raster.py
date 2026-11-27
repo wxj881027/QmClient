@@ -92,7 +92,7 @@ def run_sample(binary: Path, directory: Path, mode: int, test_storage: bool, dat
 		"qm_steam_auto_launch 0",
 		"qm_websocket_url disabled",
 		"snd_enable 0",
-		"qm_pref 1 50",
+		"qm_perf 1",
 		"qm_settings_prewarm 0",
 		"qm_settings_prewarm_migrated 1",
 		f"qm_text_raster_mode {mode}",

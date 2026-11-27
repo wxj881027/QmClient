@@ -1518,6 +1518,9 @@ Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
 == 自動錄製回放
 
+Automatically record performance diagnostics on startup
+== 啟動時自動記錄效能診斷
+
 Automatically record replays
 == 自動錄製回放
 
@@ -17532,8 +17535,8 @@ Use procedural ring pipeline
 Use public word filter
 == 使用公共屏蔽詞
 
-Use qm_pref <0|1> [20-400] (milliseconds)
-== 用法：qm_pref <0|1> [20-400]（毫秒）
+Use qm_perf <0|1>
+== 用法：qm_perf <0|1>
 
 Use server defaults
 == 使用服務預設值

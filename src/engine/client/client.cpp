@@ -8985,9 +8985,11 @@ int main(int argc, const char **argv)
 	}
 	pFutureFileLogger->Set(std::move(pConfiguredFileLogger));
 
+	// 性能诊断按保存的开关自动开始记录：qm_perf 1/0 只改配置，下次启动沿用。
+	g_Config.m_QmPerfEnabled = g_Config.m_QmPerfAutoRecord != 0;
+
 	// 性能日志文件：CFutureLogger 只能 Set 一次，启动时固定到可切换包装；
-	// 游戏内 qm_pref
-	// 变化由 CClient::UpdateQmPerfFileLogger 按帧检测，立即打开/关闭文件。
+	// 游戏内 qm_perf 变化由 CClient::UpdateQmPerfFileLogger 按帧检测，立即打开/关闭文件。
 	std::shared_ptr<CQmPerfFileSwitchLogger> pQmPerfFileSwitchLogger = std::make_shared<CQmPerfFileSwitchLogger>();
 	pFuturePerfFileLogger->Set(pQmPerfFileSwitchLogger);
 	pClient->SetQmPerfFileSwitch(std::move(pQmPerfFileSwitchLogger));
