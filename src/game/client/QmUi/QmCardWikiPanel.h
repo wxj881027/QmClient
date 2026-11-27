@@ -11,7 +11,7 @@
 struct IUiContext;
 struct SWikiDocument;
 
-// 卡片 ⓘ 打开的三段式说明面板。正文按 stableId 解析，标题沿用卡片自己的
+// 卡片 ⓘ 打开的两段式说明面板。正文按 stableId 解析，标题沿用卡片自己的
 // 标题，保证面板与卡片写法一致；没有 Wiki 条目的卡片不会被打开。
 void OpenCardWikiPopup(const IUiContext &Ctx, const char *pStableId, const char *pTitle);
 

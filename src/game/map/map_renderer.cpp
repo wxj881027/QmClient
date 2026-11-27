@@ -175,6 +175,10 @@ void CMapRenderer::LoadStep(int MaxLayers, CMapLoadTask::TClock::time_point Dead
 		}
 		if(m_pPreparingLayer)
 		{
+			// 图层 OnInit 里的同步解析（quad 数据换序、大对象构造）是独立单元。
+			// 如果它已经吃满本次切片，先返回，别把 Prepare 的首段压进同一帧。
+			if(Deadline != CMapLoadTask::TClock::time_point::max() && CMapLoadTask::TClock::now() >= Deadline)
+				return;
 			if(pProfile)
 			{
 				const CMapItemLayer *pLayer = m_pLoadLayers->GetLayer(pGroup->m_StartLayer + m_LoadLayerId);

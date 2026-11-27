@@ -741,7 +741,6 @@ Cannot update public words. Previous words remain active.
 Cannot write cfg file
 Cannot write the wiki file
 Cap update rate to save power
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
 Capsule end strength
 Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
@@ -846,7 +845,6 @@ Choose country flag
 Choose default eyes when joining a server
 Choose export name first.
 Choose Logo (PNG / WebP)
-Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
 Choose the language used by the client
 Choose the menu font and cursor appearance
 Choose the menu font and font weight
@@ -858,7 +856,7 @@ Chooses the font family and weight used by the menus.
 Chooses the language used by every menu, setting and message in the client.
 Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
 Chroma sampling
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
@@ -939,7 +937,6 @@ Client self-kill is enabled
 Client update rate
 Client uptime
 Client-side prediction and latency compensation
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
 Client-side self-kill protection
 Close
 Close the demo player
@@ -1135,7 +1132,6 @@ Controls how the settings cards themselves are drawn: card background, border an
 Controls laser shape, glow and animation.
 Controls the shape and colors shared by the whole interface: corner curve, capsule ends, surfaces, accent, control and popup backgrounds, text color mode and blur.
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
-Convenience options for chat, the scoreboard and tune zones.
 Converse
 Converse with the last person you whispered to (private message)
 Convert threads
@@ -1703,7 +1699,6 @@ Enable "Try to rename before finishing", then fill in the finishing name and run
 Enable /swap
 Enable /team0 mode
 Enable 3D background particles
-Enable a music source to display its lyrics.
 Enable absolute controller aiming in game
 Enable and calibrate controller input
 Enable antiping (more aggressive prediction)
@@ -2040,6 +2035,7 @@ feat-003 dogfood: tokens + 12 widgets
 Feature guide and announcements
 Feature Search
 Feet
+FIFO
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 Fifo file (non-Windows) or named pipe (Windows) used as input for client console
 File
@@ -2280,7 +2276,6 @@ Go forward one marker
 Go forward one tick
 Go forward the specified duration
 Go to keyframe
-Good to know
 Gores
 Gores actor
 Gores auto weapon switch
@@ -2469,6 +2464,7 @@ Hovered: %p   Next hovered: %p   Active: %p   Last active: %p
 How far a wheel or drag can push past an end, in UI pixels; 0 disables
 How far the plasma gun tracks a tee
 How far the tractor tracks a tee
+How it works
 How long expression lasts
 How long the server message of the day is displayed
 How many cfg files this flow goes through by exec; five at most.
@@ -2478,7 +2474,6 @@ How often a keyframe is written. Cut points can only land on keyframes: 0 uses t
 How often the broadcast time updates
 How the blueprint works
 How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)
-How to use it
 HTTP is not available
 HTTP map download: connection phase timeout (in ms, 0=disabled)
 HTTP map download: low speed limit (in bytes/s, 0=disabled)
@@ -2532,6 +2527,7 @@ IME gradient vertical position percentage
 IME selected text color
 IME selection background color
 IME text color
+Immediate
 Import and restart
 Import configuration package
 Import friend code
@@ -2700,6 +2696,7 @@ Jump hint vertical position (% of screen height)
 k = Resend loss
 Kaomoji
 Kawase
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
 Keep hook when teleporting
 Keep inside game window
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
@@ -2953,6 +2950,7 @@ Lyrics language (0=Original, 1=Translation, 2=Original and translation)
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 Lyrics translation
 Magic: Spirit Script
+Mailbox
 Main Asset
 Main menu
 Main only
@@ -3484,7 +3482,6 @@ Offline
 OK
 Ok
 Old chat style: no tee icons, no background
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
 Old single-segment hook collision line
 Oldschool
 Omit the typing flag from both tees' outgoing input so other players do not see your typing bubble.
@@ -3613,7 +3610,6 @@ Overwrite clan even if empty
 Overwrites
 overwrites
 Own hook line width
-Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
 p = Ping latency
 Pack name
 packets
@@ -3698,7 +3694,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 Pick result: %s
 Pick the key that starts this flow.
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
 Pick the parts to colorize, then choose a gradient mode and colors.
 Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 Pickups
@@ -3886,10 +3882,10 @@ Prediction lead is high, check prediction settings and server timing
 Prediction margin
 Prediction margin when frozen
 Prediction time
-Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 Preparing chat export: %d%%
 Preparing demo playback
+Present mode
 Preset %d
 Preset bar
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
@@ -4124,6 +4120,7 @@ Receive translation method
 Receive voice from spectators/inactive players
 Receiving
 Recent
+Recommended settings
 Reconnect in %d sec
 Record a MomentCap .poses scene to a video
 Record chat replays.
@@ -4660,7 +4657,6 @@ Set whether a friend is pinned
 Set your checkpoints based on another player
 Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
-Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
 Sets laser colors for weapons and entities.
 Sets master, music and game volume separately.
 Sets one of the two rescue modes (auto or manual). Prints current mode if no arguments provided
@@ -5060,7 +5056,6 @@ Shows a translated copy of received chat lines and can translate your own messag
 Shows each player's latest chat message in a bubble above their head, in addition to the chat box.
 Shows five points of the global point ladder beginning with rank i (1 by default)
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
-Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 Shows gameplay information for this server
 Shows help to command r, general help if left blank
@@ -5550,7 +5545,6 @@ The bind menu is full.
 The blueprint never runs by itself: it only writes the bind line at the bottom right.
 The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.
 The command is empty, incomplete, or exceeds the local config line limit.
-The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
 The downloaded file is not a valid demo
 The extra menu button which toggles visibility of buttons with "Extra Menu" visibilities. Also opens the ingame menu on long press.
 The extra menu with the given number is activated.
@@ -5576,7 +5570,6 @@ The selected button is overlapping with other buttons.
 The server is running a non-standard tuning on a pure game type.
 The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
-The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
 The watermarked screenshot was saved next to the original
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 Theme
@@ -5643,7 +5636,6 @@ Tick "Replace non-friend names with ID", "Replace non-friend skins with default"
 Tick "Show Gores drown board"; set "Players shown" and "Card opacity", and add "Show player Tee" for avatars.
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 Tick delay before executing qm_execute_on_join
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
@@ -5826,7 +5818,6 @@ Tune variable to value
 Tune variable to value or show current value
 Tune zone (map / override)
 Tuning parameter
-Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 Turn on "Auto translate received messages", pick a "Translation service", set "Translate received messages to", then press "Test translation".
@@ -5842,7 +5833,6 @@ Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins
 Turn on "Enable word filter list", type the words into "Word Filter" separated by commas, then choose "Replace mode" or "Hide player messages" under "Behavior".
 Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visuals", "Audio" and "Chat", then set the "Zen mode key" for quick switching.
 Turn on "Message merging" in Dream Features.
-Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 Turn on "Notify when friends come online" and "Auto refresh server list", then tune "Refresh interval"; "Auto greet friends entering map" is optional.
 Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opacity" and "Font size", or pick your own colors.
@@ -6014,7 +6004,6 @@ Use a fixed prediction margin while frozen
 Use alternative antiping smoothing, incompatible with cl_antiping_smooth
 Use alternative world tick calculation making hooks behave as if all players have Strong.
 Use animated title style (overrides qm_title_color_mode)
-Use cl_show_perf 1 to show the panel.
 Use colored skins for frozen tees
 Use compact list view for config variables
 Use current map as background
@@ -6170,6 +6159,7 @@ Vote yes/no
 Votes often appear while you are still moving, so keep both keys easy to reach.
 Voting
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
 Wait for current vote to end before calling a new one.
 Wait time before a player can rejoin after being voted to spectators (in minutes)
 Wait time before triggering auto vote
@@ -6224,7 +6214,6 @@ Weapons
 Website
 Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
-What this controls
 Wheel
 Wheel distance per tick; hold Alt for 3x
 Wheel down
@@ -6247,7 +6236,6 @@ Whether players can pause their character.
 Whether players can use the showother command
 Whether players see all tees by default
 Whether players see others by default (own team = 2)
-Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 Whether to limit zoom in editor (0=unlimited)
 Whether to publish player scores.
@@ -6478,6 +6466,23 @@ Zoom to current mouse target
 [Axiom map difficulty]	Solo
 [Axiom map difficulty]	Train
 [Bind keyboard key]	Menu
+[card-wiki]	Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+[card-wiki]	Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+[card-wiki]	Convenience options for chat, the scoreboard and tune zones.
+[card-wiki]	Enable a music source to display its lyrics.
+[card-wiki]	Highlight held hammer and hook inputs while frozen
+[card-wiki]	Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+[card-wiki]	Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+[card-wiki]	Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+[card-wiki]	Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+[card-wiki]	Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+[card-wiki]	The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+[card-wiki]	The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+[card-wiki]	Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+[card-wiki]	Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+[card-wiki]	Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+[card-wiki]	Use cl_show_perf 1 to show the panel.
+[card-wiki]	Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
 [Collision hitbox]	All players
 [Config help]	%s (default: "%s", max length: %d)
 [Config help]	%s (default: $%0*X)

@@ -51,6 +51,16 @@ TEST(QmSkinNameIndex, UnicodeNamesUseTheSameCaseFoldedIdentity)
 	EXPECT_STREQ(Index.Find("äskin"), "ÄSkin");
 }
 
+TEST(QmSkinNameIndex, RemoveUsesCaseFoldedIdentity)
+{
+	CSkinNameIndex Index;
+	ASSERT_TRUE(Index.Add("M_buoumao"));
+
+	Index.Remove("m_BUOUMAO");
+
+	EXPECT_EQ(Index.Find("M_buoumao"), nullptr);
+}
+
 TEST(QmSkinNameIndex, CaseInsensitiveMapFindsExistingContainerForEitherCase)
 {
 	std::unordered_map<std::string, int, SSkinNameHash, SSkinNameEqual> Entries;

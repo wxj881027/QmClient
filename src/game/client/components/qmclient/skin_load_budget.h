@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <limits>
 
 inline std::chrono::milliseconds QmSkinContainerUpdateInterval(std::chrono::milliseconds AdaptiveInterval, bool TeeRequestsPending)
 {
@@ -14,6 +15,30 @@ inline bool QmSkinCanFinalize(int Processed, std::chrono::nanoseconds Elapsed, s
 	// 首个已就绪皮肤始终取得进展，后续皮肤按时间预算留到下一轮处理。
 	return Processed == 0 || Elapsed < Budget;
 }
+
+// 驻留皮肤源字节的增量计数。此前每轮 OnUpdate 都遍历全部皮肤容器重算，
+// 7 千条目录时单帧可到 7 ms；这里只在皮肤装载/卸载时维护总量。
+class CQmSkinSourceBytesTracker
+{
+public:
+	void SetLoaded(size_t OldBytes, size_t NewBytes)
+	{
+		Remove(OldBytes);
+		if(NewBytes > std::numeric_limits<size_t>::max() - m_BytesInUse)
+			m_BytesInUse = std::numeric_limits<size_t>::max();
+		else
+			m_BytesInUse += NewBytes;
+	}
+	void Remove(size_t Bytes)
+	{
+		m_BytesInUse = Bytes >= m_BytesInUse ? 0 : m_BytesInUse - Bytes;
+	}
+	void Reset() { m_BytesInUse = 0; }
+	size_t BytesInUse() const { return m_BytesInUse; }
+
+private:
+	size_t m_BytesInUse = 0;
+};
 
 class CQmSkinUploadFrameBudget
 {

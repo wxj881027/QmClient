@@ -404,6 +404,7 @@ void CInput::ClearImeCandidates()
 void CInput::ClearImeState()
 {
 	m_CompositionString = "";
+	m_PendingCancelledComposition.clear();
 	m_CompositionCursor = 0;
 	ClearImeCandidates();
 }
@@ -680,12 +681,9 @@ void CInput::HandleTextEditingEvent(const char *pText, int Start, int Length)
 	}
 	else
 	{
-		// 切中英文会直接取消组合：没有提交事件，候选也已消失。
-		// 这时把已经打出来的组合串写回输入框，否则草稿会凭空消失。
-		// 搜狗等在翻页/高亮候选时也会发空串，但候选还在，那种情况不能提交。
 		if(!m_CompositionString.empty() && GetCandidateCount() == 0)
 		{
-			AddTextEvent(m_CompositionString.c_str());
+			m_PendingCancelledComposition = std::move(m_CompositionString);
 			m_CompositionString = "";
 			m_CompositionCursor = 0;
 			m_ImeCandidates.EndComposition();
@@ -891,6 +889,11 @@ int CInput::Update()
 		switch(Event.type)
 		{
 		case SDL_EVENT_TEXT_EDITING:
+			if(Event.edit.text[0] != '\0' && !m_PendingCancelledComposition.empty())
+			{
+				AddTextEvent(m_PendingCancelledComposition.c_str());
+				m_PendingCancelledComposition.clear();
+			}
 			HandleTextEditingEvent(Event.edit.text, Event.edit.start, Event.edit.length);
 			break;
 
@@ -917,6 +920,7 @@ int CInput::Update()
 		}
 
 		case SDL_EVENT_TEXT_INPUT:
+			m_PendingCancelledComposition.clear();
 			AddTextEvent(Event.text.text);
 			ClearImeState();
 			// 提交后抑制迟到候选，新的组合串或打开通知恢复接收。
@@ -1068,6 +1072,12 @@ int CInput::Update()
 			str_copy(m_aDropFile, Event.drop.data);
 			break;
 		}
+	}
+
+	if(!m_PendingCancelledComposition.empty())
+	{
+		AddTextEvent(m_PendingCancelledComposition.c_str());
+		m_PendingCancelledComposition.clear();
 	}
 
 	char aExtra[128];

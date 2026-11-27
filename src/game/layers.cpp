@@ -127,6 +127,7 @@ CMapLoadTask CLayers::PrepareDesignTileSkips()
 
 CMapLoadTask CLayers::InitTilemapSkip(bool Game, bool Design)
 {
+	CMapLoadSliceBudget SliceBudget;
 	for(int GroupIndex = 0; GroupIndex < NumGroups(); GroupIndex++)
 	{
 		const CMapItemGroup *pGroup = GetGroup(GroupIndex);
@@ -169,10 +170,11 @@ CMapLoadTask CLayers::InitTilemapSkip(bool Game, bool Design)
 					pTiles[y * pTilemap->m_Width + x].m_Skip = SkippedX - 1;
 					x += SkippedX;
 					TilesSinceYield += SkippedX;
-					if(TilesSinceYield >= 8192)
+					if(TilesSinceYield >= 2048)
 					{
 						TilesSinceYield = 0;
-						co_await std::suspend_always{};
+						if(SliceBudget.Expired())
+							co_await std::suspend_always{};
 					}
 				}
 			}

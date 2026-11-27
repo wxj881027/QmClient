@@ -382,6 +382,36 @@ private:
 	std::vector<const char *> m_vpAllPerfNames;
 	std::vector<class CComponent *> m_vpInput;
 	CQmStutterCapture m_QmStutterCapture;
+	// OnUpdate 子阶段耗时；仅整帧超阈值时汇总成一条 gameclient_update_spike_detail。
+	struct SQmUpdatePhaseTimes
+	{
+		double m_LocalServerMs = 0.0;
+		double m_SyncFontMs = 0.0;
+		double m_PrewarmIconsMs = 0.0;
+		double m_EntitiesPrewarmMs = 0.0;
+		double m_SkinsPrepareMs = 0.0;
+		double m_LanguageMs = 0.0;
+		double m_StreamerPrivacyMs = 0.0;
+		double m_SelfKillProtectionMs = 0.0;
+		double m_UiElementBaseMs = 0.0;
+		double m_InputEventsMs = 0.0;
+		double m_ComponentsTotalMs = 0.0;
+		double m_RepairTeeMs = 0.0;
+		double m_PredictionRefreshMs = 0.0;
+	};
+	SQmUpdatePhaseTimes m_QmUpdatePhaseTimes;
+	// OnUpdate 阶段耗时的秒级汇总：低日志量地暴露每次 3–5ms 的常态更新开销。
+	struct SQmUpdatePhaseSummary
+	{
+		int64_t m_Start = 0;
+		int m_Samples = 0;
+		double m_TotalMs = 0.0;
+		double m_SumUnaccountedMs = 0.0;
+		double m_aSumMs[13] = {};
+		double m_MaxTotalMs = 0.0;
+		double m_MaxUnaccountedMs = 0.0;
+	};
+	SQmUpdatePhaseSummary m_QmUpdatePhaseSummary;
 	std::unique_ptr<CQmJelly> m_pJellyTee;
 
 	// 启动赞助提醒：本次启动要展示的启动序号，0 表示不提示。

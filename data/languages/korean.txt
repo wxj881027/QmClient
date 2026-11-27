@@ -2142,9 +2142,6 @@ Cannot write the wiki file
 Cap update rate to save power
 == 전력 절약을 위해 업데이트 속도 제한
 
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
-== 업데이트 속도 제한은 입력 지연을 늘리므로 전력 절약 목적에만 사용하세요. 전용 전체 화면이 실패하면 먼저 창 또는 테두리 없는 모드로 돌아가세요.
-
 Capsule end strength
 == 캡슐 끝 강도
 
@@ -2454,9 +2451,6 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == 로고 선택 (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
-== 끔, 간소, 전체 중에서 고르세요. 모든 애니메이션이 이 하나의 스위치로 동작합니다. 이어서 설정, 콘솔, 채팅 입력 필드의 커서 모양을 고르세요.
-
 Choose the language used by the client
 == Choose the language used by the client
 
@@ -2490,8 +2484,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == 어떤 이름표를 그릴지 고르고, 여기에 클랜, 팀 색상, 친구 아이콘, 좌표, 클라이언트 ID를 더합니다.
 
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
-== 창/전체 화면 모드, 모니터, 해상도와 함께 렌더링 프레임 속도와 클라이언트 업데이트 속도라는 두 가지 상한을 설정합니다.
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
+== 창 모드 또는 전체 화면 모드, 모니터와 해상도, V-Sync, Vulkan 표시 모드를 선택하고 렌더링 프레임 속도와 클라이언트 업데이트 속도 두 가지 프레임 페이싱 상한을 설정합니다.
 
 Chroma sampling
 == 색차 샘플링
@@ -2726,9 +2720,6 @@ Client uptime
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
-
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
-== 클라이언트 예측 및 지연 보정: 예측 여유, AntiPing과 예측 대상, 예측 이벤트, 상향 패킷 중복 전송 및 DSCP 트래픽 표시.
 
 Client-side self-kill protection
 == 클라이언트 측 자살 보호
@@ -3299,9 +3290,6 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 다른 플레이어 이름 옆에 표시할 항목(클랜 태그, 친구 표시, 클라이언트 식별자 등)을 제어합니다.
-
-Convenience options for chat, the scoreboard and tune zones.
-== 채팅, 점수판, 튜닝 구역의 편의 설정입니다.
 
 Converse
 == 이어서 귓속말
@@ -4938,9 +4926,6 @@ Enable /team0 mode
 Enable 3D background particles
 == 3D 배경 입자 활성화
 
-Enable a music source to display its lyrics.
-== 가사를 표시할 음악 소스를 켭니다.
-
 Enable absolute controller aiming in game
 == 게임에서 절대 컨트롤러 조준 활성화
 
@@ -5922,6 +5907,9 @@ Feature Search
 Feet
 == 발
 
+FIFO
+== FIFO
+
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == 서버 콘솔 입력용 Fifo 파일 (비 Windows) 또는 네임드 파이프 (Windows)
 
@@ -6618,9 +6606,6 @@ Go forward the specified duration
 Go to keyframe
 == 키프레임으로 이동
 
-Good to know
-== 알아 두면 좋아요
-
 Gores
 == 고어스
 
@@ -7161,6 +7146,9 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == 트랙터가 티를 추적하는 거리
 
+How it works
+== 원리와 동작
+
 How long expression lasts
 == 표정 지속 시간
 
@@ -7181,9 +7169,6 @@ How often the broadcast time updates
 
 How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)
 == 비활성 플레이어 처리 방법 (0 = 관전자로 이동, 1 = 빈 관전 슬롯/추방, 2 = 추방)
-
-How to use it
-== 사용 방법
 
 HTTP is not available
 == HTTP를 사용할 수 없습니다
@@ -7343,6 +7328,9 @@ IME selection background color
 
 IME text color
 == IME 글자색
+
+Immediate
+== Immediate
 
 Import and restart
 == 가져오고 다시 시작
@@ -7832,6 +7820,9 @@ Kaomoji
 
 Kawase
 == Kawase
+
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
+== 특별한 이유가 없다면 "자동"을 유지하세요. "FIFO"는 페이싱이 가장 안정적이고 화면이 찢어지지 않습니다. "Mailbox"는 고주사율 화면에서 지연을 낮추지만 GPU가 따라오지 못하면 끊길 수 있습니다. "Immediate"는 V-Sync를 끄고 원래 프레임 시간을 측정할 때 유용하지만 눈에 보이는 찢어짐이 생깁니다. 선택한 모드를 지원하지 않으면 클라이언트는 FIFO로 대체하고 실제 모드를 로그에 남깁니다.
 
 Keep hook when teleporting
 == 순간이동 시 갈고리 유지
@@ -8543,6 +8534,9 @@ Lyrics translation
 
 Magic: Spirit Script
 == 마법풍: 영혼의 문자
+
+Mailbox
+== Mailbox
 
 Main Asset
 == 메인 에셋
@@ -10038,9 +10032,6 @@ Ok
 Old chat style: no tee icons, no background
 == 이전 채팅 스타일: 티 아이콘 없음, 배경 없음
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
-== 저장 한도에 도달하면 오래된 파일이 삭제되므로 보관할 데모는 다른 곳에 복사하세요. 포즈 스크린샷 픽셀 예산은 여기에 없고 .poses 파일 렌더링 창의 출력 옵션입니다.
-
 Old single-segment hook collision line
 == 이전 단일 구간 갈고리 충돌선
 
@@ -10407,9 +10398,6 @@ Overwrite clan even if empty
 Own hook line width
 == 자신의 갈고리 선 너비
 
-Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
-== 자신의 Tee에는 본체와 더미가 포함됩니다. 다른 플레이어를 표시하려면 같은 팀이어야 하며 서버가 사전 입력을 지원해야 합니다.
-
 p = Ping latency
 == p = Ping 지연 시간
 
@@ -10656,8 +10644,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == 추첨 결과: %s
 
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
-== 먼저 모드를 고른 뒤 모니터와 해상도를 선택하세요. "렌더링 프레임 속도 상한"은 수직 동기화가 꺼졌을 때 그리는 프레임 수를 제한하고, "클라이언트 업데이트 속도"는 게임 로직과 입력 처리 빈도를 제한하며 렌더링도 함께 제한합니다.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
+== 먼저 모드를 고르고 모니터와 해상도를 선택하세요. "렌더링 프레임 속도 상한"은 V-Sync가 꺼져 있을 때 그리는 프레임 수를 제한하고, "클라이언트 업데이트 속도"는 게임 로직과 입력 처리 빈도를 제한하며 렌더링도 함께 제한합니다. "표시 모드"는 Vulkan에서만 나타납니다. "자동"은 V-Sync를 따르고(켜짐: FIFO, 꺼짐: Immediate, macOS: Mailbox), "Immediate"는 최신 프레임을 바로 표시해 화면이 찢어질 수 있으며, "Mailbox"는 대기 중인 프레임을 막지 않고 교체해 찢어짐은 줄지만 한 프레임이 더 대기하고, "FIFO"는 다음 화면 갱신을 기다려 찢어짐은 없지만 최대 한 프레임의 지연이 생깁니다.
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == 색을 입힐 부분을 고른 뒤 그라데이션 모드와 색상을 선택하세요.
@@ -11211,9 +11199,6 @@ Prediction margin when frozen
 Prediction time
 == 예측 시간
 
-Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
-== 예측은 정확도를 반응성과 맞바꿉니다. 상향 중복 전송은 업로드 트래픽을 3배로 늘립니다. "게임 트래픽 우선"은 Windows에서 패킷에 표시만 하며 QoS를 인식하는 공유기가 있어야 효과가 있습니다.
-
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 == 시작할 때와 메뉴가 유휴 상태일 때 여러 프레임에 걸쳐 설정 페이지를 준비해 처음 열 때의 끊김을 줄입니다.
 
@@ -11222,6 +11207,9 @@ Preparing chat export: %d%%
 
 Preparing demo playback
 == 데모 재생 준비 중
+
+Present mode
+== 표시 모드
 
 Preset %d
 == 프리셋 %d
@@ -11912,6 +11900,9 @@ Receiving
 
 Recent
 == 최근
+
+Recommended settings
+== 권장 설정
 
 Reconnect in %d sec
 == %d 초 후 재접속
@@ -13476,9 +13467,6 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == 인코더·컨테이너·화질을 한 번에 정합니다. 일상 공유는 H.264 + MP4, 고품질은 더 작은 HEVC + MP4, 편집용은 어디서든 즉시 탐색되는 전체 프레임 내 H.264 + MP4, 교환용은 다른 편집 프로그램을 위한 ProRes 422 HQ + MOV입니다.
 
-Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
-== 인터페이스 동작량(전환, 카드 등장, 재배열 애니메이션, 스크롤 감각)과 모든 입력 필드의 커서 모양을 설정합니다.
-
 Sets laser colors for weapons and entities.
 == 무기와 엔티티의 레이저 색상을 설정합니다.
 
@@ -14666,9 +14654,6 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == i 순위부터 시작하는 래더의 팀 순위 또는 플레이어 순위 5개 항목 표시 (기본값 1, -1은 최하위)
-
-Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
-== FPS, 프레임 시간, RTT, 예측 리드를 표시합니다. 기준선을 넘는 막대는 60 FPS 프레임 예산을 초과한 것입니다.
 
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == 엣지 점프의 소수 위치 값을 화면 텍스트로 표시해 정확한 지점에서 점프 타이밍을 잡게 해 줍니다.
@@ -16080,9 +16065,6 @@ The card only appears while such a bind exists; click its key field to change th
 The command is empty, incomplete, or exceeds the local config line limit.
 == 명령이 비어 있거나 불완전하거나 로컬 설정 줄 제한을 초과합니다.
 
-The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
-== 표시 대상은 Tee 색상과 아이콘에 모두 적용됩니다. 각 아이콘은 방향키 표시와 별개로 켜거나 끌 수 있습니다.
-
 The downloaded file is not a valid demo
 == 다운로드한 파일은 유효한 데모가 아닙니다
 
@@ -16157,9 +16139,6 @@ The server rejected the map upload.
 
 The two keys that cast your vote: one for yes and one for no.
 == 투표에 쓰는 두 개의 키로, 하나는 찬성, 하나는 반대입니다.
-
-The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
-== 업데이트 속도와 프레임 속도 상한은 이미지 페이지로 옮겨졌습니다. 렌더링 설정 옆에 있어야 하며 이곳에는 없습니다.
 
 The watermarked screenshot was saved next to the original
 == 워터마크가 적용된 스크린샷을 원본 옆에 저장했습니다
@@ -16349,9 +16328,6 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == '다른 플레이어 표시'를 체크하면 다른 팀이 반투명하게 그려집니다. 그 아래 종속 행에서 그림자 불투명도를 설정하고, '배경 쿼드 표시'와 '기본 줌'으로 화면을 조정하세요.
-
-Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== "메인 메뉴 건너뛰기"를 켜고 "설정 파일" 또는 "테마 폴더"로 해당 위치를 여세요.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == 키 걸림 상태 표시, 해머 상태 표시, dummy 조작 상태 표시, dummy 복사 상태 표시 중 필요한 것을 선택하세요.
@@ -16884,9 +16860,6 @@ Tune zone (map / override)
 Tuning parameter
 == 튜닝 매개변수
 
-Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
-== 성능이 낮은 기기에서는 끄세요. 카드가 즉시 열리고 스크롤도 즉시 반응합니다. 커서 모양은 겉모양일 뿐이며 세 가지 모두 같은 문자 셀에 들어갑니다.
-
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 == "메인 월드 고스트 표시"를 끄면 다른 플레이어를 포함해 서버에서 오는 모든 Tee가 숨겨집니다. 켜 둔 상태에서는 불투명도 슬라이더로 보이는 정도를 정할 수 있습니다. 바인드 행은 연습 메뉴와 같은 명령을 보내므로 채팅창을 열 필요가 없습니다.
 
@@ -16931,9 +16904,6 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 
 Turn on "Message merging" in Dream Features.
 == "드림 기능"에서 "Message merging"을 켜세요.
-
-Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== "네임플레이트 텍스트 효과"를 켜고 "개별 조정"을 연 뒤 "테두리", "그라데이션", "무지개", "발광"을 켜고 해당 범위와 색상을 설정하세요.
 
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == 새 창은 새 IME를 켜고, 채팅창에 맞춰 입력 모드를 바꾸려면 입력 중 IME 자동 관리를 켭니다. 색은 색 편집에서 바꿉니다.
@@ -17430,9 +17400,6 @@ Use alternative world tick calculation making hooks behave as if all players hav
 Use animated title style (overrides qm_title_color_mode)
 == 칭호 애니메이션 스타일 사용 (qm_title_color_mode 덮어씀)
 
-Use cl_show_perf 1 to show the panel.
-== cl_show_perf 1을 입력하면 패널이 표시됩니다.
-
 Use colored skins for frozen tees
 == 얼어붙은 티에 컬러 스킨 사용
 
@@ -17877,6 +17844,9 @@ Voting
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
 == Vulkan API 버전: 14 = 1.4, 1.3, 1.1 순으로 우선, 13 = 1.3, 1.1 순으로 우선, 11 = 1.1 강제
 
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
+== Vulkan 표시 모드: 0=자동, 1=Immediate, 2=Mailbox, 3=FIFO
+
 Wait for current vote to end before calling a new one.
 == 새 투표를 요청하기 전에 현재 투표가 끝날 때까지 기다리세요.
 
@@ -18039,9 +18009,6 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 바인딩이 설정된 레벨 (자동이며 사용할 필요 없음)
 
-What this controls
-== 무엇인가요
-
 Wheel
 == 휠
 
@@ -18098,9 +18065,6 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == 플레이어가 기본적으로 다른 사람을 볼 수 있는지 여부 (자신 팀 = 2)
-
-Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
-== 메인 메뉴 건너뛰기, 커뮤니티 지도 태그, 시작 시 충돌 보고서 표시, 설정/저장/테마 폴더 열기 항목입니다.
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == 더미를 동시에 제어할지 여부 (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
@@ -18817,6 +18781,74 @@ Train
 [Bind keyboard key]
 Menu
 == 메뉴 키
+
+[card-wiki]
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== 끔, 간소, 전체 중에서 고르세요. 모든 애니메이션이 이 하나의 스위치로 동작합니다. 이어서 설정, 콘솔, 채팅 입력 필드의 커서 모양을 고르세요.
+
+[card-wiki]
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== 클라이언트 예측 및 지연 보정: 예측 여유, AntiPing과 예측 대상, 예측 이벤트, 상향 패킷 중복 전송 및 DSCP 트래픽 표시.
+
+[card-wiki]
+Convenience options for chat, the scoreboard and tune zones.
+== 채팅, 점수판, 튜닝 구역의 편의 설정입니다.
+
+[card-wiki]
+Enable a music source to display its lyrics.
+== 가사를 표시할 음악 소스를 켭니다.
+
+[card-wiki]
+Highlight held hammer and hook inputs while frozen
+== 얼어 있는 동안 누른 해머와 갈고리 입력 강조
+
+[card-wiki]
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== 저장 한도에 도달하면 오래된 파일이 삭제되므로 보관할 데모는 다른 곳에 복사하세요. 포즈 스크린샷 픽셀 예산은 여기에 없고 .poses 파일 렌더링 창의 출력 옵션입니다.
+
+[card-wiki]
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== 자신의 Tee에는 본체와 더미가 포함됩니다. 다른 플레이어를 표시하려면 같은 팀이어야 하며 서버가 사전 입력을 지원해야 합니다.
+
+[card-wiki]
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== 예측은 정확도를 반응성과 맞바꿉니다. 상향 중복 전송은 업로드 트래픽을 3배로 늘립니다. "게임 트래픽 우선"은 Windows에서 패킷에 표시만 하며 QoS를 인식하는 공유기가 있어야 효과가 있습니다.
+
+[card-wiki]
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== 인터페이스 동작량(전환, 카드 등장, 재배열 애니메이션, 스크롤 감각)과 모든 입력 필드의 커서 모양을 설정합니다.
+
+[card-wiki]
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== FPS, 프레임 시간, RTT, 예측 리드를 표시합니다. 기준선을 넘는 막대는 60 FPS 프레임 예산을 초과한 것입니다.
+
+[card-wiki]
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== 표시 대상은 Tee 색상과 아이콘에 모두 적용됩니다. 각 아이콘은 방향키 표시와 별개로 켜거나 끌 수 있습니다.
+
+[card-wiki]
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== 업데이트 속도와 프레임 속도 상한은 이미지 페이지로 옮겨졌습니다. 렌더링 설정 옆에 있어야 하며 이곳에는 없습니다.
+
+[card-wiki]
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== "메인 메뉴 건너뛰기"를 켜고 "설정 파일" 또는 "테마 폴더"로 해당 위치를 여세요.
+
+[card-wiki]
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== 성능이 낮은 기기에서는 끄세요. 카드가 즉시 열리고 스크롤도 즉시 반응합니다. 커서 모양은 겉모양일 뿐이며 세 가지 모두 같은 문자 셀에 들어갑니다.
+
+[card-wiki]
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== "네임플레이트 텍스트 효과"를 켜고 "개별 조정"을 연 뒤 "테두리", "그라데이션", "무지개", "발광"을 켜고 해당 범위와 색상을 설정하세요.
+
+[card-wiki]
+Use cl_show_perf 1 to show the panel.
+== cl_show_perf 1을 입력하면 패널이 표시됩니다.
+
+[card-wiki]
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== 메인 메뉴 건너뛰기, 커뮤니티 지도 태그, 시작 시 충돌 보고서 표시, 설정/저장/테마 폴더 열기 항목입니다.
 
 [Collision hitbox]
 All players

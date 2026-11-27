@@ -20,55 +20,55 @@
 == "%s" 与 pnglite 不兼容，无法被旧版本 DDNet 加载
 
 "Absolute" aims at a fixed point and hides the speed setting, so pick "Relative" if you want to tune it.
-== 绝对模式按固定点瞄准，会隐藏速度设置；想调速度就选相对。
+== 先用相对模式并小幅调灵敏度，确认能稳定停在目标上；摇杆漂移时先加死区，不要用超大灵敏度掩盖。菜单灵敏度单独调，避免和瞄准手感互相牵制。
 
 "Active disconnect" leaves the server without closing the client, so bind it only for deliberate use.
-== 主动断开只退出服务器、不关闭客户端，所以只在你有意使用时才绑它。
+== 只给常用动作分配按键，截图和控制台可以留在默认位置。主动断开放在需要刻意按到的组合键上，避免跑图时误退服务器。
 
 "Advanced options" adds category filters and colors; join, version, rules and help texts still stay in chat.
-== 高级选项里能加类别过滤和颜色；进服、版本、规则和帮助类文字仍然留在聊天里。
+== 只把重要提示和 Echo 路由到通知栏，加入、版本和规则留在聊天；持续时间不要太长，最多两三条，避免遮住 HUD。
 
 "Copy all" only copies the filtered rows, so clear the search first if you want your whole list.
-== 复制全部只会复制筛选后的行，想复制完整列表请先清空搜索。
+== 导出前先清空搜索，确认复制的是完整列表；发现同一键有多条命令时到编辑器里逐条清理，不要直接清空整个键。
 
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
-== 循环自定义 Tee 色调只在用自定义颜色时生效，TClient 的彩虹 Tee 开着时它不起作用。
+== 描边宽度保持一两像素，太宽会糊住细节；色相循环只在自定义颜色下有效，速度放慢更耐看。人多时关掉他人描边和切换动画。
 
 "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
-== “数据来源”只决定目录收录范围，与下载无关；同一皮肤可以同时属于多个目录。
+== 只开需要的下载来源，减少启动时的网络请求；前缀留空表示不替换。胖皮肤会改变碰撞观感但不改变判定，按喜好选择。
 
 "Default (software)" is x264: CPU only, best quality, slowest.
 == 「Default (software)」就是 x264：纯 CPU、画质最好、速度最慢。
 
 "Hammer Mode" applies even with both animations off, so check it if your hammer keeps turning with the cursor.
-== 锤子模式即使两个动画都关掉也照样生效；如果锤子一直跟着光标转，先检查这一项。
+== 切枪动画时长保持短，避免影响判断；作用范围选自己即可。锤子跟随光标如果让手感发飘就关掉。
 
 "Hide player messages" removes the whole line, including team chat that merely mentions a blocked word.
-== 隐藏玩家消息会整行删掉，连只是在队伍聊天里提到屏蔽词的整句也一起消失。
+== 先用完整模式，误伤少；正则模式只给确定会写的表达式。隐藏整行会连队伍信息一起吞掉，公共聊天里优先用替换而不是隐藏。
 
 "Hook strength scope" limits which players get the marker, so pick "All" if it seems missing.
-== 钩子强度范围决定哪些玩家带标记，看不到标记时选全部。
+== 通常选「全部」并只开图标，信息足够又不占宽度；需要精确判断时再开数值。范围设得太窄时标记会像消失，先切「全部」排查。
 
 "Ingame mouse sens." changes your aim, so adjust it in small steps and test it on a warm-up map.
-== 游戏内鼠标灵敏度会直接影响瞄准，一次只改一点，然后去热身图里试。
+== 游戏灵敏度小步调整，并在热身图确认转身和微调都稳定；最大距离不要太小，否则远处目标够不到。界面灵敏度与瞄准分开调，菜单操作会更稳。
 
 "None" hides all name plates including your own team, so choose "Others" if you only want a cleaner screen.
-== 无会连自己队伍的昵称一起隐藏，只想要画面干净请选其他玩家。
+== 只显示他人通常最干净；需要找队友时用「他人加自己」。战队和 ID 按需开，ID 单独一行会明显增高名字牌，拥挤服务器上慎用。
 
 "Scoreboard filter" keeps only players whose name or clan matches, so clear it when the scoreboard looks empty.
-== 计分板筛选只保留名字或战队匹配的玩家；计分板看起来空了，先清掉筛选内容。
+== 拥挤服务器开滚动模式最实用；查分依赖外部服务，网络不稳时可能为空。筛选后计分板看起来没人时先清空筛选，而不是重开。
 
 "Show on key" needs a key bound to +showweapontrajectory; if nothing appears, switch to "Always show".
-== 按键显示需要一个绑到 +showweapontrajectory 的键；什么都没出现就换成一直显示。
+== 平时用按住键显示，需要精确预判时再常显；线宽保持细，避免盖住目标。忍者路径受地图碰撞影响，实战仍要以实际飞行确认。
 
 "Switch weapon on pickup" grabs whatever you walk over, which can override the weapon you wanted to keep.
-== 拾取武器时自动装备会抓走你踩到的任何枪，可能把你本想留着的武器换掉。
+== 竞速建议关闭动态镜头或把平滑度调低，镜头延迟会直接影响瞄准；拾取自动换枪容易覆盖想保留的武器，通常关掉，没子弹自动换枪可以保留。
 
 "Use original style" hides the color and countdown options below it.
-== 勾选使用原始样式时，其下方的颜色和倒计时选项会被隐藏。
+== 保持原始样式最省心；想要信息密度时先开队伍和歌曲，再开倒计时。三段颜色要能区分，警告和紧急不要用相近色。
 
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
-== X 与我对齐提示会在另一名玩家的 X 与你的对齐达设定的检测时间后为其变色。
+== 只显示他人坐标通常够用；对齐提示用来练同步，窗口时间不要太短。严格模式容易闪，普通模式更适合实战。
 
 %.0f Bps
 == %.0f 格/秒
@@ -382,16 +382,16 @@ a = View angle
 == a = 视角角度
 
 A bar too close to the edge is cut on unusual aspect ratios.
-== 状态栏离边缘太近时，在特殊宽高比下会被裁掉。
+== 背景保持半透明、文字与地图有对比；只留时间和延迟等常用字段，标签越多越容易在窄分辨率下换行。
 
 A big "Team tee glow halo size" can wash out outlines and map detail, so start low and raise it slowly.
-== 光晕太大会把描边和地图细节冲淡，先调小再慢慢加大。
+== 先从较低强度和中等光晕开始，确认不会盖住地图轮廓；Team 0 用自定义色或彩虹更容易和队伍光晕区分。
 
 A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, so only the game stays on screen.
 == 一个安静游玩的模式：按你的选择隐藏 HUD、名字、特效、聊天和声音，屏幕上只留下游戏本身。
 
 A crowded HUD hides the game, so start with one element and add more if needed.
-== HUD 太满会挡住游戏画面，先从一项开始，需要时再加。
+== HUD 里只开中心参考线和最近通知即可；迷你调试和迷你投票在需要时开。旁观光标透明度不要太高，避免遮挡观战画面。
 
 A damped spring drives the offset; reversing slows it before it turns
 == 阻尼弹簧驱动偏移，反向时先减速再回转
@@ -406,10 +406,10 @@ A group frame carries the nodes inside it: drag the frame and the whole group mo
 == 分组框会带着框内的节点走：拖动框，整组一起移动。
 
 A key that already has a command is overwritten, so recheck your other binds after assigning keys here.
-== 已经被占用的键会被覆盖，所以在这里绑定后最好回头检查其他绑定。
+== 只给真正会用的动作绑键，避免占掉移动键；绑定后到总览检查冲突。删除用垃圾桶，不要清空整个键。
 
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
-== 这里绑定的键会顶掉之前占用它的动作，所以改完一个键记得回头检查其他按键。
+== 保持默认的 WASD 与鼠标左右键，除非你已经有稳定的个人习惯；改键后检查跳跃、钩子和开火是否互相冲突，再进服务器测试。
 
 A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
 == 有一条关键词规则无法保存。请检查触发词是否含有 => 或以保留前缀开头。
@@ -421,7 +421,7 @@ A node cannot link to itself
 == 节点不能连到自己
 
 A pack missing files falls back to the default sounds.
-== 音频包缺少文件时会回退到默认音效。
+== 选与当前版本兼容的音频包；如果某些动作突然没声音，先切回默认包排查缺失文件。
 
 a player
 == 一名玩家
@@ -442,13 +442,13 @@ A screenshot with this name already exists
 == 已有同名截图
 
 A see-through panel looks fine in the menu but is hard to read in game, so check it on a bright map before keeping it.
-== 半透明面板在菜单里好看，进了游戏却难读，想保留就先在明亮的地图上试一下。
+== 背景保持足够不透明，明亮地图上才看得清；选中色要和普通文字有对比。列表太长时输入更多字符缩小范围。
 
 A Tee
 == 其他玩家
 
 A very large cursor can hide small UI elements underneath it.
-== 光标放得太大时会挡住它下面的小界面元素。
+== 大屏幕上把缩放调到能一眼找到，但不要大到遮住小控件；旋转保持 0，除非你习惯特定朝向。
 
 A vote is currently active.
 == 已有投票正在进行。
@@ -574,7 +574,7 @@ Add a server as a favorite
 == 将服务器添加为收藏夹
 
 Add a shortcut, then use it in chat to send the text.
-== 添加快捷方式，然后在聊天中使用它发送文字。
+== 自定义聊天快捷方式保存文本或命令，触发时走正常聊天发送流程；与颜文字、敌对列表分组互不影响。文本内容不会自动翻译。
 
 Add a skin as a favorite
 == 将皮肤添加为收藏夹
@@ -649,13 +649,13 @@ Add one
 == 加一
 
 Add one shortcut per message; it is used when the target is on the list.
-== 每条消息添加一个快捷方式，只有目标在列表上时才会使用。
+== 每条快捷方式针对敌对列表中的玩家；目标在列表上时触发对应文本，不在列表时不会自动发送。文本同样受聊天长度和发送频率限制。
 
 Add options below
 == 在下方加入选项
 
 Add or edit entries, then use the bind in chat to send the text.
-== 添加或编辑条目，然后在聊天中使用对应绑定发送文字。
+== 每条颜文字保存一个快捷文本，聊天绑定触发时把文本填入输入框并发送；过长的文本会被聊天长度上限截断。条目本身不绑定按键，按键由聊天绑定或命令触发。
 
 Add phrase
 == 添加语录
@@ -664,10 +664,10 @@ Add player '%s' to '%s'
 == 将玩家「%s」加入「%s」
 
 Add players or groups, then choose which markers and chat highlights apply to them.
-== 添加玩家或分组，再选择对它们生效的标记和聊天高亮。
+== 敌对列表按玩家名或分组匹配；「隐藏敌人聊天」「屏蔽敌人」在绘制前过滤聊天、替换名字为 ID 并使用默认皮肤；「计分板」「观战」「战队名」开关决定标记出现在哪些界面。列表只存在本地。
 
 Add rules in "Rule list", fill the answer in "Reply content", then under "Trigger limits" turn on "Enable keyword reply" and set "Auto reply cooldown".
-== 在规则列表里添加规则，在回复内容里填好答案，然后在触发限制里启用关键词回复并设置自动回复冷却。
+== 规则列表每行保存关键词、可选正则和回复文本；聊天命中后按冷却发送回复，可指定由分身发送。规则按顺序匹配，冷却对所有规则共用。
 
 Add team clan:
 == 添加友好战队：
@@ -766,7 +766,7 @@ Adjust mouse sensitivity and cursor limits
 == 调整鼠标灵敏度和光标限制
 
 Adjust nameplate options and compare the preview.
-== 调整名字牌选项后与预览对比。
+== 预览按当前名字牌设置绘制玩家和分身，包括名字、战队、坐标、ID、钩子强度和按键图标；「自由移动」允许在预览里拖动各元素并写回偏移，「多选」可一起拖动，「联动偏移」让玩家和分身共用一套坐标。预览只用于排版，不参与游戏内绘制。
 
 Adjust opacity of entity layers
 == 调整各个实体层的透明度
@@ -784,10 +784,10 @@ Adjust TClient heads-up display elements
 == 调整 TClient 抬头显示元素
 
 Adjust the display options; open a vote to check the layout before joining a busy server.
-== 调整显示选项，进拥挤的服务器前先开一个投票查看布局。
+== 「远离时自动投票」在投票窗口出现且你离投票点较远时，按设定时间自动选择；自动投票文本会显示在聊天或提示中。它仍受服务器投票规则限制。
 
 Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
-== 在这里调整气泡字号和弹跳动画；背景色跟随弹层颜色。
+== 提示气泡读取悬停控件的信息，按设定字号排版，并用弹跳动画入场；背景色跟随弹层颜色，不单独配置。字号只影响提示，不改变控件布局。
 
 Adjust trails rendered behind Tees
 == 调整 Tee 身后的轨迹效果
@@ -811,7 +811,7 @@ Advanced options
 == 高级选项
 
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
-== 上传成功后用 F2 登录并执行 change_map 命令；文件须小于 64 MiB。
+== 上传前先在本地确认地图能正常加载；只使用可信端点，上传后按提示用 F2 登录并执行 change_map。大文件先压缩资源而不是硬传。
 
 After hammer fly, whether dummy switches back to previous weapon
 == 锤子飞后分身是否切换回上一把武器
@@ -994,7 +994,7 @@ An export preset applies an encoder, container and quality combination. Choose C
 == 导出预设会套用编码器、容器和画质的组合；选择“自定义”可分别调整。
 
 An import replaces settings and binds and then restarts the client, so export your current setup first.
-== 导入会覆盖现有设置和绑定并重启客户端，所以先把你当前的配置导出备份。
+== 导入前先导出当前配置包备份；只想改一项时直接编辑对应文件，不要用整包导入覆盖。
 
 And pick one randomly
 == 并随机抽取一张
@@ -1144,7 +1144,7 @@ Apply to player
 == 应用到本体
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
-== 应用会一次覆盖字体、UI 缩放、动画与面板颜色，先记下你喜欢的那几项数值。
+== 应用前先记下自己调过的字体和缩放；如果只想借用配色，应用后再逐项改回。缺字体时先安装字体，避免中英文回退到不同字形。
 
 Applying this preset changes the appearance settings listed below.
 == 应用预设会修改下面列出的外观设置。
@@ -1237,7 +1237,7 @@ Assets editor
 == 材质编辑器
 
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
-== 分别绑定禁止自杀和允许自杀两个按键；按下禁止键后，K 会被忽略，直到你按允许键。
+== 开启后拦截本地发出的 K 键和 kill 命令，直到按下允许键；「自动开启延迟」在进服若干分钟后自动启用，0 表示不自动。快速练习的重置命令优先于保护。
 
 Assigned group
 == 所属群组
@@ -1342,7 +1342,7 @@ Auto greet friends entering map
 == 自动问候进图的好友
 
 Auto greet waits 1 second after a friend joins, then sends a public greeting when chat is available. Leave "Greeting text" empty on strict servers.
-== 好友进图满 1 秒后，聊天允许发送时会公开打招呼。在限制自动发言的服务器上，将「打招呼文本」留空即可关闭自动问候。
+== 刷新间隔保持几十秒，避免频繁请求；自动打招呼在严格服务器上可能被视为刷屏，建议留空。自动跟随只给固定队友开。
 
 Auto hammer while firing; press again to cancel.
 == 按住开火时自动挥锤；再按一次取消。
@@ -1837,16 +1837,16 @@ Better scoreboard
 == 更好的计分板
 
 Big icons can overlap names and nearby tees, so shrink "Size of key press icons" when many players are close.
-== 图标太大会压住名字和旁边的 Tee，人多挤在一起时把按键显示图标大小调小。
+== 默认只显示他人或全部，自己按键自己清楚；人多时把图标调小，否则会和名字、附近 Tee 叠在一起。
 
 Bind
 == 绑定
 
 Bind "Zen mode key" before you need it: while Zen mode is on, hidden HUD, chat and scoreboard stay hidden.
-== 最好提前绑好禅模式按键：禅模式开启时，被隐藏的 HUD、聊天和计分板会一直隐藏。
+== 先绑定 Zen 模式键，再逐类开启隐藏；竞速时保留方向指示和关键音效，只隐藏 HUD 和聊天。一次全开会失去必要反馈。
 
 Bind a key to "Draw at mouse position", hold it in game and move the mouse to draw, then set color, width and how long strokes stay visible.
-== 给“绘制鼠标所在位置”绑定一个按键，在游戏中按住并移动鼠标即可绘制，再设置颜色、宽度和笔画的显示时长。
+== 按住「在鼠标位置绘制」绑定的键并移动鼠标时，在本地背景层生成笔画；颜色、宽度和淡出时间控制外观，淡出为 0 时保留到下次绘制。笔画不发送给服务器，离开地图即清除。
 
 Bind address for client/server
 == 绑定客户端/服务器的地址
@@ -2014,7 +2014,7 @@ Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括号头衔颜色：0 = 跟随服务器，1 = 单色，2 = 彩虹
 
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
-== 背景过亮会降低文字对比度；请让遮罩保持足够暗。
+== 用纯色或暗色地图背景能保持文字对比度；开启地图细节后如果菜单字发灰，先加深背景色。背景实体只影响观感，性能紧张时可以关掉。
 
 Brightness shift
 == 明暗切换
@@ -2229,9 +2229,6 @@ Cannot write the wiki file
 Cap update rate to save power
 == 限制更新频率以节约功耗
 
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
-== 限制更新频率会增加输入延迟，只建议为省电开启。独占全屏失败时，先切回窗口或无边框模式。
-
 Capsule end strength
 == 胶囊端部强度
 
@@ -2263,7 +2260,7 @@ Card opacity
 == 卡片不透明度
 
 Card shape is shared with the rest of the interface and lives in "Interface theme".
-== 卡片形状与界面其它部分共用，在「界面主题」里调整。
+== 「卡片边框」控制是否描边，「边框颜色」「背景色」「背景不透明度」共同决定卡片表面；「彩虹标题」让标题颜色随时间循环。卡片形状和圆角来自「界面主题」，这张卡只覆盖表面与标题效果，不改变布局。
 
 Cascade
 == 慢速波浪
@@ -2290,13 +2287,13 @@ cfg installed
 == cfg 已安装
 
 Change colors and style options, then compare the preview.
-== 修改颜色和样式选项后与预览对比。
+== 预览用本地玩家和分身皮肤重绘钩子辅助线，显示线宽、透明度、三种终点颜色和末端色；它按当前设置实时更新，但不模拟真实地图碰撞，因此只能检查配色和粗细是否易读。
 
 Change indicator offset based on distance to other tees
 == 根据与其他 Tee 的距离更改指示器偏移量
 
 Change laser options and compare the preview.
-== 改动激光选项，再对照预览效果。
+== 预览把五类激光的内芯和外框颜色画成静态样本，方便比较同类和跨类对比度；它不显示增强辉光、脉冲或实际地图背景，也不代表武器射速和判定。
 
 Change map
 == 更改地图
@@ -2308,10 +2305,10 @@ Change the skip duration
 == 变更指定时长
 
 Change values in the chat cards and watch this preview update.
-== 在聊天设置卡片中修改数值，此处的预览会同步更新。
+== 预览直接读取当前聊天卡的颜色、渐变、字号、宽度、过滤和旧版样式，用固定示例行重绘一遍；它不发送消息，也不读取服务器历史。过滤开关只决定哪些类别出现在预览里，方便在改色时对照队伍、好友和系统消息的差异。
 
 Change values in the settings card and watch this preview update.
-== 在设置卡片里改动数值，这里的预览会同步更新。
+== 预览按当前状态栏方案拼接时间、延迟、地图和自定义标签，并用当前字号、颜色和透明度绘制；它使用本地示例数据，不连接服务器。
 
 Change zoom
 == 更改缩放比例
@@ -2491,7 +2488,7 @@ Check to set the background map name to %current%. Uncheck to clear the name.
 == 勾选后将背景地图名设为 %current%；取消勾选会清空背景地图名。
 
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
-== 先检查设备再调阈值；大多数麦克风没声音的情况只是输入设备选错了。
+== 先确认输入设备正确，再调阈值；大多数没声音是设备选错。码率用自动，降噪从简单模式开始；全局组队只在队伍沟通时开。
 
 Checking for existing player with your name
 == 正在查找该昵称的 DDNet 记录
@@ -2515,19 +2512,19 @@ Chinese font:
 == 中文字体：
 
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
-== 把显示按键设为自己的、其他玩家或全部，再调按键显示图标大小。
+== 「显示按键」按自己、他人或全部绘制方向键图标；「图标大小」缩放整组按键。图标取自本地输入状态，其他玩家的按键依赖服务器下发的输入信息，因此无预输入或未同步时会缺失。图标绘制在名字旁，不改变实际输入。
 
 Choose a position, then adjust width and size; the preview card shows the result.
-== 先选择位置，再调整宽度和尺寸；预览卡片会显示效果。
+== 「显示聊天」决定聊天区常驻还是只在输入时展开；「聊天宽度」「字体大小」「行距」直接改变排版盒，行距是在默认行高上追加像素。「队伍颜色」让名字取队伍色；「仅好友」「仅队友」在绘制前过滤消息类别。「聊天背景色」「旧版样式」和「右侧滚动条」只改外观，不影响消息保留；聊天记录自动保存与保留天数独立于显示。
 
 Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
 == 选择常用档位，或选“自定义”手动输入宽和高；跟随窗口使用当前渲染分辨率。
 
 Choose a screen position and font size, then check the preview card for wrapping.
-== 选择屏幕位置和字号，再在预览卡片里检查是否换行。
+== 「状态栏」选择显示方案，「高度」「文字颜色」「文字透明度」「背景色」「背景透明度」控制排版和可读性；「标签」决定显示哪些字段，「12 小时制」「本地时间秒数」只改时间格式。
 
 Choose a target, then set its color; entity lasers can follow team colors.
-== 先选一个目标，再设置它的颜色；实体的激光可以跟随队伍颜色。
+== 每一类激光都有内芯色和外框色：步枪、霰弹、冻结、门和拖拽器分别独立。「内芯」填充光束主体，「外框」描边；实体激光（门、冻结、拖拽器）可按队伍色取色，武器激光保持自定义。颜色只改绘制，不改变激光判定。
 
 Choose colors for weapons and entity lasers
 == 选择武器和实体激光的颜色
@@ -2543,9 +2540,6 @@ Choose export name first.
 
 Choose Logo (PNG / WebP)
 == 选择 Logo（PNG / WebP）
-
-Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
-== 选择关、精简或完整；所有动画都由这一个开关控制。再为设置页、控制台与聊天输入框挑选光标形状。
 
 Choose the language used by the client
 == 选择客户端使用的语言
@@ -2563,10 +2557,10 @@ Choose the new group color
 == 选择新群组的颜色
 
 Choose when recording starts and how demos are named; playback speed and camera follow are separate.
-== 设置录制何时开始以及 demo 的命名方式；回放速度和镜头跟随另行设置。
+== 「自动录制 demo」在对局中把服务器下发的原始网络数据写入文件，「最大 demo 数」到达上限后删除最旧文件。「回放长度」控制按 Esc 时保留的最近片段；「启用回放」「保存最佳成绩回放」决定是否落盘。「竞速影子」保存最佳成绩的移动轨迹，「影子透明度」「只保存更好成绩」控制显示和覆盖策略。
 
 Choose which parts get the rainbow; adjust speed and saturation to taste.
-== 选择哪些部分使用彩虹色，再按喜好调整速度和饱和度。
+== 彩虹效果按时间循环色相，可分别作用于 Tee、他人、钩子和武器；速度控制循环快慢，模式决定渐变方式，旧队伍色开关决定是否保留原队伍配色。只改本地绘制。
 
 Chooses the font family and weight used by the menus.
 == 选择菜单使用的字体和字重。
@@ -2580,8 +2574,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == 选择要绘制哪些昵称，并给昵称加上战队、队伍颜色、好友图标、坐标和客户端 ID。
 
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
-== 设置窗口/全屏模式、显示器与分辨率，以及两个帧节奏上限：渲染帧率和客户端更新频率。
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
+== 选择窗口化或全屏模式、显示器和分辨率、垂直同步以及 Vulkan 呈现模式，并设置两个帧节奏上限：渲染帧率上限和客户端更新频率。
 
 Chroma sampling
 == 色彩采样
@@ -2698,19 +2692,19 @@ Clears the voting options
 == 清除投票选项
 
 Click "QmClient Settings", "Profiles", "War List" or "Chat Binds" to open that file, then use "Configuration packages" to export or import a whole set.
-== 点 QmClient 设置、配置文件、敌对列表或聊天绑定就能打开对应文件；要整包导出或导入就用配置包。
+== 「QmClient 设置」「配置档」「敌对列表」「聊天绑定」按钮直接打开对应的本地文件或目录；「配置包」把设置和绑定导出成一个包，导入时覆盖现有内容并重启客户端。
 
 Click a key on the keyboard picture or under "Mouse", then add a command with "Add function" or use the capture button to move an existing bind.
-== 在键盘图上或鼠标按键区点一下键，再用添加功能加上命令，或用捕获按钮把已有的绑定移过来。
+== 按键编辑器把命令写到客户端的绑定表，支持键盘、鼠标键、滚轮方向和 Ctrl/Alt/Shift/Win 组合；捕获按钮把一个已有绑定整体移到新键。一个键可以保存多条命令，执行时按注册顺序派发。
 
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
-== 在列表里点一种语言就会立即生效，左侧的国旗标出当前选择。
+== 语言选择立即切换界面、设置说明和客户端提示所用的翻译文件；左侧旗帜只标记当前选择。切换不会重启客户端，但已经生成的聊天行保持原语言。
 
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
-== 点一下 HDF 或左跳这类行，按下想用的键即可绑定；点旁边的垃圾桶图标可以清除这个绑定。
+== 预设行把常用练习命令绑定到按键：HDF、DF、45 度瞄准、左右跳和轨迹线；点击行后捕获新键，垃圾桶删除该行绑定。绑定直接写命令表，不经过聊天框。
 
 Click a slice in the preview to change that option's color; options only exist within "Detection distance", so keep the wheel short.
-== 点击预览里的扇区可修改该选项的颜色；选项只在「检测距离」内生效，保持轮盘简短。
+== 只保留四到六个动作，扇区越少越容易盲选；检测距离不要太大，避免选中远处路人。颜色按动作分组，误选时能一眼看出。
 
 Click a slice to set color
 == 点击扇区设置颜色
@@ -2719,25 +2713,25 @@ Click again to find the next location.
 == 再次点击可查找下一个位置
 
 Click the "Player" or "Dummy" preview, type a name under "Your skin", then turn on "Custom colors" to pick "Body" and "Feet".
-== 点一下玩家或 Dummy 的预览，在皮肤栏里输入名字，再打开自定义颜色选身体和脚的颜色。
+== 「玩家」「分身」两个预览分别编辑各自的一套数据：皮肤、身体色、脚色、默认眼睛、名称和国家。「自定义颜色」打开后才使用身体与脚色；默认眼睛只在新加入服务器时应用。当前选中的预览决定改哪一套。
 
 Click the key field beside "Chat", "Team chat" or "Chat command" and press the key you want to use.
-== 点聊天、队伍聊天或聊天框指令旁边的按键栏，按下想用的键。
+== 「聊天」打开公共输入框，「队伍聊天」打开只发给队友的输入模式，「聊天指令」预置斜杠进入命令输入；「语音聊天」按住期间占用麦克风，「重复上一句」直接重发上次内容。每个键位对应一个客户端动作，按下时由输入层派发，不经过聊天框。
 
 Click the key field beside "Hammer", "Pistol", "Shotgun" or "Next weapon" and press the key you want to use.
-== 点锤子、手枪、霰弹枪或下一个武器旁边的按键栏，按下想用的键。
+== 锤子、手枪、霰弹和榴弹的直接按键会立即切换到对应武器；「下一件」「上一件」按武器槽顺序循环。切换请求在本地预测中生效，服务器确认后保持；没有对应武器时按键不会凭空生成武器。
 
 Click the key field beside "Toggle dummy", "Dummy jump" or "Dummy copy" and press the key you want.
-== 点切换分身、分身跳或分身同步旁边的按键栏，按下想用的键。
+== 「切换分身」连接或断开分身；「分身跳跃」「分身开火」「分身钩子」把对应输入直接写给分身；「复制操作」把当前移动与开火同步给分身。分身输入仍走正常客户端预测和服务器同步，切换键同时改变当前受控 Tee。
 
 Click the key field next to "Vote yes" and "Vote no" and press the key you want for each.
-== 点赞成和反对旁边的按键栏，分别为它们按下想用的键。
+== 「赞成」「反对」分别把当前投票结果设为 yes 或 no，按下即发送一次，不改变已投出的票。投票窗口出现时按键才有效，窗口关闭后按键不会缓存。
 
 Click the key field next to an action such as "Jump" or "Hook" and press the key you want; a waiting field takes your next key.
-== 点跳跃或钩子这类动作旁边的按键栏，再按下想用的键；处于等待状态的按键栏会接收你下一个按键。
+== 移动、跳跃、开火和钩子各自绑定到 DDNet 输入动作，按下期间持续保持；镜头缩放和显示快捷键走同一套按键派发。等待中的按键栏会捕获下一次按键，并把该键从原有动作上解绑，因此一键只对应一个动作。
 
 Click the key field next to an action such as "Scoreboard", "Spectate mode" or "Pie menu" and press the key you want.
-== 点计分板、观战模式或饼菜单这类动作旁边的按键栏，按下想用的键。
+== 这里汇集计分板、旁观、控制台、截图、表情和练习工具的剩余动作；每个按键栏对应一个客户端命令，按下即派发。「主动断开」只退出当前服务器，不关闭客户端；「旁观传送」把旁观镜头移到目标。改键会覆盖同一按键上原有的动作。
 
 Click to add this community to favorites
 == 点击将该社区加入收藏
@@ -2822,9 +2816,6 @@ Client uptime
 
 Client-side prediction and latency compensation
 == 客户端预测与延迟补偿
-
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
-== 客户端预测与延迟补偿：预测余量、AntiPing 及其预测对象、预测事件、上行包冗余与 DSCP 流量标记。
 
 Client-side self-kill protection
 == 客户端侧自杀保护
@@ -2917,7 +2908,7 @@ Colors the scoreboard rows: authenticated players, players of the same clan, fri
 == 为计分板各行着色：已认证玩家、同战队玩家、好友，以及好友列表中的战队成员。
 
 Colors too close to the map background are hard to read while moving.
-== 颜色与地图背景过于接近时，移动中很难看清。
+== 先在预览里确认三种终点颜色彼此可分，再进游戏看地图背景上的效果；深色地图上不要用低透明度，移动时容易看不见。
 
 Comic dialogue
 == 漫画对白
@@ -2950,7 +2941,7 @@ Commands
 == 命令
 
 Commands run once per connection, not on every map change; remove the parts that print errors.
-== 指令每次连接只执行一次，不会在每次换图时执行；把会报错的部分去掉。
+== 只放只读命令或提示，不要自动发言；服务器未准备好时调高加入延迟。报错的命令及时删掉，避免每次进服刷控制台。
 
 Common filters
 == 常用筛选
@@ -2965,7 +2956,7 @@ Community
 == 社区
 
 Community translations can be unfinished, so a few lines may stay in English; switch back here at any time.
-== 社区翻译可能还没做完，个别条目仍会显示英文；随时可以回到这里换回别的语言。
+== 选自己阅读最顺的语言；社区翻译可能有个别未完成条目，遇到英文残留可以切回英文核对。
 
 Compact
 == 紧凑列表
@@ -3411,9 +3402,6 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 控制其他玩家名字旁显示的内容，例如战队标签、好友标记和客户端标识。
 
-Convenience options for chat, the scoreboard and tune zones.
-== 聊天、计分板和调参区的便捷设置。
-
 Converse
 == 继续私聊
 
@@ -3601,7 +3589,7 @@ Crazy shotgun bullet sound on/off
 == 疯狂霰弹枪子弹声音开/关
 
 Create a profile, edit it, then switch profiles before playing on a different server.
-== 先创建配置档并编辑，换服务器游玩前再切换配置档。
+== 配置档保存名称、战队、皮肤、颜色、表情、国旗和部分聊天设置；切换时把这些字段写回当前配置并重新加载外观。加载是覆盖式的，不会合并两个配置档。
 
 Create a random skin
 == 随机创造皮肤
@@ -3616,7 +3604,7 @@ Credits
 == 制作名单
 
 Credits are read-only.
-== 名单仅供查看。
+== 无需设置；想核对贡献者时直接滚动查看。名单不完整时以项目仓库为准。
 
 Crescent
 == 月牙
@@ -3712,7 +3700,7 @@ Custom colors
 == 自定义颜色
 
 Custom colors too close to the surface make icons disappear; keep contrast.
-== 自定义颜色与界面表面太接近时，图标会看不见；请保持对比度。
+== 深色界面用白色或浅色图标，浅色界面用黑色；自定义色要保证和控件底色有足够对比。图标样式选常规或填充即可，轻体在小字号下容易发虚。
 
 Custom command
 == 自定义命令
@@ -3733,7 +3721,7 @@ Custom font for Latin text (family, or family + style)
 == 拉丁文本的自定义字体（字族，或字族 + 样式）
 
 Custom fonts only cover the characters they include, so pick a font with CJK support if Chinese text looks different.
-== 自定义字体只包含它自带的字形，中文显示异常时请选支持中日韩字符的字体。
+== 先定中文字体，再调光标大小；字体改完检查设置页和聊天是否截断，光标不要大到遮住小按钮。
 
 Custom pressed hook line colors
 == 自定义按下后颜色
@@ -3913,7 +3901,7 @@ DDRace HUD
 == DDRace HUD
 
 DDRace HUD is driven by server messages, so it stays empty on servers without DDRace.
-== DDRace HUD 由服务器消息驱动，因此在没有 DDRace 的服务器上会一直空白。
+== HUD 只开自己会读的几项：竞速时冻结条和跳跃指示最有用，坐标与角度适合练习地图。项目越多越容易挡住视野，长期不看的项先关掉。
 
 DDRace HUD Pro
 == DDRace HUD Pro
@@ -4207,7 +4195,7 @@ Demos directory
 == 回放目录
 
 Demos store raw network data, so long sessions produce large files.
-== demo 保存的是原始网络数据，因此长时间的对局会生成很大的文件。
+== 需要复盘就开自动录制，并把上限设到磁盘能承受的数量；只想看最佳路线时用竞速影子，不必保留全部 demo。影子只记录位置，不包含聊天和服务器状态。
 
 Depending on the number of supplied arguments, teleport yourself to; (0.) where you are spectating or aiming; (1.) the specified player name
 == 根据参数数量，将自己传送到：(0) 当前旁观或瞄准的位置；(1) 指定玩家
@@ -4279,7 +4267,7 @@ Direct touch input while spectating
 == 旁观时直接触摸操作
 
 Direct weapon keys are faster than cycling, so bind at least the weapons you use most.
-== 直接选武器比一件件切换更快，至少把最常用的武器绑上对应的键。
+== 至少给最常用的两把武器直接绑键，直接选择比循环更快；循环键可以留空，避免切枪时多按一次。
 
 Direction Keys
 == 方向键
@@ -4303,7 +4291,7 @@ Disabled
 == 已禁用
 
 Disabling system messages also hides server warnings.
-== 关闭系统消息后，服务器警告也会一并隐藏。
+== 保留击杀和通关消息，但把高亮色和普通色拉开；如果画面太吵，先关击杀而不是通关，通关信息通常更有用。
 
 Disagree
 == 反对
@@ -4444,7 +4432,7 @@ Do not translate server messages
 == 不翻译服务器消息
 
 Do not use it to spam: servers may punish repeated automatic messages.
-== 不要用它刷屏，服务器可能会处罚重复的自动消息。
+== 文本写清「暂时不在」即可，不要自动回复长句；严格服务器上建议关闭，避免被当成刷屏。
 
 Document too large for the editor (%d of %d bytes)
 == 文档过大，无法在客户端编辑器内修改（%d / %d 字节）
@@ -4564,7 +4552,7 @@ Drag
 == 拖动
 
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
-== 拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用“显示实体层”把整个实体层调淡。
+== 每个实体层有独立透明度覆盖：死亡、冻结、深度冻结、解冻、传送、检查点和开关；「总覆盖」先统一淡化整层，单层值再覆盖。冻结色可统一着色，实体文字另有字号。透明度只改绘制，不改变碰撞。
 
 Drag empty space to box-select
 == 拖动空白处框选
@@ -4588,7 +4576,7 @@ Drag the selected watermark to move it. The original image is preserved.
 == 拖动选中的水印可调整位置，原图会保留。
 
 Drag the three sliders; master scales the other two.
-== 拖动三个滑块；主音量会按比例调整另外两个音量。
+== 「主音量」先乘到所有声道，再分别应用地图环境、背景音乐、聊天提示和游戏音效音量；任一子音量过高都可能在主音量下削波。滑块只改本地输出，不影响其他玩家。
 
 Drag to another category to move this friend.
 == 拖动到其他分类以移动此好友。
@@ -4669,7 +4657,7 @@ Draws the keys each tee is pressing beside their name, so you can read their mov
 == 在名字旁画出每个 Tee 正在按的键，方便看出对方的移动。
 
 Drift and dynamic FOV are cosmetic and can make aiming feel floaty, so start with a low intensity in a warm-up map.
-== 镜头漂移和动态 FOV 只是观感效果，会让准星手感发飘，建议先在热身图里用低强度试。
+== 漂移和动态 FOV 都会改变瞄准手感，先用低强度在热身图试；竞速追求稳定时全部关闭。宽高比预设按显示器比例选，自定义值不要超出屏幕。
 
 Drift direction
 == 漂移方向
@@ -4954,7 +4942,7 @@ Dynamic island connection icon custom color
 == 灵动岛连接图标自定义颜色
 
 Each service needs its own API key and network access; run "Test translation" after changing keys.
-== 每个服务都需要各自的 API Key 和可用网络；换 Key 之后记得再点一次测试翻译。
+== 先只开收到消息翻译，确认服务商和密钥可用再开发送翻译；目标语言设成自己实际使用的语言。公共聊天里自动翻译发送内容可能造成语义偏差，谨慎开启。
 
 Ease in out quad
 == 缓入缓出二次
@@ -5017,7 +5005,7 @@ Edit skin texture
 == 编辑皮肤贴图
 
 Edit the name and clan fields; the dummy keeps its own values.
-== 编辑名称和战队字段；分身保留它自己的值。
+== 「玩家名称」「战队」在连接和改名时发送给服务器，并显示给其他玩家；分身保存独立的一套名称和战队。名称长度受协议限制，超出部分会被截断。
 
 Edit touch controls
 == 编辑触控设置
@@ -5035,7 +5023,7 @@ Edits individual Tee 7 skin parts and previews the result.
 == 编辑 Tee 7 皮肤的各个部件，并预览结果。
 
 Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded" enabled.
-== 人多时特效很耗性能，建议保持同屏拥挤时自动 LOD 开启。
+== 只开边框或渐变就够了，彩虹和发光同时开会明显增加绘制量。保持自动降级开启，拥挤服务器上优先保证名字可读，而不是效果完整。
 
 Efficient sharing (HEVC / MP4)
 == 高效分享 (HEVC / MP4)
@@ -5050,7 +5038,7 @@ Elastic feel of the ESC menu sliding in from the top
 == ESC 菜单从顶部滑入时的弹性手感
 
 Elements too close to the edges overlap on ultrawide screens.
-== 在超宽屏上，太靠近屏幕边缘的元素会互相重叠。
+== 保持生命弹药常开，分数按模式决定；本地时间只在需要看时间时开。超宽屏上把边缘元素往内收，避免和计分板或聊天重叠。
 
 Elevated
 == 提升的
@@ -5092,19 +5080,19 @@ Empty command
 == 命令为空
 
 Empty slots still take space, so clear the ones you no longer use.
-== 空槽位同样占位置，不再使用的槽位请及时清空。
+== 只保留常用动作，空槽位越少越容易盲选；标签用两三个字，命令写完先在控制台测试。布局选自己习惯的方向顺序，换布局后重新记一遍位置。
 
 enable
 == 开启
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
-== 开启“地图进度条”，选择独立显示、玩家统计或灵动岛。选择玩家统计时，还需开启“显示玩家统计 HUD”。
+== 统计 HUD 累计存活时间、救援次数、冻结次数和钩子左右比例；「地图进度条」按 Gores 地图检查点计算完成度，可放在独立位置、统计面板内或灵动岛，宽度、高度、位置和颜色独立设置。统计在本地累计，可按进服重置。
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
-== 启用“显示其他玩家未预测的影子”，再调整预测影子和未预测影子的不透明度。
+== 影子工具把服务器位置和本地预测位置分开绘制：预测影子、未预测影子的透明度独立，可交换两者、把影子画成圆、隐藏冻结目标；「回放反馈」在观看 rank ghost 时本地播放声音和命中效果。
 
 Enable "Try to rename before finishing", then fill in the finishing name and run to the finish to test it.
-== 启用“过终点前尝试改名”，填好终点名称，再跑到终点测试。
+== 接近终点时把当前名称替换为「终点名称」，让通关记录使用该名字；只改名称，不改战队、皮肤或颜色。名称过长会按协议截断。
 
 Enable /swap
 == 启用/交换
@@ -5114,9 +5102,6 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 启用 3D 背景粒子
-
-Enable a music source to display its lyrics.
-== 启用一个音乐来源以显示歌词。
 
 Enable absolute controller aiming in game
 == 在游戏中启用绝对控制器瞄准
@@ -5218,7 +5203,7 @@ Enable dynamic FOV, wider view at higher speed
 == 启用动态视野，移动越快视野越宽
 
 Enable each element, then set its position and size; the HUD draws on top of the game world.
-== 逐个启用元素，再设置它们的位置和大小；HUD 绘制在游戏世界之上。
+== 「显示 HUD」是总开关；「生命与弹药」「分数」分别控制两块基础信息。「本地时间」「秒数」读取系统时钟并按固定间隔刷新；「投票结束后保留投票窗」让结果停留而不是立即消失；「旁观光标」在可用时绘制鼠标指针。所有元素都在游戏世界之后绘制，位置由各自布局决定。
 
 Enable emote eyes? 1=enabled, 0=disabled, -1=disabled.
 == 是否启用表情符号换眼功能 = 1，不启用 = 0，-1 不启用
@@ -5236,7 +5221,7 @@ Enable fast input for other players in Gores mode
 == 进入 Gores 模式时联动开启其他玩家的快速输入预测，需同时开启快速输入。
 
 Enable fast input if your key presses feel late; turn on auto margin to stop the cursor sticking to screen edges.
-== 按键感觉延迟就启用快速输入；光标卡在屏幕边缘时打开自动边距。
+== 「快速输入」把按键提前若干毫秒发送，可分别作用于自己和他人；「自动边距」根据网络时延调整预测边界；「亚 tick 瞄准」让鼠标角度以小于一个 tick 的精度发送。它们改变输入时序，不改变按键映射。
 
 Enable fast input in Gores mode
 == 进入 Gores 模式时联动开启快速输入，让自己的按键动作更早显示。
@@ -5470,34 +5455,34 @@ Enable tee trails
 == 启用 Tee 拖尾
 
 Enable the badges you want; tune the nameplate size where it overlaps the game view.
-== 启用需要的标记；名牌挡住游戏画面时再调整名牌大小。
+== 名字牌附加项包括国家旗帜、延迟圆环和皮肤头像；每项独立开关，按当前名字牌布局绘制。延迟圆环读取本地测得的 RTT，皮肤头像使用玩家当前皮肤。
 
 Enable the DDRace elements you use and set their scale.
-== 启用你用到的 DDRace 元素，并设置它们的缩放比例。
+== 「DDRace HUD」是总开关；「冻结条」按服务器同步的冻结倒计时绘制，条内透明度只影响冻结中的填充。「跳跃指示」「玩家速度」「坐标」「角度」「旁观人数」各自读取本地预测或服务器状态并在角落排版。「分身动作/速度/坐标/角度」只显示分身数据；「冻结星星」是冻结 Tee 的粒子效果。
 
 Enable the effects you like; turn tiny Tees off if distant players become hard to see.
-== 启用喜欢的特效；远处玩家看不清时就关掉迷你 Tee。
+== 「迷你 Tee」缩小远处 Tee 的绘制尺寸，「果冻 Tee」在动作时做挤压变形，可分别作用于他人；「假 CTF 旗帜」和指示器尺寸是独立装饰项。全部只改绘制。
 
 Enable the finished indicator and wait for player data
 == 启用完成状态指示，并等待玩家数据加载
 
 Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then set the icon size and the maximum number of rows.
-== 启用冻结 Tee HUD，选择统计活动中的还是被冻结的 Tee，再设置图标大小和最大行数。
+== 冻结 Tee HUD 统计本队冻结和活动 Tee 数量，用图标行显示；可显示皮肤、限制最大行数、只统计本队，并调整图标大小和文字。数据来自服务器同步的队伍状态。
 
 Enable the guide line, then set its length, style and colors.
-== 启用辅助线后，设置它的长度、样式和颜色。
+== 「显示自己的钩子碰撞线」「显示他人的」控制绘制对象，值为 2 时无视按键常亮；「透明度」「线宽」分别控制整条线的可见度和粗细。「可钩物」「不可钩」「命中 Tee」三种颜色按射线终点分类，末端颜色单独覆盖最后一段。「按键时反色」只在常亮模式下按住钩子键时切换颜色；开启四色自定义后，四种终点各有独立按下颜色。辅助线在本地用当前世界碰撞数据计算，不向服务器查询。
 
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
-== 启用指示器，选择距离模式，并决定敌对列表玩家是否使用不同颜色。
+== 指示器在屏幕边缘或玩家位置绘制标记，按存活、死亡、冻结和是否同队取不同状态；距离模式决定标记随距离缩放还是固定，敌对列表玩家可单独配色。「隐藏可见 Tee」只在目标离开视野时显示。
 
 Enable the message types you want and choose their colors.
-== 启用需要的消息类型，并为其选择颜色。
+== 「击杀消息」控制击杀提示是否出现，「普通色」「高亮色」分别给普通击杀和你参与或被击杀的行着色；「通关消息」独立控制终点提示。消息仍由服务器事件触发，关闭只影响本地绘制。
 
 Enable the outlines, choose color and thickness, then test on a map with many different tiles.
-== 启用轮廓，选好颜色和粗细，再到图块种类多的地图上测试。
+== 轮廓按 tile 类型分别绘制：实心、死亡、冻结、深度冻结、解冻和传送各有颜色与宽度，总透明度和「在实体层内绘制」控制叠加顺序。它只描边，不改变碰撞。
 
 Enable the pet, pick its skin and size, then move around to watch how it follows.
-== 启用宠物，选好皮肤和大小，再跑动看看它怎么跟随。
+== 宠物是跟随 Tee 的本地装饰实体，按选定皮肤和大小绘制，透明度可调；它不参与碰撞、不发送输入，也不出现在其他玩家屏幕上。
 
 Enable the selected Gores helpers, such as hammer switching and fast input, while this mode is active.
 == 进入 Gores 模式后，启用下方选中的辅助功能，例如锤枪切换和快速输入。
@@ -5515,7 +5500,7 @@ Enable tile outlines
 == 启用图块轮廓
 
 Enable trails, choose length and fade, then turn off other players' trails if the screen gets crowded.
-== 启用拖尾，选好长度和淡化，画面挤时再关掉其他玩家的拖尾。
+== 拖尾记录 Tee 最近的位置并按长度、宽度、淡出和透明度绘制；颜色可固定或按队伍/彩虹，锥形收尾让轨迹更自然。「显示他人拖尾」控制是否绘制其他玩家。
 
 Enable UDP KCP transport negotiation (old clients keep legacy UDP, hot-switch fallback)
 == 启用 UDP KCP 传输协商（旧客户端保持传统 UDP，支持热切换回退）
@@ -5749,7 +5734,7 @@ Event - Press
 == 事件 · 按下
 
 Every click applies the skin at once, so star the ones you like before you start browsing.
-== 每点一次都会立刻套用，想留下喜欢的皮肤就先加星再慢慢浏览。
+== 先收藏喜欢的皮肤再浏览，避免每点一次都改外观；来源选官方或社区后确认皮肤确实存在，网络皮肤需要先允许下载。
 
 Every wheel tick restarts from rest, matching the original client
 == 每档滚轮都从静止重新起步，与原版客户端一致
@@ -5911,10 +5896,10 @@ External console password. Must be set to enable economy.
 == 外部控制台密码。需要设置此选项才能启用经济。
 
 External links open in the browser.
-== 外部链接会在浏览器中打开。
+== 无需设置；需要反馈问题时从官方仓库入口进入，避免使用来历不明的镜像。
 
 External sites are not controlled by the client.
-== 外部网站不受客户端控制。
+== 只从官方卡片进入站点；外部页面不受客户端控制，登录或下载前确认域名。
 
 Extra console log line spacing in pixels
 == 控制台日志的额外行距（像素）
@@ -5926,7 +5911,7 @@ Extras
 == 其他
 
 Extreme values make movement feel wrong, so change one step at a time.
-== 极端值会让移动手感变怪，每次只改一档。
+== 先保持默认；其他玩家跳动时小幅增加稳定方向，感觉自己落后时减小负缓冲。每次只改一项，极端值会让移动看起来不自然。
 
 Extremely slow, for testing only
 == 极慢，仅测试用
@@ -5968,7 +5953,7 @@ Fade trail alpha
 == 淡化拖尾
 
 Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge.
-== 把死亡块和冻结尾块调淡，能看到后面的 Tee 和武器，但块的精确边界也更难判断。
+== 把死亡和冻结调到能看见后面 Tee 的程度即可，太低会看不清边界；传送和开关保持较高透明度，避免踩错。
 
 Failed
 == 失败
@@ -6058,7 +6043,7 @@ Fast encode
 == 编码快
 
 Fast flashing colors are hard to read, so keep the speed moderate.
-== 颜色闪得太快会难以辨认，速度保持适中。
+== 速度保持中低，快速闪烁很难辨认；只给钩子或武器开彩虹，Tee 本体保持队伍色更利于判断。
 
 Fast input
 == 快速输入
@@ -6067,7 +6052,7 @@ Fast input (reduce visual latency)
 == 快速输入（降低视觉延迟）
 
 Fast input changes how inputs are timed, so disable it if a server reports unusual behavior.
-== 快速输入会改变输入发送的时机，服务器报告异常时请关掉。
+== 只有按键明显迟到时才开快速输入，并从较小提前量开始；服务器报告异常就关掉。亚 tick 瞄准适合高刷鼠标，普通设备收益有限。
 
 Fast input others
 == 快速输入其他玩家
@@ -6126,6 +6111,9 @@ Feature Search
 Feet
 == 脚
 
+FIFO
+== FIFO
+
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Fifo 文件（非 Windows）或命名管道（Windows）用于服务器控制台输入
 
@@ -6163,7 +6151,7 @@ Fill
 == 填充
 
 Fill in the connect and join command fields, separate several commands with semicolons, and raise the delay if the server is not ready yet.
-== 填写连接段和加入段的指令栏，多条指令用分号隔开；服务器还没准备好就调高延迟。
+== 「连接时执行」在建立连接后立即运行，「加入时执行」在进入地图后按延迟运行；多条命令用分号分隔。每次连接只执行一次，不随换图重复。
 
 Filter by group
 == 按群组筛选
@@ -6202,7 +6190,7 @@ Filter sensitive words
 == 过滤内置敏感词
 
 Filter the list by name, select the values to change back, then confirm before resetting.
-== 按名称筛选列表，勾选要改回的项，确认后再重置。
+== 卡片扫描当前配置与默认值的差异，只列出被改过的项；勾选后确认重置会把对应变量写回默认值并立即生效。重置不删除配置文件，也不处理未列出的运行时状态。
 
 Filtered word console color
 == 被屏蔽词控制台颜色
@@ -6283,7 +6271,7 @@ Flag returned
 == 旗帜归还
 
 Flags are cosmetic and can be hidden by other clients.
-== 国旗只是装饰，其他客户端也可以隐藏它。
+== 选自己实际所在地区即可；国旗只是身份展示，不影响匹配或延迟。如果不想暴露地区，可以留空。
 
 Flip:
 == 翻转：
@@ -6376,7 +6364,7 @@ Font weight:
 == 字体字重：
 
 Fonts without CJK glyphs show fallback squares for Chinese text.
-== 不含中日韩字形的字体在显示中文时会变成方块。
+== 中文字体选覆盖完整、在小字号下清晰的一款；图标字体不要随意换，否则图标可能变成方块。改字体后检查设置页是否有截断。
 
 for Gores
 == 用于 Gores
@@ -6736,13 +6724,13 @@ Ghosts directory
 == 影子目录
 
 Ghosts only affect your own view; bind the toggle key or lower the opacity when the screen gets crowded.
-== 影子只影响你自己的视角；画面挤时绑一个切换键或调低不透明度。
+== 只开未预测影子并保持低透明度，用来判断延迟；画面拥挤时关掉他人影子。回放反馈只影响本地，录视频时可以开。
 
 Github
 == Github
 
 Give "Team chat" its own key so a quick call to your team cannot reach everyone by mistake.
-== 给队伍聊天单独一个键，这样临时喊队友时才不会误发到全场。
+== 给队伍聊天单独一个顺手的键，避免紧急呼叫误发到公共聊天。语音和重复上一句放在不易误触的位置，重复内容仍会走正常发送频率限制。
 
 Give back right to vote to player with client ID
 == 将投票权归还给拥有客户端 ID 的玩家
@@ -6845,9 +6833,6 @@ Go forward the specified duration
 
 Go to keyframe
 == 定位关键帧
-
-Good to know
-== 建议
 
 Gores
 == Gores 模式
@@ -6988,7 +6973,7 @@ Guide line color
 == 辅助线颜色
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
-== 辅助线仅在本地计算，不能保证钩子一定成功。
+== 默认常亮模式最适合练习：先用三种颜色区分可钩、不可钩和 Tee，再决定是否给按下状态单独配色。线宽不要太大，否则端点会盖住要判断的格子。
 
 Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
 == 提示附近还没踩过的传送检查点，并在接近会按检查点回传的入口时预警，方便先补踩再进传送。
@@ -7045,7 +7030,7 @@ Heart
 == 爱心
 
 Heavy glow costs fill rate; disable it if frame time rises in big fights.
-== 高辉光会消耗填充率；大规模团战时如果帧时间上升，就把它关掉。
+== 默认关闭增强效果；想用就先把辉光调低、脉冲速度保持 100%，确认团战帧时间不上升。低端机只开圆头或大小，不开辉光。
 
 Height
 == 高
@@ -7234,7 +7219,7 @@ High Detail
 == 显示地图细节
 
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
-== 大量粒子和拖尾会消耗帧率；FPS 下降时降低粒子数量。
+== 先保持较低数量和关闭拖尾，确认菜单帧率稳定；想要层次感再开辉光或脉冲。低端机优先降数量，而不是把粒子缩得很小。
 
 High quality, slow
 == 高质量，速度慢
@@ -7303,7 +7288,7 @@ Hold still
 == 停住
 
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
-== 按住轮盘键可以看到选中项移动，松开即执行高亮的槽位。
+== 预览按编辑器里的槽位、标签和布局绘制轮盘，并显示当前鼠标方向命中的槽位；按住轮盘键时高亮会移动，松开后执行高亮项。预览不发送命令。
 
 Hold to Zoom
 == 按住缩放
@@ -7413,6 +7398,9 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == 拖拉机将跟踪 tee 多远
 
+How it works
+== 原理与机制
+
 How long expression lasts
 == 表情持续时间
 
@@ -7439,9 +7427,6 @@ How the blueprint works
 
 How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)
 == 如何处理不活跃玩家（0 = 移到观众，1 = 移到空闲观众槽位/踢出，2 = 踢出）
-
-How to use it
-== 怎么用
 
 HTTP is not available
 == HTTP 不可用
@@ -7522,7 +7507,7 @@ If 1, current driver is in blocking error state.
 == 如果为 1，则当前驱动程序处于阻塞错误状态。
 
 If a device disappears after unplugging headphones, reselect it or restart the client.
-== 如果拔掉耳机后设备消失，请重新选择该设备或重启客户端。
+== 保持总开关和游戏音效开启，背景音乐按喜好；聊天提示音只留队伍和提及，避免公共聊天频繁响。切出窗口时静音适合直播或办公环境。
 
 If both tees are frozen and another player hammers the inactive tee awake first, switch control to it.
 == 本体和分身都被冻结时，如果其他玩家先锤醒了当前未控制的角色，就切过去操作。
@@ -7534,13 +7519,13 @@ If lasers can hit you when shot and pull you to bounce origin (0 for all new map
 == 激光被射击时是否可以击中自己并将自己拉回反弹起点（所有新地图设为 0）；否则激光不会击中自己，而是将其他玩家拉向射击者。
 
 If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IME appearance" brings back the defaults.
-== 候选栏挡住聊天时，先调低不透明度或 IME 字体大小；重置 IME 外观可恢复默认。
+== 候选栏挡住聊天时先降不透明度和字号，再考虑关闭新样式；自动管理在窗口切换频繁时最有用，遇到输入法卡住可以临时关掉。
 
 If the server allows event prediction, play predicted sounds and particles before its reply. A hammer hit can sound twice.
 == 服务器允许事件预测时，提前播放预测的音效和粒子效果。一次锤击可能响两次。
 
 If the wheel feels crowded, remove unused slots in the editor card.
-== 如果轮盘显得拥挤，就在编辑卡片里删掉不用的槽位。
+== 先在预览里确认每个方向都能选中想要的槽位，再进游戏试；如果经常选错，减少槽位或改用更熟悉的布局。
 
 Ignis: Ember Spirit
 == 焰灵：余烬之灵
@@ -7601,6 +7586,9 @@ IME selection background color
 
 IME text color
 == 输入法文字颜色
+
+Immediate
+== Immediate
 
 Import and restart
 == 导入并重启
@@ -7696,7 +7684,7 @@ Incoming language
 == 接收语言
 
 Increase the scale if the pointer is hard to see; decrease it for a cleaner look.
-== 看不清指针时调大缩放，想要画面更干净时调小。
+== 「光标缩放」改变游戏内指针的绘制大小，「旋转」改变指针朝向；两者只影响本地光标，不改变命中点。
 
 Indicate map finish
 == 标记已完成
@@ -7975,22 +7963,22 @@ Invites are disabled
 == 本服务器已禁用队伍邀请
 
 It is a diagnostic overlay, not gameplay data; lower the opacity when it covers the map.
-== 这是诊断用的浮层，不是游戏数据；挡住地图时把不透明度调低。
+== 只在排查卡顿时打开，并保持较低不透明度；看帧时间而不是单看 FPS，持续高于参考线才说明渲染超预算。
 
 It only appears in Gores mode; enable "Include Team 0" to count players without a team.
-== 它只在 Gores 模式下出现；启用包含 0 队可统计没有队伍的玩家。
+== 只在 Gores 模式出现；人数控制在队伍规模内，避免面板过高。不透明度保持能看清文字即可，正式比赛可以关掉减少干扰。
 
 It only appears with a connected dummy and renders an extra scene each frame, so lower "Dummy window size" if FPS drops.
-== 只有连着分身时才会出现，而且每帧多渲染一个场景；掉帧就把分身小窗大小调小。
+== 小窗放在不挡主视野的角落，尺寸控制在主画面的几分之一；帧率下降时先缩小尺寸，再考虑关闭。
 
 It only changes what you see: your own name, chat and skin are still sent to the server and stay visible to others.
-== 它只改你看到的画面：你自己的名字、聊天和皮肤仍会发到服务器，别人照样看得见。
+== 直播前确认好友列表准确，否则熟人也会被匿名；词表按平台规则维护。需要完全隐藏身份时还要注意聊天内容本身。
 
 It only changes your name, not your skin or clan; names that are too long are cut off.
-== 它只改名字，不改皮肤和战队；名字过长会被截断。
+== 终点名保持简短且能认出自己；测试时先跑一张短图确认触发距离，避免比赛中改名前就被记录。
 
 It only counts your own team and only appears on your screen; lower the icon size when it covers the crosshair.
-== 它只统计你自己的队伍，也只显示在你的屏幕上；挡住准星时把图标调小。
+== HUD 只统计本队并限制两行，放在不挡准星的位置；图标大小以能数清为准，不要为了好看放大。
 
 It's recommended that you check the settings to adjust them to your liking before joining a server.
 == 建议你在进入服务器前检查一下设置并根据你的喜好进行调整。
@@ -8106,6 +8094,9 @@ Kaomoji
 Kawase
 == Kawase
 
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
+== 默认保持自动呈现和垂直同步开启，FIFO 最稳；高刷屏且 GPU 有余力时可以试邮箱降低延迟，出现顿挫就切回自动。只在省电时限制更新频率，因为它会增加输入延迟；测原始帧时间才用立即。独占全屏失败时先退回无边框。
+
 Keep hook when teleporting
 == 传送时保持钩子
 
@@ -8113,25 +8104,25 @@ Keep inside game window
 == 跟随窗口边界
 
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
-== 保持较小并放在角落；过大的浮层会遮住地图，把重要的东西挡住。
+== 放在角落并保持较小尺寸，键盘缩放和鼠标缩放分开调；录屏时开计数，日常游玩关掉减少干扰。
 
 Keep it small and near an edge: the hint draws over the map and can cover the tile you are aiming at.
-== 保持小字号并放在边缘附近：提示会盖在地图上，可能挡住你要瞄的块。
+== 字号保持小，放在不挡路线的边缘；颜色要和地图高对比。练习卡点时开，正式跑图可以关掉。
 
 Keep messages short so they fit in one chat line.
-== 消息尽量简短，确保能放进一行聊天。
+== 消息保持简短，避免在紧张对局中占满聊天；只给确认的敌对目标使用，误发到公共聊天会很难收回。
 
 Keep square inside game window
 == 窗口内保持方形
 
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
-== 除非你在高 Ping 下游戏，否则保持默认值；需要时一次只改一项再对比。
+== 「预测边界」决定本地模拟领先服务器的时间；「冻结内预测边界」在冻结状态单独放宽或收紧。「移除抗延迟」在延迟若干 tick 后暂停抗延迟一段时间，用来避开特定手感；「冻结内不预测他人」停止外推其他玩家。它们只改本地预测，不改变服务器判定。
 
 Keep the feeling of the maximum cursor distance independent of resolution
 == 让最大光标距离的手感不受分辨率影响
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== 这些颜色要和队伍颜色区分开，否则同战队名字会融进队伍面板里，变得难以辨认。
+== 把已认证、同战队和好友设成三种明显不同的色相；同战队色不要接近队伍面板底色，否则名字会融进去。好友列表两色可以比计分板更柔和。
 
 Keep unsent message on chat close
 == 关闭聊天框时保留未发送内容
@@ -8410,7 +8401,7 @@ Learn
 == 教程 Wiki
 
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
-== 先学会切换分身；其他分身按键只有在你已经开始用第二个 tee 跑图时才有用。
+== 先把切换分身练熟，再给跳跃和钩子分配独立键；复制操作适合双人同步跑图，但会和手动分身输入冲突，不需要时不要常开。
 
 Leave empty to detect automatically
 == 留空自动检测
@@ -8428,7 +8419,7 @@ Leave empty to use the default directory. Relative paths use the config director
 == 留空使用默认目录。相对路径以配置目录为起点。
 
 Leave it off on normal servers: the auto switch overrides your weapon keys, so your pick can change before you shoot.
-== 普通服务器上别开：自动切换会覆盖你的武器键，可能还没开枪武器就被换掉了。
+== 只在 Gores 服务器开启，普通服务器保持关闭；自动换枪先配合「有额外武器时」使用，确认不会打断正常切枪。快速输入如果服务器报异常就关掉。
 
 Leave preview
 == 退出预览
@@ -8440,7 +8431,7 @@ Leave spectating when another player hammers your active tee awake. A thawing ti
 == 正在控制的角色被其他玩家锤醒时自动退出旁观。自然解冻或自己的另一个角色锤醒都不会触发。
 
 Leave the path empty to auto-detect; fill it in only when the status says "Steam not found".
-== 路径留空即可自动检测；只有状态显示未找到 Steam 时才需要填写。
+== Steam 版或需要计时就开启；便携版可以关闭。自动探测失败时再手动填路径，换盘后重新探测。
 
 Leave the pose session
 == 离开姿态会话
@@ -8551,7 +8542,7 @@ Links and gestures
 == 连线与操作
 
 Links open in the system browser.
-== 链接会在系统浏览器中打开。
+== 只从官方卡片进入社区和下载页；外部页面不受客户端控制，登录和下载前先确认域名。
 
 Links to related project and community websites.
 == 指向相关项目与社区网站的链接。
@@ -8680,7 +8671,7 @@ Loading
 == 加载中
 
 Loading a profile overwrites current settings, so save first if unsure.
-== 加载配置档会覆盖当前设置，不确定时请先保存。
+== 按服务器或队伍建配置档，切换前先保存当前修改；名称和战队会发送到服务器，公开服务器上不要放私人信息。
 
 Loading assets...
 == 正在加载资源……
@@ -8830,7 +8821,7 @@ Low
 == 低
 
 Low contrast between name and message text makes chat hard to scan in fights.
-== 名字与消息文本对比度过低时，对局中很难快速看清聊天内容。
+== 先保证名字与正文的对比度，再考虑渐变；对局中最常看的是队伍和好友消息，优先把这两类调到一眼能分清。渐变两端色差过大反而会降低可读性。
 
 Low Sensitivity Aim
 == 低灵敏度瞄准
@@ -8857,13 +8848,16 @@ Lyrics language (0=Original, 1=Translation, 2=Original and translation)
 == 歌词语言（0=原文，1=译文，2=原文＋译文）
 
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
-== 歌词只显示在 Dynamic Island 中，因此该选项未开启前不会出现。
+== 只启用实际使用的音乐源，减少后台连接；歌词岛宽度跟随主岛时更适合窄屏。唱歌和哼唱在公共服务器上容易刷屏，默认关闭。
 
 Lyrics translation
 == 歌词译文
 
 Magic: Spirit Script
 == 魔法风：灵文游丝
+
+Mailbox
+== Mailbox
 
 Main Asset
 == 主材质
@@ -9133,7 +9127,7 @@ Markers
 == 标记
 
 Markers are drawn on your screen only and never change the game itself.
-== 标记只画在你自己的屏幕上，不会改变游戏本身。
+== 只标记队友和敌对列表，避免满屏箭头；距离模式选固定大小更容易读。颜色按状态区分，冻结和死亡不要用相近色。
 
 Master server URL to register
 == 要注册的主服务器 URL
@@ -9580,7 +9574,7 @@ Music
 == 音乐
 
 Music and game volume are multiplied by master, so raising master alone can clip.
-== 音乐音量和游戏音量都会与主音量相乘，因此只调高主音量可能导致破音。
+== 主音量留出余量，游戏音效高于音乐，聊天提示音最低；如果出现破音，先降主音量而不是单独拉高某一项。
 
 Music player volume
 == 音乐播放器音量
@@ -9838,7 +9832,7 @@ Nameplates
 == 名牌
 
 Names are sent to the server and shown to other players.
-== 名称会发送到服务器，并显示给其他玩家。
+== 名称保持简短易读，战队按队伍实际名称填写；分身名称最好能与主角色区分。改名会在服务器上立即生效，比赛中途改名可能影响他人辨认。
 
 Native scale (1.0)
 == 原生缩放 (1.0)
@@ -10458,9 +10452,6 @@ Ok
 Old chat style: no tee icons, no background
 == 旧版聊天样式：不显示 Tee 图标，不显示背景
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
-== 保存数量到上限后会删除旧文件，想留的录像记得另存。姿势截图像素预算不在这里，它是 .poses 文件渲染弹窗里的出图选项。
-
 Old single-segment hook collision line
 == 旧版单段钩子辅助线
 
@@ -10474,7 +10465,7 @@ On
 == 开
 
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
-== 一个键能放多条命令，想删掉其中一条就到已绑定功能里单独删除，不必清空整个键。
+== 一个键放多条命令时先确认顺序，避免后一条覆盖前一条的状态；改键后到总览里检查冲突。组合键不要和系统快捷键冲突。
 
 Online
 == 在线
@@ -10495,10 +10486,10 @@ Only allow authorized clients to vote
 == 只允许经过授权的客户端进行投票
 
 Only free spectating is affected, not normal play; set "Cinematic smoothness" to 0 to keep instant camera response.
-== 只影响自由观战，不影响正常游玩；把电影镜头平滑度设成 0 就恢复即时响应。
+== 录视频或看回放时用中等平滑，日常观战保持低值；觉得镜头拖沓就把平滑度降到 20 以下。
 
 Only kills sent by your own client are blocked and server commands still work, so press your off key again after racing.
-== 只拦截你自己客户端发出的自杀，服务器指令仍然有效，所以跑完图记得再按一次禁止键。
+== 跑图前按一次禁止键，跑完再按允许键；自动延迟适合经常忘记的情况。保护只拦截本地输入，服务器指令仍能杀死你。
 
 Only multi-action
 == 只看多动作
@@ -10531,13 +10522,13 @@ Only show when the other Tee is not on screen
 == 仅当另一个 Tee 不在屏幕上时显示
 
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
-== 改动只作用于选中的 Tee，想改 dummy 的颜色要先切到 Dummy。
+== 先切到要改的角色再动颜色，避免改错对象；默认眼睛选正常或眨眼最不干扰，名称和战队保持简短。
 
 Only what you can't imagine, nothing Dream can't do
 == 只有你想不到，没有梦做不到
 
 Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
-== 只有你自己的世界副本在模拟：其他玩家属于服务器侧的 Tee，你踩到的开关不会影响他们。影子开关与不透明度同样作用于他们。
+== 练习时关掉主世界影子能看清自己的路线；需要参考队友时再打开并降低透明度。练习命令绑定一次就够，不要和正常移动键冲突。
 
 Opacity
 == 不透明度
@@ -10555,13 +10546,13 @@ Open a bind menu (identity, chat, assets, custom)
 == 打开绑定菜单（身份、语录、资源、自定义）
 
 Open a link to join the community.
-== 打开链接即可加入社区。
+== 卡片把社区群组和项目地址渲染成可点击行，点击后交给系统浏览器打开；客户端不内嵌网页，也不会上传任何信息。链接内容随版本更新。
 
 Open a link to reach the project.
-== 打开链接即可前往项目。
+== 开发者与贡献者名单编译在客户端内，按分组只读展示；项目链接交给系统浏览器打开，不读取网络数据。
 
 Open a link to visit the site.
-== 打开链接即可访问网站。
+== 卡片把相关项目和社区地址渲染成可点击行，点击后交给系统浏览器打开；客户端不内嵌网页，也不会上传信息。链接随版本固定，不读取网络配置。
 
 Open a matching settings card directly
 == 直接打开匹配的设置卡片
@@ -10603,7 +10594,7 @@ Open TClient configuration file locations
 == 打开 TClient 配置文件位置
 
 Open the card and enable only the elements you want; each option explains what it draws.
-== 打开卡片，只启用需要的元素；每个选项都说明了它画什么。
+== 这组 TClient HUD 包括屏幕中心准星/参考线、迷你调试信息、迷你投票提示、最近通知和旁观光标；每项独立绘制，位置和颜色分别配置。它们不改变 DDNet 原生 HUD。
 
 Open the custom bind menu
 == 打开自定义绑定菜单
@@ -10702,7 +10693,7 @@ Options
 == 选项
 
 Options here affect networking or identity; test on a server before using them in matches.
-== 这里的选项会影响网络或身份；在对局中使用前请先在服务器上测试。
+== 只放确认安全的只读命令或提示，不要在进入时自动发言或改关键设置；命令写错会在控制台报错，先在本机测试再保存。
 
 Or visit DDNet.org
 == 或访问 DDNet.org
@@ -10765,7 +10756,7 @@ Outline where freeze, deep freeze and death tiles take effect
 == 描出地图上冻结块、深冻块和死亡块生效的边缘
 
 Outlines can be distracting in fast maps; lower the opacity instead of disabling them.
-== 快节奏地图里轮廓容易分散注意，可以调低不透明度而不是关掉。
+== 只给死亡、冻结和传送开轮廓，实心块通常不需要；宽度保持一像素。颜色与地图对比不足时换色，不要靠加粗解决。
 
 Output
 == 输出
@@ -10845,9 +10836,6 @@ overwrites
 Own hook line width
 == 自己的钩子辅助线宽度
 
-Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
-== 「自己的」包含本体和分身。其他玩家的提示只对同队玩家生效，且需要服务器支持预输入。
-
 p = Ping latency
 == p = Ping 延迟
 
@@ -10921,7 +10909,7 @@ Particles
 == 粒子
 
 Parts are stored in the skin file; unsaved changes are lost when leaving the page.
-== 各部件保存在皮肤文件里；离开页面时没保存的改动会丢失。
+== 改完一个部位就先保存一次，避免切换角色后丢改动；颜色和贴图保持高对比，远看时更容易辨认。
 
 Passed
 == 通过
@@ -11050,49 +11038,49 @@ Pet Skin:
 == 宠物皮肤：
 
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
-== 宠物只是装饰，额外绘制影响性能时请关掉。
+== 尺寸保持小，透明度略低以免抢视线；性能紧张时直接关闭，而不是把尺寸缩到看不见。
 
 Phrase
 == 语录
 
 Pick a color preset or a custom color, then choose regular or bold weight.
-== 选择预设颜色或自定义颜色，再选择常规或粗体。
+== 「图标颜色」按白色、黑色、自定义或彩虹取色，自定义模式才读取自定义色值；「图标样式」在常规、粗体、填充和轻体之间切换同一套图标字体的字形。「收藏图标」「好友图标」可以单独取色，不跟随主图标。颜色只影响绘制，不改变图标语义。
 
 Pick a country for each player.
-== 为每个玩家各选一个国家。
+== 国家代码按 ISO 3166-1 数字码保存，客户端据此在名字旁绘制对应国旗；玩家和分身各存一份。国旗由本地资源绘制，其他客户端可以隐藏或不显示。
 
 Pick a family; if it offers several weights, choose one that stays readable at small sizes.
-== 先选字体，若有多个字重，挑一个小字号下依然清晰的。
+== 「界面字体」「中文字体」「图标字体」分别指定三类字形来源，字重独立选择；缺失字体时回退到内置字体。字体只影响菜单和 HUD 文字排版，不改变游戏世界。
 
 Pick a font family and weight here; use the cursor scale to make the pointer easier to see on large screens.
-== 在这里选择字体和字重；大屏幕上用光标缩放让指针更容易看清。
+== 这张卡把界面字体与游戏内光标放在一起：字体族、中文字体、图标字体和字重决定文字排版，光标缩放与旋转决定指针绘制。两者都不影响命中判定。
 
 Pick a map or a solid color, then adjust brightness and blur.
-== 选择一张地图或一种纯色，再调整亮度和模糊。
+== 「背景地图」决定菜单背后加载哪张地图或纯色；「背景颜色」「实体颜色」分别给纯色背景和实体层着色。「背景实体」控制是否绘制地图实体，「显示地图细节」决定是否叠加普通 tile 图层。地图背景按菜单场景渲染，不进入服务器。
 
 Pick a mode from the list; unsupported modes are not offered.
-== 从列表中选择模式；不支持的模式不会显示。
+== 列表来自图形后端对当前显示器报告的可用模式，每一项包含宽、高和刷新率；选择后写入全屏分辨率并在下次切换全屏时生效。「无边框」只在窗口模式生效，「全屏模式」区分独占、桌面和窗口化全屏。不支持的组合不会出现在列表里。
 
 Pick a pack to activate it; samples are reloaded when the selection changes.
-== 选中音频包即启用；切换音频包时会重新加载声音采样。
+== 「音频包」选择一套替换游戏音效的资源；切换时重新加载采样，缺失文件回退到默认音效。音频包只改声音文件，不改变武器判定或服务器逻辑。
 
 Pick a scope under "Show name plates", then set "Name plates size" and "Name plates offset"; clan and client ID lines have their own switches.
-== 在显示昵称下选择范围，再设置昵称大小和昵称距离；战队与客户端 ID 各自有独立开关。
+== 「显示名字牌」的范围决定绘制对象：无、当前角色、自己、他人、他人加自己的非当前角色或全部。「大小」「与 Tee 的间距」控制整体排版；「战队」「队伍颜色」「好友标记」「客户端 ID」「ID 单独一行」各自是独立开关，ID 和战队还有自己的字号。范围是绘制前过滤，关掉后对应名字牌完全不画。
 
 Pick a shape, then tune glow and animation speed.
-== 先选一种形状，再调整辉光与动画速度。
+== 「增强激光」启用辉光和脉冲动画；「辉光强度」控制外扩光晕，「脉冲幅度」「脉冲速度」让亮度随时间起伏，「大小」缩放光束宽度，「圆头」把端帽从方形改成圆形，「透明度」统一乘到整条光束。辉光会增加填充率消耗，脉冲只改颜色不改判定。
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
-== 选一个槽位，输入指令和对应标签，再在游戏中按住轮盘键测试。
+== 每个槽位保存一条命令和一个显示标签；按住轮盘键时按鼠标方向选中槽位，松开即执行该槽位命令。空槽位仍占据一个扇区，所以轮盘角度不会自动收紧；「布局」决定扇区排列方式。
 
 Pick a text color mode first; the custom color row only appears for the custom mode.
-== 先选择文本颜色模式；自定义颜色行只在自定义模式下出现。
+== 「界面表面色」「控件底色」「弹层底色」「强调色」及各自不透明度决定整套配色；「圆角曲线」「胶囊端头」「平滑强度」决定形状算法。「文字颜色模式」在白、黑、彩虹和自定义之间切换，自定义模式才读取自定义色；「背景模糊」和模糊算法给半透明表面加背板模糊。所有组件共用这些 token。
 
 Pick a text style or a moon or sun badge, check the preview, then press "Save" to share the style with other players.
-== 选择文字款、月亮胶囊或太阳胶囊。查看预览后点「保存」，其他玩家就能看到这款头衔。
+== 头衔保持简短，避免在聊天里占掉半行；样式先看预览再保存，月亮和太阳徽章在深色聊天背景下更清楚。赞助码只输入一次，不要截图分享。
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== 逐行选择颜色；已认证和同战队颜色作用于计分板，两个列表颜色作用于好友列表。
+== 四个颜色分别作用于不同集合：「已认证玩家」和「同战队」在计分板按身份与战队匹配；「好友」和「好友列表中的战队成员」只在好友列表着色。匹配按优先级覆盖，队伍色仍用于队伍面板。颜色只影响本地显示，不改变玩家身份。
 
 Pick result: %s
 == 抽取结果：%s
@@ -11100,11 +11088,11 @@ Pick result: %s
 Pick the key that starts this flow.
 == 选择启动这条流程的按键。
 
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
-== 先选模式，再选显示器与分辨率。「渲染帧率上限」限制关闭垂直同步时每秒画多少帧；「客户端更新频率」限制游戏逻辑与输入的处理频率，并连带限制渲染。
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
+== 窗口模式决定交换链的创建方式：独占全屏直接接管显示器，无边框和窗口模式走桌面合成；切换模式会重建交换链，画面可能短暂闪烁。「显示器」「分辨率」决定后备缓冲尺寸，非原生分辨率由 GPU 缩放。「垂直同步」让呈现等待屏幕刷新；「呈现模式」只在 Vulkan 下出现：自动跟随垂直同步（开 FIFO、关立即、macOS 邮箱），立即直接提交可能撕裂，邮箱用新帧替换等待帧且不阻塞，FIFO 等刷新不撕裂但最多多一帧延迟。「渲染帧率上限」在提交前限制绘制帧数，「客户端更新频率」限制逻辑与输入 tick 并连带降低渲染；两者独立，实际取更严格者。
 
 Pick the parts to colorize, then choose a gradient mode and colors.
-== 勾选需要上色的部分，再选择渐变模式和颜色。
+== 「消息颜色」「队伍消息」「系统消息」「客户端消息」分别决定普通、队伍、服务器和客户端提示的文字颜色；「渐变」为对应文字叠加第二色，并按字符位置插值。「好友消息」单独启用好友名字着色和爱心，爱心颜色独立于文字颜色；「高亮」用于命中关键词的消息；「隐藏服务器前缀」只去掉服务器消息前的星号，不改变消息来源。
 
 Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 == 选择与你使用的音乐客户端匹配的来源并保持播放，歌词会自动跟随。
@@ -11632,7 +11620,7 @@ Prediction
 == 预测
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== 预测与延迟补偿已移到 DDNet 页面的「网络补偿」子页签。
+== 正常对局保持其他队伍可见并把透明度设在能看清又不抢视线的位置；背景 quad 只在制图或排查渲染时开。缩放时长 0 最跟手，想要平滑感再小幅增加。
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 预测边界（单位：毫秒，增加延迟但可减少因 ping 波动导致的卡顿）
@@ -11664,9 +11652,6 @@ Prediction margin when frozen
 Prediction time
 == 预测耗时
 
-Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
-== 预测是用准确性换响应速度；上行冗余会让上传流量翻三倍。「优先游戏流量」只在 Windows 上给数据包打标记，还需要路由器识别 QoS 才有效。
-
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 == 在启动和菜单空闲时分帧准备设置页，减少首次打开时集中加载造成的卡顿。
 
@@ -11675,6 +11660,9 @@ Preparing chat export: %d%%
 
 Preparing demo playback
 == 正在准备回放
+
+Present mode
+== 呈现模式
 
 Preset %d
 == 预设 %d
@@ -11689,7 +11677,7 @@ Presets
 == 预设
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
-== 按选择地图挑文件，核对上传显示的目标服务器与玩家，再按上传地图；取消可中止。
+== 上传把本地 .map 文件分块发送到设定端点，显示进度和服务器返回的错误；目标服务器和上传玩家在开始前固定。文件超过 64 MiB 或端点为空时不会开始。
 
 Press '%s' to show cursor.
 == 按「%s」显示光标
@@ -11746,7 +11734,7 @@ Pressed: Something hookable
 == 按下后：可钩物体
 
 Pressing the key again leaves the split and returns both Tees to the team set in "Team when leaving solo split".
-== 再按一次该键退出分线，两个 Tee 会回到退出单人分线时的队伍设置里指定的队伍。
+== 先设好离开队伍，避免退出后回错队；自动锁队只在确定要跑单图时开。按键分开绑定，防止连按误切。
 
 Prev. weapon
 == 上一个武器
@@ -11806,7 +11794,7 @@ Preview selected file
 == 试听已选文件
 
 Preview spacing does not match every map; check in game before a match.
-== 预览中的间距并不适用于所有地图，比赛前请进游戏实测。
+== 先用预览把元素拖到不重叠的位置，再进游戏确认；预览间距不等于所有地图，比赛前至少在两张图上检查。改完偏移记得关掉自由移动，避免误拖。
 
 Preview the bind menu layout and entries
 == 预览绑定菜单布局和条目
@@ -12331,7 +12319,7 @@ Ratio threshold for local target language detection
 == 本地目标语言识别占比阈值
 
 Read the listed rows, then press "Apply Qm recommended appearance"; if the font is missing, the panel says so and your current fonts stay.
-== 先看列出的各项，再按应用 Qm 推荐外观；若缺少字体，面板会提示，当前字体会保留。
+== 预设是一组字体、UI 缩放、动画强度、面板透明度和界面颜色的固定值；应用时逐项写入对应配置并立即重载界面。字体缺失时只跳过字体项，其余值仍会应用，面板会列出实际写入的每一项。
 
 Ready
 == 已就绪
@@ -12377,6 +12365,9 @@ Receiving
 
 Recent
 == 最近
+
+Recommended settings
+== 建议设置
 
 Reconnect in %d sec
 == %d 秒后重新连接
@@ -12616,7 +12607,7 @@ Remove right to vote from player with IP address
 == 删除具有 IP 地址的玩家的投票权
 
 Remove shortcuts you no longer use to keep the list readable.
-== 删掉不再使用的快捷方式，让列表保持清爽。
+== 只保留日常会用到的短语，按场景命名；公共聊天内容注意不要包含会被服务器过滤的词。
 
 Remove team clan:
 == 删除友好战队：
@@ -12850,7 +12841,7 @@ Replays directory
 == 回放目录
 
 Replies go to public chat and share one cooldown, so keep keywords specific or a common word will spam the server.
-== 回复会发到公共聊天并共用一个冷却，关键词要具体，否则常见词会在服务器上刷屏。
+== 关键词写具体，避免常见词触发；冷却设在几十秒以上。公共服务器上自动回复容易被当成刷屏，默认关闭。
 
 Reply
 == 回复
@@ -12997,7 +12988,7 @@ Reset tooltip appearance
 == 恢复气泡默认外观
 
 Reset tooltip appearance to restore the default font size and bounce animation.
-== 重置气泡外观可恢复默认字号和弹跳动画。
+== 字号保持与正文接近，太大容易挡住相邻控件；弹跳动画在低端机上可以关掉。
 
 Reset tuning after each map change
 == 每次地图更改后是否重置调整
@@ -13012,7 +13003,7 @@ Reset zone tuning in zone x or in all zones
 == 重置区域 x（或全部区域）的调参配置
 
 Resetting restores defaults immediately, so note down values you want to keep.
-== 重置会立刻恢复默认值，想保留的值请先记下来。
+== 重置前先导出配置或记下关键项；一次只重置确定不要的改动，尤其是画面、按键和网络相关变量，避免把整套手感清掉。
 
 Resolution:
 == 分辨率：
@@ -13069,7 +13060,7 @@ Restoring save %d: main '%s', dummy '%s'.
 == 正在恢复存档 %d：本体“%s”，分身“%s”。
 
 Results include cards on other pages; the tab switches automatically.
-== 结果也包含其他页面上的卡片；标签页会自动切换。
+== 优先选标题完全匹配的结果；跳到卡片后确认副标题和控件，避免同名功能进错页面。
 
 Retry
 == 重试
@@ -13108,7 +13099,7 @@ Review and reset changed configuration values
 == 查看并重置已更改的配置值
 
 Review the entries and change only what you understand; defaults are tuned for normal play.
-== 先浏览各项，只修改你理解的内容；默认值已按正常游玩调校。
+== 这张卡目前只承载剩余 DDNet 偏好，例如「进入服务器时执行」的命令串；命令在连接建立后由控制台依次执行，分号分隔多条。它不会在每个地图切换时重复执行，也不会绕过服务器权限。
 
 Reviews configuration values that differ from their defaults and resets them.
 == 检查与默认值不同的配置项，并把它们重置。
@@ -13180,7 +13171,7 @@ Route Echo messages to notifications
 == Echo 消息改走通知栏
 
 Rows here usually come from old configs, so test each command before you rely on it.
-== 这里的行多半来自旧配置，所以先试一遍命令，确认能用再依赖它。
+== 只保留自己确认过的命令，旧配置迁移来的行先逐条测试；不认识的命令直接清空按键，避免误触后刷屏或改坏配置。
 
 RTT
 == 往返延迟
@@ -13534,13 +13525,13 @@ Scroll step
 == 滚动步长
 
 Scroll the list to see sponsors and support options.
-== 滚动列表可查看赞助者与支持方式。
+== 卡片展示赞助者名单和支持入口，支持入口通常打开外部页面；客户端只负责展示，不处理支付，也不会因为赞助改变任何游戏行为。
 
 Scroll to browse
 == 滚轮浏览
 
 Scroll to browse the credits.
-== 滚动即可浏览鸣谢名单。
+== 名单是编译进客户端的只读文本，按贡献者和工作人员分组滚动展示；不读取网络，也不能在界面内编辑。
 
 Search
 == 搜索
@@ -13573,7 +13564,7 @@ Search maps or mappers
 == 搜索地图或作者
 
 Search matches config names too, so qm_ queries find raw options.
-== 搜索也会匹配配置名称，因此 qm_ 查询能找到原始选项。
+== 不确定控件名时直接输入配置变量名，例如 qm_ 开头的项；结果太多时再加一个关键词缩小范围。
 
 Search online fonts…
 == 搜索在线字体…
@@ -13639,7 +13630,7 @@ Segment warmup (ticks)
 == 分段预热（tick）
 
 Select a body part, change its sprite or color, then save the skin.
-== 选一个身体部位，改它的贴图或颜色，然后保存皮肤。
+== 编辑器按身体部位选择 Tee 7 贴图和颜色，修改只作用于当前角色的皮肤副本；保存后写入皮肤文件，未保存的改动在离开页面时丢弃。预览使用当前光照和动作。
 
 Select a configuration package to preview its contents.
 == 选择配置包以预览内容。
@@ -13651,7 +13642,7 @@ Select a preset, then apply it to player or dummy
 == 先选择预设，再应用到本体或分身
 
 Select a result to open its card.
-== 选择一项结果即可打开对应卡片。
+== 结果列表按匹配度列出卡片，选中后跳到对应页面并展开卡片；跨页结果会自动切换标签页。结果只包含已注册的设置卡。
 
 Select a saved .map file (client limit: 64 MiB).
 == 选择已保存的 .map 文件（客户端上限：64 MiB）。
@@ -13906,19 +13897,19 @@ Server-side ghost opacity during fast practice (%)
 == 快速练习中服务器侧影子的不透明度（%）
 
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
-== 设置背景颜色和背景不透明度，再设文字颜色、选中文字颜色与选中背景颜色；下方会实时预览。
+== 补全弹窗在输入聊天时列出匹配的命令和表情，按当前输入过滤；背景色与不透明度、文字色、选中文字色和选中背景色分别控制列表与高亮。弹窗只接受键盘选择，不改变已输入文本。
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
-== 把显示方式设为按键显示或一直显示，再按需开启手枪辅助线和预测忍者路径，并调整颜色、线宽和透明度。
+== 轨迹线从武器位置按当前朝向和弹道规则外推，显示手枪引导线或忍者飞行路径；模式可选关闭、按住指定键显示或常显，颜色、线宽和透明度独立。它只做本地预测，不保证命中。
 
 Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit the cursor with "Minimum cursor distance" and "Maximum cursor distance".
-== 瞄准用游戏内鼠标灵敏度，菜单用鼠标灵敏度（界面），再用最小光标距离和最大光标距离限制光标位置。
+== 「游戏鼠标灵敏度」缩放瞄准时的原始鼠标位移，「界面鼠标灵敏度」只作用于菜单和编辑器；「最小/最大光标距离」把光标限制在 Tee 周围的一段半径内，超出后停止外移。「限制在屏幕内」阻止光标跑出窗口，「按缩放调整距离」让限制随镜头缩放变化。
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== 以毫秒设置「预测余量」，勾选「延迟补偿（AntiPing）」，再选择要预测的内容；冗余开关是实验性的，只在丢包严重的连接上有用。
+== 「预测边界」决定客户端向前模拟多长时间，数值越大越能吸收抖动，但输入到显示的延迟也越大；「AntiPing」在预测边界内平滑其他玩家位置。「预测其他玩家」「预测武器」「预测榴弹」分别选择要外推的对象；「预测事件」提前播放声音和粒子。「上行冗余」在支持 PingEx 的服务器上复制发出的 UDP 包，最多三倍上传；「游戏流量优先」只在 Windows 给包打 DSCP 标记。
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
-== 把切换间隔设为 0 就会停止定时切换，队列留给手动切换或进图时使用。
+== 间隔设在 30 秒以上，避免跑图中频繁换肤分散注意；只想手动换肤时把间隔设为 0，保留队列用于进图随机。
 
 Set all to Rifle
 == 统一为激光枪颜色
@@ -13985,9 +13976,6 @@ Sets chat position, width, font size and visibility.
 
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == 一次配好编码器、容器和画质：日常分享是 H.264 + MP4，高画质是体积更小的 HEVC + MP4，剪辑是全帧内 H.264 + MP4（任意位置都能瞬间定位），交换格式是给别的剪辑软件用的 ProRes 422 HQ + MOV。
-
-Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
-== 设置界面的动效强度（过渡、卡片入场、重排动画、滚动手感），以及每个输入框的光标形状。
 
 Sets laser colors for weapons and entities.
 == 设置武器与实体的激光颜色。
@@ -15186,9 +15174,6 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == 显示天梯队伍排名（或玩家排名）从第 i 名开始的 5 条（默认 1，-1 为最差）
 
-Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
-== 显示 FPS、帧耗时、RTT 与预测提前量；超过参考线的帧耗时条表示已超出 60 FPS 的帧预算。
-
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == 以屏幕文字显示边缘跳的小数位置数值，帮你卡在准确的位置起跳。
 
@@ -15802,7 +15787,7 @@ Start dummy skin queue from a random position when entering a map
 == 进入地图时从分身皮肤队列随机位置开始
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
-== 先保持默认值；其他玩家看起来跳动就稍微调高，感觉自己落后于他们就调低。
+== 改进抗延迟在基础 AntiPing 上增加负缓冲、稳定方向和不确定度缩放：负缓冲允许提前量回退，稳定方向抑制来回抖动，不确定度缩放决定预测位置的可信范围。数值只影响本地外推。
 
 Start from the flow library, or create a new flow
 == 从左侧流程库开始，或新建一个流程
@@ -15841,7 +15826,7 @@ Start the export paused
 == 导出开始时暂停
 
 Start with one or two rows; all four at once crowd the corner during a run.
-== 先开一两行就好；四行全开会在跑图时挤满角落。
+== 先开卡键和分身控制，跑图时最常用；锤子和复制状态只在专门练习时开。四行全开会挤占角落视野。
 
 Starts Steam automatically when the client is launched from outside, so Steam records your playtime.
 == 从外部启动客户端时自动启动 Steam，让 Steam 记录你的游戏时长。
@@ -16021,7 +16006,7 @@ Stroke retention time (0=Never disappear)
 == 描边保留时间（0=永不消失）
 
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
-== 笔画只在本地显示，离开地图就会消失；把消失时间设为 0 可保留到下次绘制。
+== 颜色选与地图高对比但不刺眼的，宽度保持细；讲解路线时把淡出设长一些，日常游玩设短一些避免残留。
 
 Strong hook
 == 强钩
@@ -16075,7 +16060,7 @@ Superellipse
 == 超椭圆
 
 Support is optional; nothing here changes client behavior.
-== 支持完全自愿；此处内容不会改变客户端行为。
+== 完全自愿；不支持也不影响功能。打开支持页前确认是官方链接，不要在游戏内输入支付信息。
 
 Support ♥
 == 支持 ♥
@@ -16114,7 +16099,7 @@ Switch interval
 == 切换间隔
 
 Switch on only the ones you recognize; chat completion affects the chat input, and "Show Qm badge" adds the Qm marker next to names on the scoreboard.
-== 只打开看得懂的项；聊天补全作用于聊天输入框，显示 Qm 标识会在计分板名字旁加一个 Qm 标记。
+== 这些开关彼此独立：自动接受组队邀请会发送 /team 命令；消息合并把两秒内相同发言并成一行；随机受击表情、Qm 徽章、短服务器名、tune 区域着色和隐藏进服信息分别改一处显示或行为；「输入时不显示气泡」只去掉发送输入里的正在输入标记。
 
 Switch on the status rows you need, then list the binds you want to watch.
 == 打开需要的状态开关，再在自定义列表里填想监控的 bind。
@@ -16378,7 +16363,7 @@ Team when leaving solo split
 == 退出单刷时的队伍
 
 Team-colored lasers are easier to read in matches.
-== 队伍配色的激光在对局中更容易辨认。
+== 把危险激光（冻结、门）设成高对比色，武器激光按习惯区分即可。实体激光跟随队伍色能减少误判，但队友颜色接近背景时要手动调亮。
 
 Teammate
 == 队友
@@ -16621,7 +16606,7 @@ Text color mode: 0 white, 1 black, 2 rainbow, 3 custom
 == 文本颜色模式：0=白色，1=黑色，2=彩虹，3=自定义
 
 Text follows the chosen mode instead of the surface, so a light surface with white text is unreadable by design.
-== 文字跟随所选模式而不是表面色，因此浅色表面配白字在设计上就是不可读的。
+== 先定文字颜色模式，再调表面和控件底色，保证正文对比度；强调色只用于焦点和选中态，不要大面积铺开。模糊好看但增加 GPU 开销，低端机可以关掉。
 
 Text is too long for the selected translation service.
 == 文本超过所选翻译服务的长度限制。
@@ -16651,13 +16636,10 @@ The blueprint never runs by itself: it only writes the bind line at the bottom r
 == 蓝图不会自己运行，它只负责写出右下角那一行 bind。
 
 The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.
-== 只有存在这类绑定时卡片才会出现；点它的按键栏就能换键，行标题就是它执行的命令。
+== 这张卡只显示客户端无法归类的原始命令绑定；行标题就是实际执行的命令文本，按键栏直接改键。命令仍由控制台解析，参数和引号按原样保留，因此拼写错误或已移除的命令不会在这里被纠正。
 
 The command is empty, incomplete, or exceeds the local config line limit.
 == 命令为空、不完整或超过本地配置行限制。
-
-The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
-== 显示范围同时控制 Tee 变色和图标。两个图标各有独立开关，关掉方向键显示后仍可使用。
 
 The downloaded file is not a valid demo
 == 下载的文件不是有效的演示
@@ -16678,10 +16660,10 @@ The FPS at which the recorder should record replay.
 == 录像机应以哪个 FPS 录制回放。
 
 The launcher key only switches launch mode, so you still choose the emote with your normal emote key.
-== 发射键只负责切换发射模式，具体表情仍要用平时的表情键来选择。
+== 人多时关掉发射表情可减少视觉噪声；大表情保留，沟通更直观。发射键放在不易误触的位置。
 
 The list only affects your client and is not shared with other players.
-== 该列表只影响你的客户端，不会共享给其他玩家。
+== 只把确认的敌对目标加入列表，避免误伤路人；屏蔽功能会让画面信息变少，比赛前先确认自己仍能看清队友和敌人。
 
 The look and behavior of the IME candidate bar that appears when you type Chinese, Japanese or Korean in chat.
 == 在聊天里输入中日韩文字时出现的 IME 候选栏的外观与行为。
@@ -16690,10 +16672,10 @@ The look of the help bubbles that appear when you hover over buttons, settings a
 == 鼠标悬停在按钮、设置项和绑定行上时弹出的提示气泡的外观。
 
 The map progress bar only fills on Gores maps; the other three lines work on any server.
-== 地图进度条只在 Gores 地图上填充；其余三行在任何服务器上都有效。
+== 进度条放在屏幕上方不挡路线；统计 HUD 只开自己会看的行。非 Gores 地图进度条不会填充，不要误以为失效。
 
 The message is sent on every water death, so keep it short; leaving "Chat message" empty disables sending.
-== 每次掉水都会发一次，所以内容尽量短；聊天内容留空就不会发送。
+== 消息保持一句话，避免在连续落水时刷屏；概率设在 50% 以下更自然。表情 ID 先在本地试好再启用。
 
 The name "default" is reserved.
 == “default” 是保留名称。
@@ -16702,13 +16684,13 @@ The player you were whispering to hasn't reconnected yet or left. Please wait or
 == 你正在私聊的玩家尚未重连或已离开。请稍等，或改与他人私聊
 
 The preview does not show every weapon; check in game.
-== 预览不会显示所有武器；请到游戏中确认。
+== 先在预览里定好内芯与外框的明暗差，再进游戏看真实背景；如果预览里两类激光已经接近，实际对局中会更难分辨。
 
 The preview uses your own name and colors; other players may look different.
-== 预览使用你自己的名字和配色，其他玩家的显示可能不同。
+== 把预览当作配色对照表：一次只改一类，确认名字、正文和背景三者都能分开。预览里的名字和皮肤来自本地设置，其他玩家实际显示可能不同。
 
 The preview uses your own Tee; other players may look different.
-== 预览用的是你自己的 Tee，其他玩家看起来可能不一样。
+== 先看预览确认不换行、不超出屏幕，再进游戏看实际位置；长标签在小字号下更容易挤在一起。
 
 The rank 1 demo is already downloaded
 == Rank 1 演示已下载过
@@ -16733,9 +16715,6 @@ The server rejected the map upload.
 
 The two keys that cast your vote: one for yes and one for no.
 == 投出你那一票的两个键：一个赞成，一个反对。
-
-The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
-== 更新频率与帧率上限已移到图像页：它们属于渲染设置，不该放在这里。
 
 The watermarked screenshot was saved next to the original
 == 带水印的截图已保存到原图旁边
@@ -16789,13 +16768,13 @@ There's an unsaved map in the editor, you might want to save it.
 == 编辑器中有尚未保存的地图，建议先保存。
 
 These effects are cosmetic and can cost a little performance on weaker GPUs.
-== 这些特效只是观感，较弱显卡上会多占一点性能。
+== 迷你 Tee 会让远处目标更难看清，竞技时关闭；果冻动画可以保留，但人数多时关掉他人效果。假旗帜只在娱乐地图使用。
 
 These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered.
-== 这些选项彼此独立，只开启会用到的功能，聊天和计分板会更清爽。
+== 只开自己认识的项；自动接受邀请和随机表情在陌生服务器上可能造成困扰，默认关闭。徽章和短名属于显示偏好，按需开启。
 
 These options only change prediction on your client; what other players see is not affected.
-== 这些选项只改变你客户端的预测，不影响其他玩家看到的画面。
+== 默认全部保持关闭或默认值；只有高 Ping 且确认某种延迟模式更顺手时，才一次改一项并记录 tick 数。改动过大容易让位置和命中判断失真。
 
 Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
 == 思考控制取决于模型服务。使用服务默认值不代表已关闭思考。
@@ -16834,7 +16813,7 @@ This name cannot be used for files and folders
 == 此名称不能用于文件和文件夹
 
 This only affects your own screen; votes still follow the server rules.
-== 这只影响你自己的屏幕，投票仍按服务器规则进行。
+== 默认关闭；只在确定不想被打断跑图时开启，并把时间设得足够长。公共服务器上自动投票可能违背你的真实意愿。
 
 This person has disabled receiving whispers
 == 该玩家已关闭接收私聊
@@ -16906,49 +16885,46 @@ Those nodes are already linked
 == 这两个节点已经连过了
 
 Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split key" to toggle, or use the enter and leave keys.
-== 勾选自动连接 dummy 让它替你连接，然后把单人分线按键绑定为切换，或直接使用进入和离开的按键。
+== 进入单人分屏后，你和分身被分到两个独立队伍，各自模拟；「自动连接分身」在进入时拉起分身，「离开队伍」指定退出后回到哪一队，「自动锁队」在进入时立即锁住两队。进入和离开可分别绑定按键。
 
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
-== 勾上动态视野即可开启；平滑动态视野让镜头移动更顺滑，武器切换则是下面各自独立的行。
+== 「动态镜头」让镜头跟随光标而不是固定居中；「平滑度」控制镜头移动的过渡量，0 为立即，100 最慢；「稳定」在快速移动光标时降低镜头速度，过高会显得延迟；「跟随系数」决定光标对镜头的影响比例。「拾取自动换枪」「没子弹自动换枪」分别在你走过武器或当前武器耗尽时切换。
 
 Tick "Enable 3D background particles", pick a "Particle type", then set "Particle count", "Particle speed" and "Particle color".
-== 勾选启用 3D 背景粒子，选择粒子类型，然后设置粒子数量、粒子速度和粒子颜色。
+== 3D 粒子在菜单背景层独立渲染：粒子类型决定几何体，数量、大小范围、速度、深度和视野边距决定分布；颜色可固定或随机，辉光、脉冲、闪烁和拖尾分别叠加额外绘制。玩家推动半径让粒子对光标产生排斥。背景层不参与游戏世界。
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
-== 勾选启用语音，打开高级选项选择输入设备和输出设备；说话时自动取消静音能让你空出静音键。
+== 语音聊天通过独立 WebSocket 服务器传输，输入设备、输出设备、麦克风音量、播放音量、静音和立体声分别设置；「语音激活」在电平超过阈值时自动发送，释放延迟避免字尾被截；降噪和码率影响带宽与清晰度，「全局组队」让同组玩家不受地图距离限制。
 
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
-== 勾选从外部启动时自动启动 Steam；若找不到 Steam，手动输入其路径或点按重新检测 Steam。
+== 从外部启动客户端时，按配置路径拉起 Steam，让 Steam 记录游戏时长；路径为空时自动探测常见安装位置。客户端本身不依赖 Steam 运行。
 
 Tick "Position jump hint", then move it with "Horizontal position" and "Vertical position" in percent and pick a readable "Font size".
-== 勾选显示跳跃提示，用水平位置和垂直位置（百分比）挪动它，再选一个看得清的字体大小。
+== 提示读取本地 Tee 的精确位置，在接近可起跳边缘时显示小数坐标；颜色、字号和屏幕百分比位置独立设置。它只在满足边缘条件时出现，不改变跳跃判定。
 
 Tick "Replace non-friend names with ID", "Replace non-friend skins with default" or "Use default flags on scoreboard"; words come from a "Word list file".
-== 勾选用 ID 替换非好友名字、用默认皮肤替换非好友皮肤或计分板使用默认旗帜；词语来自词表文件。
+== 直播过滤只改本地绘制：非好友名字替换为客户端 ID，非好友皮肤换成默认，计分板旗帜换成默认，敏感词按词表替换。你自己的名字、聊天和皮肤仍会正常发送。
 
 Tick "Show Gores drown board"; set "Players shown" and "Card opacity", and add "Show player Tee" for avatars.
-== 勾选显示 Gores 溺水面板；设置显示玩家数和卡片不透明度，并可加上显示玩家 Tee 来展示头像。
+== 面板统计本队玩家的落水次数并按次数排序，最多显示设定人数；「显示 Tee」给每行加头像，「不透明度」控制底板。只有 Gores 模式且本队有数据时出现。
 
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
-== 勾选显示输入，然后用键盘大小、鼠标大小、不透明度和位置滑块调整尺寸与位置。
+== 浮层按当前按键状态点亮键盘和鼠标，位置与缩放以屏幕百分比保存；「按键次数」在键帽上累加计数，可设置标签、颜色和字号。它只读取本地输入，不发送数据。
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== 勾选「显示其他玩家」会半透明绘制其他队伍，在它下方的依赖行里设置影子不透明度，并用「显示背景贴图」和「默认缩放」调整视图。
-
-Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== 勾选「跳过主菜单」，用「设置文件」或「主题目录」打开对应位置。
+== 「显示其他队伍」把队友以外的 Tee 画成半透明，值为 2 时只显示本队；「透明度」控制这层半透明的强度。「显示背景四边形」绘制地图背景 quad，主要用于制图排查或低端机降负载；「默认缩放」决定进入地图时的镜头距离，「平滑缩放时长」控制滚轮缩放的过渡时间，0 为立即切换。
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
-== 按需勾选显示卡键状态、显示锤子状态、显示分身控制状态或显示分身同步状态。
+== 四条 HUD 分别读取不同状态：「卡键」显示被系统或输入层卡住的键，「锤子」显示当前锤子状态，「分身控制」显示当前受控 Tee，「分身复制」显示复制开关。每行独立排版，不改变输入。
 
 Tick delay before executing qm_execute_on_join
 == 执行 qm_execute_on_join 前的延迟（tick）
 
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
-== 勾选想要的动作，例如解冻后自动取消旁观或自动锁定队伍；下方会出现锁定延迟和旁观透明度。
+== 被其他玩家锤醒时，按开关执行：取消旁观、在两个 Tee 都冻结时切到先醒的那个、关闭聊天、自动锁队；锁队延迟控制等待时间。「唤醒提示」在另一个本地 Tee 上方显示左右随机的箭头，「暂停旁观透明度」缩放水域或冻结中 Tee 的淡化程度。
 
 Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
-== 勾选下载开关后，在「皮肤搜索」里用「数据来源」选择要显示哪个来源目录。
+== 「下载皮肤」「下载社区皮肤」「下载 DDStats 皮肤」分别允许对应来源的网络请求，下载地址可自定义；「皮肤前缀」把本地皮肤替换为同名的带前缀变体，「胖皮肤」启用宽体渲染。来源过滤只影响列表，不影响已缓存皮肤。
 
 Ticks after freeze before applying max prediction reduction
 == 冻结后经过多少 tick 才应用最大预测减少
@@ -17263,7 +17239,7 @@ Token to register this server to a specific community
 == 用于将此服务器注册到特定社区的令牌
 
 Too many badges make busy servers hard to read, so keep only the ones you actually use.
-== 标记太多会让拥挤的服务器难以看清，只留实际会用到的。
+== 只开延迟圆环或国家旗帜，皮肤头像会明显增大名字牌；拥挤服务器上关掉头像，保持名字可读。
 
 Too many configuration files.
 == 配置文件过多。
@@ -17338,7 +17314,7 @@ Trail width
 == 拖尾宽度
 
 Trails add drawing work, so lower the length on low-end machines.
-== 拖尾会增加绘制负担，低配机器上把长度调小。
+== 长度保持短，避免轨迹盖住地图细节；只开自己的拖尾最干净。低端机优先缩短长度而不是降低透明度。
 
 Translate
 == 翻译
@@ -17484,95 +17460,89 @@ Tune zone (map / override)
 Tuning parameter
 == 调校参数
 
-Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
-== 机器较弱时关掉动效，卡片会立刻展开、滚动手感也随之关闭。光标形状只是外观：三种样式都占同一个字符格。
-
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
-== 关闭“显示主世界影子”会隐藏所有来自服务器的 Tee（包括其他玩家）；保持开启时，不透明度滑杆决定它们有多显眼。绑定行发送的指令与练习菜单一致，按键触发无需打开聊天框。
+== 快速练习在本地复制地图并模拟自己的 Tee，服务器上的真实 Tee 留在进入点；其他玩家以服务器侧影子显示，开关和机关不会因你的练习而改变。「主世界影子」控制是否显示这些 Tee，透明度滑杆控制可见度；计时器显示本次练习用时，绑定行直接发送练习命令。
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
-== 打开「掉水自动发言」，填上想要的聊天内容，想要表情就再开启「掉水发表情」并选好表情 ID。
+== 落水死亡事件触发后，按设定概率发送聊天消息；「表情」开关额外发送指定 ID 的表情。消息文本为空时不发送，概率低于 100% 时不是每次死亡都触发。
 
 Turn on "Auto translate received messages", pick a "Translation service", set "Translate received messages to", then press "Test translation".
-== 打开自动翻译收到的消息，选择翻译服务，设定收到消息译为的目标语言，再点测试翻译确认能用。
+== 收到消息后按目标语言和检测模式决定是否翻译，译文作为附加行显示；发送前翻译可选始终或仅常见源语言。服务商、源/目标语言、API Key、端点和并发分别配置，LLM 还支持自定义提示词和思考参数。翻译失败时保留原文。
 
 Turn on "Automatically record demos" or a screenshot option, set "Max demos" or "Max Screenshots", and fill "Demo directory" or "Screenshot directory" to move the files.
-== 打开自动录制回放或某个截图选项，设置最大回放数或最大截图数，再填好回放保存目录或截图保存目录就能把文件换地方。
+== 「自动录制 demo」「结束时截图」「自动计分板截图」「自动 CSV」各自在对应事件触发写盘；「最大数量」到达后删除最旧文件，0 表示不限。「demo 目录」「截图目录」为空时使用默认存档路径。「截图水印」在保存时叠加自定义文字、时间、地图名和位置。
 
 Turn on "Better scoreboard", then enable what you need: "Scoreboard point check", "Show scoreboard after death" or "Scroll mode".
-== 打开更好的计分板，再按需要开启计分板查分、死亡后显示计分板或滚动模式。
+== 「增强计分板」替换默认排版；「查分」从 DDStats 拉取玩家分数或游戏时长并缓存，「死亡后显示」在复活前保留计分板，「滚动模式」把行高固定并用滚轮浏览。「筛选」在绘制前按名字或战队过滤，清空后恢复全部。
 
 Turn on "Enable camera drift" or "Enable dynamic FOV", then tune "Drift intensity" and "Dynamic FOV intensity"; use "Aspect ratio preset" to force a view shape.
-== 打开镜头漂移或动态 FOV 后，才会出现对应的强度与平滑度滑条；用宽高比预设固定画面形状，选自定义可自己填比例。
+== 「镜头漂移」按移动速度给镜头加一个反向偏移，强度和反向开关控制方向，平滑度控制跟随速度；「动态 FOV」随速度拉宽视野，强度和阻尼独立。「即时开镜反转」让相反方向缩放键立即反向，而不是等原动画结束；「界面缩放」和「宽高比预设」只改画面排版。
 
 Turn on "Enable collision hitboxes", choose what to draw, then pick which players to show under "Show hitboxes for".
-== 打开「启用碰撞箱」，勾选想看的项目，再在「显示对象」里选择要显示哪些玩家。
+== 「碰撞边界」按地图碰撞层绘制冻结、死亡、检查点、护盾拾取和武器范围；每个子开关选择一类几何体，「显示对象」决定只画自己、队友或全部。绘制使用本地地图数据，不向服务器请求。
 
 Turn on "Enable controller", choose the device, pick "Relative" or "Absolute" under "Ingame controller mode", then tick the axes you want under "Aim bind".
-== 打开启用控制器并选好设备，在游戏内手柄瞄准模式里选相对或绝对，再在操作轴绑定里勾选需要的轴。
+== 「启用手柄」把 SDL 手柄事件接入输入层；「相对」「绝对」决定摇杆是持续推动光标还是映射到固定屏幕点，绝对模式会隐藏灵敏度。「游戏灵敏度」「菜单灵敏度」分别缩放两类场景的摇杆位移；「死区」过滤摇杆漂移；X/Y 轴绑定决定哪根轴控制光标。手柄输入与键鼠并行合并。
 
 Turn on "Enable dummy window", then set "Dummy window size" and "Dummy window zoom"; "Only show when the other Tee is not on screen" hides it otherwise.
-== 打开启用分身小窗，再调分身小窗大小和缩放；勾上只在另一个 Tee 不在画面内时显示，其它时候它就会藏起来。
+== 小窗用第二个摄像机渲染另一个 Tee 所在位置，尺寸和缩放独立于主视图；「仅当另一个 Tee 不在屏幕内」在两者同屏时隐藏小窗。它需要已连接的分身，并额外渲染一个场景。
 
 Turn on "Enable Gores mode" or let "Auto enable in Gores mode" do it, pick options like "Auto weapon switch", and bind "Gores mode key".
-== 打开启用 Gores 模式，或让在 Gores 模式中自动启用代劳，选择自动切换武器等选项，再绑定 Gores 模式按键。
+== Gores 模式把锤子和手枪的切换规则改成 KOG 习惯：开启自动换枪后，切到锤子会在开火后回到手枪；「有额外武器时」按住开火短暂切锤再恢复。「禁用分身锤」阻止分身误锤，「快速输入」改变输入发送时机，「隐藏辅助线」和「跳过切换动画」只改本地表现。Axiom 登录和移动方块预测是独立实验项。
 
 Turn on "Enable pie menu", bind the "Pie menu" command on the Bind page, then hold that key near a player and release on an option. Drag options between the two lists to show or hide them.
-== 打开「启用饼菜单」，在「绑定」页绑定「饼菜单」指令，然后靠近玩家按住该键，并在某个选项上松开。拖动选项可在两个列表之间显示或隐藏。
+== 按住轮盘键时在「检测距离」内寻找最近玩家并展开扇区，松开执行高亮项；每个动作有独立开关和颜色，菜单缩放、透明度、开关动画可调。动作包括悄悄话、观战、加好友、组队、复制名字/皮肤和改名队列。
 
 Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins with the plus icon in the skin list; "Random skin on map join" picks the start.
-== 打开启用轮换并把切换间隔设成毫秒数，然后在皮肤列表里用加号图标加入皮肤；进入地图时随机皮肤决定从哪里开始。
+== 队列保存一组皮肤并按顺序轮换；「切换间隔」以毫秒计时，0 表示不定时切换、只在进图时随机起点。「进图随机」决定是否从随机位置开始。玩家和分身各有一条独立队列。
 
 Turn on "Enable word filter list", type the words into "Word Filter" separated by commas, then choose "Replace mode" or "Hide player messages" under "Behavior".
-== 打开启用屏蔽词列表，在屏蔽词里用逗号分隔填好词，再在行为里选替换模式或隐藏玩家消息。
+== 词表在聊天绘制前匹配消息：完整模式按整词，正则模式按表达式，两者可同时启用；命中后按行为替换字符或隐藏整行。「公共词表」使用内置列表，自定义词表用逗号分隔；「逐字节替换」让替换符按匹配长度重复，否则只出现一次。过滤只影响本地显示。
 
 Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visuals", "Audio" and "Chat", then set the "Zen mode key" for quick switching.
-== 打开启用禅模式，再在界面、玩家、视觉、音频和聊天分区里挑选要隐藏的项目，最后设置禅模式按键方便随时切换。
+== Zen 模式是总开关，下面按类别隐藏：HUD、名字牌、聊天、击杀/通关提示、系统提示、方向指示、辅助线、地图进度，以及跳跃、锤子、冻结、死亡、枪口和爆炸特效；音频可分别静音跳跃、锤子和死亡。隐藏只发生在绘制和混音阶段，不改变游戏状态。
 
 Turn on "Message merging" in Dream Features.
 == 在「梦的小功能」里打开「消息合并」。
 
-Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== 打开「名牌文本特效」，进入「个性调整」，再勾选「描边」「渐变」「彩虹」或「辉光」并设置对应范围与颜色。
-
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
-== 打开新 IME 使用新候选栏，再打开输入时自动管理 IME 让输入模式跟随聊天框；颜色在编辑颜色里改。
+== 新 IME 候选栏接管聊天输入时的候选绘制，支持自定义背景、文字、选中色、透明度和字号；「自动管理」在输入框获得/失去焦点时切换输入法状态。关闭后回退到系统候选栏。
 
 Turn on "Notify when friends come online" and "Auto refresh server list", then tune "Refresh interval"; "Auto greet friends entering map" is optional.
-== 打开好友上线提醒和自动刷新服务器列表，再调刷新间隔；自动问候进图好友是可选项。
+== 好友通知通过定时刷新服务器列表检测上线和进图；刷新间隔越短越及时，但请求更多。「进图播报」用大字显示好友加入，「自动打招呼」在好友进图后发送预设文本，「自动跟随」按延迟切到好友所在服务器。最后在线时间来自 DDStats 缓存。
 
 Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opacity" and "Font size", or pick your own colors.
-== 打开在玩家头顶显示聊天气泡，再调显示时长、气泡不透明度和字号，也可以自己选颜色。
+== 气泡读取每个玩家最近一条聊天，在头顶按持续时间绘制；透明度、字号、背景色、文字色和样式控制外观，消失动画可选淡出、缩小或上滑。持续时间为 0 或 Zen 模式开启时不显示。气泡不改变聊天框内容。
 
 Turn on "Show hook strength icon indicator", optionally add "Show hook strength number indicator", then choose a "Hook strength scope".
-== 打开显示钩子强度图标，需要的话再开显示钩子强度数值，然后选择钩子强度范围。
+== 「钩子强度」0 关闭、1 只画图标、2 图标加数值；图标和数值共用「大小」。「范围」决定标记哪些玩家：自己、他人、仅强钩、仅弱钩或全部。强钩与弱钩颜色分别取两个色值，标记按服务器同步的钩子强度状态实时更新。
 
 Turn on "Show important server prompts as notifications" or "Route Echo messages to notifications", then set "Notification hold time" and "Notification text size".
-== 打开把重要服务器提示显示为通知或把 Echo 消息转发到通知，再设置每条显示多久和通知文字大小。
+== 通知栏在聊天框之外单独绘制服务器提示、Echo 和系统消息；分类过滤决定哪些类别进入通知栏，持续时间、最大条数、动画、背景色、文字色和字号控制排版。未进入通知栏的消息仍留在聊天里。
 
 Turn on "Show own coordinates" or "Show other players' coordinates", then choose "Show X" and "Show Y".
-== 开启显示自己的坐标或显示其他玩家的坐标，再选择显示 X 和显示 Y。
+== 坐标取玩家当前位置的 tile 小数，显示在自己的或其他玩家名字牌上，X/Y 可分别开关。「X 对齐提示」在另一名玩家与你或分身的 X 差值持续落在窗口内时给 X 上色；严格模式要求整段时间都精确到百分之一 tile，普通模式允许 0.03 tile 误差。
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
-== 打开自己和 dummy 的皮肤描边或其他玩家的皮肤描边，再调宽度和透明度；循环自定义 Tee 色调负责让自定义颜色动起来。
+== 「皮肤描边」为本地或其他 Tee 生成外轮廓，宽度、透明度、颜色独立；「自定义色相循环」按角度速度旋转主角色和分身的自定义颜色；「表情阴影」在表情后绘制阴影。皮肤切换动画可设置类型、时长、强度、缓动和作用范围。描边是运行时生成，不写回皮肤文件。
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
-== 打开平滑自由观战镜头并设置电影镜头平滑度：数值低反应快，数值高镜头慢慢漂。
+== 自由观战时，鼠标移动先经过一层平滑再驱动镜头；平滑度 0 为立即响应，100 为最慢跟随。它只作用于实况和回放的自由旁观，不改变跟随玩家或正常游玩镜头。
 
 Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow halo size"; "Team 0 glow" handles players without a team.
-== 打开队伍 Tee 发光，再设队伍 Tee 发光强度和队伍 Tee 光晕大小；队伍 0 发光负责没有队伍的玩家。
+== 「队伍 Tee 光晕」按竞速队伍给 Tee 外圈着色；「强度」控制光晕亮度，「光晕大小」控制外扩半径。无队伍的 Team 0 可关闭、跟随 Tee 颜色、使用自定义色或彩虹。光晕在本地绘制，不改变皮肤文件。
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
-== 打开武器切换动画或换弹翻转动画，再选动画范围，并调整时长、距离和旋转角度。
+== 切枪动画在武器切换时按持续时间、滑入距离、旋转角度和缓动播放，作用范围可选自己、本地加分身或全部玩家；换弹动画按概率触发翻转。「锤子跟随光标」让锤子持续朝向鼠标，即使两个动画都关闭也生效。动画只改绘制。
 
 Turn on LX Music open API
 == 开启 LX Music 开放 API
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
-== 一次只开一项：切换 Tee 或关闭聊天可能丢掉你还没写完的消息。
+== 先只开取消旁观和唤醒提示，确认不会打断输入；自动切 Tee 和关聊天容易丢消息，熟练后再开。锁队延迟留出一秒左右，避免刚进队就被锁。
 
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
-== 先开启声音，再选择设备；设备列表由音频后端在启动时提供。
+== 「启用声音」是总开关；「背景音乐」「游戏音效」「手枪声」分别控制各类声音，「聊天提示音」「队伍聊天提示音」「服务器消息提示音」「提及提示音」按事件触发。「窗口失活时静音」在切出窗口后停止输出；「播放设备」由音频后端枚举。
 
 Turning point (%d to %d blocks/s)
 == 速度拐点（%d 至 %d 格/秒）
@@ -17614,16 +17584,16 @@ Type a map name or pick one below
 == 输入地图名，或在下方选择
 
 Type a word; results filter as you type across cards and config names.
-== 输入词语后，结果会随输入实时筛选卡片与配置名称。
+== 搜索框对卡片标题、功能名称、配置变量名和别名做实时匹配，输入即过滤结果；查询会忽略常见问句词，并支持按配置名直接定位。它不修改任何设置。
 
 Type ID
 == 类型编号
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
-== 在搜索框输入或切换全部、收藏、最近，点一下皮肤立即套用，用加号图标把它排进队列。
+== 列表按当前来源过滤和排序，搜索框匹配皮肤名；点击皮肤立即套用到当前角色，加号把皮肤加入轮换队列而不是立即切换。「收藏」「最近」是独立视图，元数据开关显示作者和发布日期。
 
 Type in the search field to filter, switch between "Sort by key" and "Sort by command", and press "Copy all" to copy the rows.
-== 在搜索框输入即可筛选，可在按键排序和命令排序之间切换，按复制全部能复制这些行。
+== 总览汇总客户端当前所有绑定，按移动、武器、聊天、分身等用途分组；搜索匹配键名或命令，排序在按键与命令之间切换；复制只输出当前筛选后的行。
 
 Type something...
 == 输入内容……
@@ -17632,7 +17602,7 @@ Type switch vote started automatically
 == 已自动发起切换类型投票
 
 Type your code into "Sponsor code" and press "Redeem", then edit "Custom title", choose a "Chat message style" and press "Save".
-== 在认证码里填入你的码并点领取，然后编辑自定义头衔、选一个发言样式，最后点保存。
+== 「赞助码」提交后由客户端校验并解锁自定义头衔；「自定义头衔」保存显示文本，「聊天消息样式」选择文字样式或月亮/太阳徽章。保存后样式随聊天消息发送给其他玩家，预览只用于本地确认。
 
 Types
 == 模式
@@ -17923,10 +17893,10 @@ Unsolo
 == 退出单人
 
 Untick "Show other players' large emoticons" or "Show other players' launched emoticons"; click "Launch emote key" to assign the key that turns launching on and off.
-== 取消勾选显示其他玩家的大表情或显示其他玩家发射的表情可以减少干扰；点发射表情按键即可指定开关发射模式的键。
+== 「其他玩家大表情」控制头顶大表情，「发射表情」控制带轨迹的发射表情；两者只影响本地绘制。「发射键」切换发射模式，具体表情仍由普通表情键选择。
 
 Untick "Use original style" to reach "Background color", the countdown options and "Always show song title and artist"; "Show team" works in both styles.
-== 取消勾选使用原始样式，才能设置背景色、倒计时选项和始终显示歌曲标题与歌手；显示队伍在两种样式下都有效。
+== 顶部胶囊有两种样式：原始样式只保留基础信息，关闭后解锁背景色与不透明度、队伍、歌曲详情、钩子倒计时和开关倒计时。钩子倒计时按剩余时间分正常/警告/紧急三段取色，可设置圆环大小和无限钩样式；开关倒计时可选择跟随 Tee、放进灵动岛或两者都显示。
 
 Untitled
 == 未命名
@@ -17935,7 +17905,7 @@ Untitled flow
 == 未命名流程
 
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
-== 不常见的刷新率可能导致画面撕裂；建议优先使用显示器的原生刷新率。
+== 优先选显示器原生分辨率和刷新率，非整数缩放会让画面发软；高刷屏确认线材和显示器都支持后再选。窗口化全屏切换最快，独占全屏更适合需要最低延迟的场景。
 
 Update
 == 更新
@@ -18047,9 +18017,6 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == 使用头衔动态风格（覆盖 qm_title_color_mode）
-
-Use cl_show_perf 1 to show the panel.
-== 输入 cl_show_perf 1 显示面板。
 
 Use colored skins for frozen tees
 == 冻结 Tee 使用彩色皮肤
@@ -18289,10 +18256,10 @@ Very high quality, very slow
 == 质量很高，速度非常慢
 
 Very long kaomoji are split by the chat length limit.
-== 过长的颜文字会因聊天长度上限被拆分发送。
+== 把最常用的颜文字放前面，长度控制在一条聊天内；含特殊符号的条目先在聊天里试发，确认服务器没有过滤。
 
 Very thick borders make text look blurry; keep them near the defaults.
-== 边框太粗会让文字显得模糊；请保持在默认值附近。
+== 保持边框开启并把不透明度设在能区分卡片又不遮住背景的范围；彩虹标题适合展示，长时间阅读时关掉更省眼。边框不要过粗，否则文字边缘会发糊。
 
 Video Background
 == 视频背景
@@ -18508,13 +18475,16 @@ Vote yes/no
 == 投票赞成/反对
 
 Votes often appear while you are still moving, so keep both keys easy to reach.
-== 投票提示经常在你还在跑动时就跳出来，所以两个键都要放在手边。
+== 把两个键放在移动手附近但不易误触的位置；如果不常投票，可以只绑一个反对键，赞成仍用鼠标点。
 
 Voting
 == 投票
 
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
 == Vulkan API 版本：14 = 优先使用 1.4、再用 1.3 和 1.1，13 = 优先使用 1.3、再用 1.1，11 = 强制使用 1.1
+
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
+== Vulkan 呈现模式：0=自动，1=Immediate，2=Mailbox，3=FIFO
 
 Wait for current vote to end before calling a new one.
 == 请先等待当前投票结束，再发起新的投票
@@ -18678,9 +18648,6 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 绑定设置为什么级别（这是自动的，你不需要使用它）
 
-What this controls
-== 这是什么
-
 Wheel
 == 轮盘
 
@@ -18706,7 +18673,7 @@ When other players' ghosts are visible, draw the solid tee at the server positio
 == 显示他人影子时，实体角色画在服务器位置，影子画在本地预测位置。
 
 When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
-== 跑图时可以保留「冻结子弹与激光」，关掉「锤击与钩子范围」和「子弹、爆炸与普通激光」，这样更容易看清迎面而来的冰弹和冰激光。
+== 竞速时只留冻结弹道和激光，其他武器范围会干扰视线；练习地图可以全开确认判定。颜色和地图背景接近时换一套高对比色。
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已启用 TClient 彩虹 Tee 时，本功能不会生效。
@@ -18746,9 +18713,6 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == 玩家是否默认看到其他人（本队为 2）
-
-Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
-== 是否跳过主菜单、社区地图标签、启动时显示崩溃报告，以及设置/存档/主题目录的入口。
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == 是否同时控制分身（cl_dummy_jump、cl_dummy_fire、cl_dummy_hook）
@@ -18826,7 +18790,7 @@ Why will some players not open a 4:4:4 file? H.264 4:4:4 uses the High 4:4:4 Pre
 == 为什么有些播放器打不开 4:4:4 的成片？4:4:4 的 H.264 使用 High 4:4:4 Predictive profile，部分硬件解码器和手机不支持。需要广泛兼容就用 4:2:0。
 
 Wide chat lines cover the game; keep the width to what you actually read.
-== 聊天行过宽会遮挡游戏画面；宽度以实际阅读需要为准。
+== 宽度按实际阅读行数设置，能读完一行即可，超宽会压住游戏画面。行距 0 保持默认，觉得挤再小幅增加。开启自动保存前先确认保留天数，避免聊天记录无限增长。
 
 Width
 == 宽度
@@ -18934,7 +18898,7 @@ Write the guide here
 == 在这里写说明
 
 Write the reply text; choose whether it triggers for muted players and whether the panel starts minimized.
-== 填写回复文字，选择是否对已屏蔽发言的玩家触发，以及面板是否默认最小化。
+== 当窗口失焦或你屏蔽了对方时，收到私聊会发送对应预设文本；两条文本分别用于最小化和屏蔽场景，面板可默认最小化。回复走正常聊天发送，受服务器频率限制。
 
 Writes a chat message, and optionally sends an emoticon, whenever your tee dies in water.
 == 你的 Tee 掉水死亡时自动发一条聊天消息，也可以顺便发一个表情。
@@ -19288,7 +19252,7 @@ Zen Mode
 == 禅模式
 
 Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves old lines on screen.
-== 禅模式开启时即使这里有开也不会显示气泡；显示时长设得太久，旧消息会一直挂在屏幕上。
+== 持续时间保持在几秒，太长会让旧话一直挂在头上；字号不要大于名字牌。人多时降低不透明度，避免气泡互相遮挡。
 
 Zen mode key
 == 禅模式按键
@@ -19474,6 +19438,74 @@ Train
 [Bind keyboard key]
 Menu
 == 菜单键
+
+[card-wiki]
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== 「动画强度」是全局开关：关闭后过渡、卡片入场和重排立即完成，降低后缩短时长并减少位移，完整保留全部动效；它作用于所有 QmUi 动画，不逐个组件配置。「光标样式」在竖线、下划线和方块之间切换，三种样式占用同一个字符格，不改变输入逻辑。
+
+[card-wiki]
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== 客户端预测与延迟补偿：预测边界、AntiPing 及其预测对象、事件预测、上行冗余和流量标记。
+
+[card-wiki]
+Convenience options for chat, the scoreboard and tune zones.
+== 聊天、计分板和 tune 区域的零散便利开关。
+
+[card-wiki]
+Enable a music source to display its lyrics.
+== 歌词从 Spotify、网易云、QQ 音乐、酷狗、LX Music 等集成读取当前曲目和歌词行，显示在灵动岛或独立歌词岛；语言可选原文、译文或两者。「唱歌」双击绑定键把当前行发到公共聊天，「哼唱」按随机间隔自动发送。
+
+[card-wiki]
+Highlight held hammer and hook inputs while frozen
+== 冻结时高亮你按住的锤子和钩子输入。
+
+[card-wiki]
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== 先设一个有限的保留数量，避免长期对局把磁盘写满；想留的 demo 及时复制到别处。水印只在分享截图时需要，日常截图可以关掉。
+
+[card-wiki]
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== 只开自己需要的图标，方向和锤钩分开看更清楚；颜色和冻结特效拉开对比。他人提示依赖服务器，缺失时不要当成自己按键没生效。
+
+[card-wiki]
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== 先保持默认预测边界，只在明显抖动时小幅增加；AntiPing 打开后逐项启用预测，确认没有误判再保留。上行冗余只用于丢包严重的连接，流量和服务器负担都会上升。
+
+[card-wiki]
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== 界面动画强度（过渡、卡片入场、重排、滚动手感）和所有输入框的文字光标形状。
+
+[card-wiki]
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== 显示 FPS、帧时间、RTT 和预测提前量；帧时间条超过参考线即超出 60 FPS 预算。
+
+[card-wiki]
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== 冻结状态下读取本地按住的锤子/钩子输入，在 Tee 旁用颜色和图标提示；显示范围同时控制颜色和图标对象，每个图标有独立开关，与方向键无关。自己的范围包含主角色和分身；其他玩家需要同队且服务器支持预输入。
+
+[card-wiki]
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== 经常直接进服就开跳过主菜单；想保留启动画面时关掉。崩溃报告建议保持开启，至少让它写日志；设置和主题目录只在需要手工备份时打开。
+
+[card-wiki]
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== 「跳过主菜单」在启动后直接进入服务器列表或上次连接；「菜单背景地图」选择主菜单加载的场景。「启动时显示崩溃报告」把待处理报告弹窗展示，关闭时只写日志。「设置文件」「主题目录」是打开本地路径的按钮，不改变配置值。
+
+[card-wiki]
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== 低端机或远程桌面选关闭或降低，界面响应会更直接；正常机器保持完整。光标按习惯选竖线或方块即可，下划线在小字号下最容易看清。
+
+[card-wiki]
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== 「文字效果」是总开关，位掩码分别启用边框、渐变、彩虹和发光；边框与发光范围控制外扩距离，渐变色和发光色独立。「游戏范围」「观战范围」分别决定对局和观战或回放中作用于谁；「演示模式」可只对指定玩家或范围预览效果。「拥挤时自动降级」按屏幕名字牌数量削减外层效果。效果在本地逐字绘制，人数越多开销越大。
+
+[card-wiki]
+Use cl_show_perf 1 to show the panel.
+== 面板直接读取客户端性能计数器：FPS 和帧时间是实际绘制间隔，RTT 来自网络层，预测提前量显示本地模拟领先服务器的时间；帧时间条以 60 FPS 的 16.7 ms 为参考线。它不修改任何游戏状态，只做诊断。
+
+[card-wiki]
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== 是否跳过主菜单、菜单背景地图、启动时崩溃报告，以及设置、存档和主题目录的入口。
 
 [Collision hitbox]
 All players

@@ -37,6 +37,13 @@ public:
 
 	void Clear() { m_Entries.clear(); }
 
+	void Remove(const char *pName)
+	{
+		if(pName == nullptr)
+			return;
+		m_Entries.erase(Key(pName));
+	}
+
 	bool Add(const char *pName, int Priority = 0)
 	{
 		if(pName == nullptr || pName[0] == '\0')

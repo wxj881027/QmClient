@@ -29,7 +29,7 @@ TEST(QmBindOverview, UnknownCommandsFallBackToCustom)
 	EXPECT_EQ(GroupForCommand("say /spec"), EBindOptionGroup::CUSTOM);
 	EXPECT_EQ(GroupForCommand("+scoreboard"), EBindOptionGroup::MISCELLANEOUS);
 	EXPECT_EQ(GroupForCommand("bindfile"), EBindOptionGroup::CUSTOM);
-	EXPECT_EQ(GroupForCommand("toggle dbg_graphs 0 1"), EBindOptionGroup::CUSTOM);
+	EXPECT_EQ(GroupForCommand("toggle cl_show_perf 0 1"), EBindOptionGroup::CUSTOM);
 	EXPECT_EQ(GroupForCommand(""), EBindOptionGroup::CUSTOM);
 }
 
@@ -72,12 +72,12 @@ TEST(QmBindOverview, SerializeWritesKeyEqualsCommandPerLine)
 {
 	const std::vector<SBindOverviewEntry> Entries = {
 		{"A", "+left"},
-		{"ctrl+shift+g", "toggle dbg_graphs 0 1"},
+		{"ctrl+shift+g", "toggle cl_show_perf 0 1"},
 		{"mouse1", "+fire"},
 	};
 	EXPECT_EQ(Serialize(Entries),
 		"A = +left\n"
-		"ctrl+shift+g = toggle dbg_graphs 0 1\n"
+		"ctrl+shift+g = toggle cl_show_perf 0 1\n"
 		"mouse1 = +fire\n");
 }
 

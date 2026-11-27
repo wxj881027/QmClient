@@ -329,6 +329,12 @@ public:
 		       ModifierMask == ((1 << KeyModifier::ALT) | (1 << KeyModifier::SHIFT)) ||
 		       ModifierMask == ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT));
 	}
+	static bool IsFixedPerfGraphShortcut(int Key, int ModifierMask)
+	{
+		return Key == KEY_G &&
+		       (ModifierMask == ((1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)) ||
+			       ModifierMask == ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)));
+	}
 	static bool AllowsUnmodifiedFallback(int Key, int ModifierMask)
 	{
 		if(IsReservedShortcutChord(ModifierMask))

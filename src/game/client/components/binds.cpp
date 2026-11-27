@@ -46,7 +46,8 @@ static bool IsExactDebugGraphToggleCommand(const char *pCommand)
 
 	char aNormalized[1024];
 	NormalizeBindCommand(pCommand, aNormalized, sizeof(aNormalized));
-	return str_comp_nocase(aNormalized, "toggle dbg_graphs 0 1") == 0;
+	return str_comp_nocase(aNormalized, "toggle cl_show_perf 0 1") == 0 ||
+	       str_comp_nocase(aNormalized, "toggle dbg_graphs 0 1") == 0;
 }
 
 static void ExecuteBindCommand(IConsole *pConsole, const char *pBind, const CGameClient *pGameClient, int Stroke, int ClientId)
@@ -67,7 +68,20 @@ bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 		return m_pBinds->OnInput(Event);
 	}
 
-	return false;
+	const int KeyModifierMask = GetModifierMaskOfKey(Event.m_Key);
+	const int ModifierMask = GetModifierMask(Input()) & ~KeyModifierMask;
+	const char *pBind = m_pBinds->Get(Event.m_Key, ModifierMask);
+	if(!pBind[0] && AllowsUnmodifiedFallback(Event.m_Key, ModifierMask))
+		pBind = m_pBinds->Get(Event.m_Key, KeyModifier::NONE);
+	if(!IsExactDebugGraphToggleCommand(pBind))
+		return false;
+
+	// 已按住的键仍按活动槽位处理，避免提前执行该槽位中的普通命令。
+	const auto OtherActiveId = m_pBinds->m_ActiveBinds.Find([&](const CActiveBind &Bind) {
+		return Bind.m_Key == Event.m_Key &&
+		       !IsExactDebugGraphToggleCommand(Bind.m_ShortcutState.Command(m_pBinds->Get(Bind)));
+	});
+	return OtherActiveId == 0 && m_pBinds->OnInput(Event);
 }
 
 CBinds::CBinds()
@@ -166,6 +180,12 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 
 	const int KeyModifierMask = GetModifierMaskOfKey(Event.m_Key);
 	const int ModifierMask = GetModifierMask(Input()) & ~KeyModifierMask;
+
+	// Ctrl/GUI+Shift+G 由 CClient::Run 在主循环里全局处理（菜单、编辑器、游戏内一致）。
+	// 这里吞掉同一组合，避免旧配置里残留的显式绑定再触发一次来回切换。
+	if(IsFixedPerfGraphShortcut(Event.m_Key, ModifierMask) &&
+		(Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) != 0)
+		return true;
 
 	bool Handled = false;
 
@@ -431,7 +451,6 @@ void CBinds::SetDefaults()
 
 	Bind(KEY_F3, "vote yes");
 	Bind(KEY_F4, "vote no");
-
 	Bind(KEY_K, "kill");
 	Bind(KEY_Q, "say /spec");
 	Bind(KEY_P, "say /pause");
@@ -471,9 +490,6 @@ void CBinds::ConBind(IConsole::IResult *pResult, void *pUserData)
 	}
 
 	const char *pCommand = pResult->GetString(1);
-	// 清掉旧版保存的性能绑定，用户为同一按键设置的其他命令仍可加载。
-	if(IsExactDebugGraphToggleCommand(pCommand))
-		pCommand = "";
 	pBinds->Bind(BindSlot.m_Key, pCommand, false, BindSlot.m_ModifierMask);
 }
 

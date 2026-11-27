@@ -2142,9 +2142,6 @@ Cannot write the wiki file
 Cap update rate to save power
 == Ограничить частоту обновлений для экономии энергии
 
-Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
-== Ограничение частоты обновлений добавляет задержку ввода; используйте его только для экономии энергии. Если эксклюзивный полный экран не работает, сначала вернитесь к оконному или безрамочному режиму.
-
 Capsule end strength
 == Сила торцов капсулы
 
@@ -2454,9 +2451,6 @@ Choose export name first.
 Choose Logo (PNG / WebP)
 == Выбрать логотип (PNG / WebP)
 
-Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
-== Выберите «Выкл.», «Сокращённо» или «Полностью»; этот переключатель управляет всеми анимациями. Затем выберите форму курсора для настроек, консоли и чата.
-
 Choose the language used by the client
 == Choose the language used by the client
 
@@ -2490,8 +2484,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == Выбирает, какие таблички с именами рисовать, и добавляет к ним клан, цвет команды, значок друга, координаты и ID клиента.
 
-Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
-== Выбор оконного/полноэкранного режима, монитора и разрешения, а также двух ограничений темпа кадров: частоты отрисовки и частоты обновления клиента.
+Chooses windowed or fullscreen mode, the monitor and the resolution, V-Sync and the Vulkan present mode, plus two frame pacing caps: render frame rate and client update rate.
+== Выбирает оконный или полноэкранный режим, монитор и разрешение, вертикальную синхронизацию и режим представления Vulkan, а также два ограничения темпа кадров: частоту отрисовки и частоту обновления клиента.
 
 Chroma sampling
 == Цветовая субдискретизация
@@ -2726,9 +2720,6 @@ Client uptime
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
-
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
-== Клиентское предсказание и компенсация задержки: запас предсказания, AntiPing и предсказываемые объекты, предсказываемые события, избыточность исходящих пакетов и маркировка трафика DSCP.
 
 Client-side self-kill protection
 == Защита от самоубийства на стороне клиента
@@ -3299,9 +3290,6 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Определяет, что показывать рядом с именами других игроков: клан-теги, отметки друзей, идентификаторы клиентов.
-
-Convenience options for chat, the scoreboard and tune zones.
-== Дополнительные параметры чата, таблицы счёта и зон настроек.
 
 Converse
 == Продолжить личное сообщение
@@ -4938,9 +4926,6 @@ Enable /team0 mode
 Enable 3D background particles
 == Включить фоновые 3D-частицы
 
-Enable a music source to display its lyrics.
-== Включите источник музыки для показа текста песни.
-
 Enable absolute controller aiming in game
 == Включить абсолютное прицеливание контроллера в игре
 
@@ -5922,6 +5907,9 @@ Feature Search
 Feet
 == Ноги
 
+FIFO
+== FIFO
+
 Fifo file (non-Windows) or named pipe (Windows) for server console input
 == Fifo-файл (не Windows) или именованный канал (Windows) для ввода в консоль сервера
 
@@ -6618,9 +6606,6 @@ Go forward the specified duration
 Go to keyframe
 == Перейти к ключевому кадру
 
-Good to know
-== Полезно знать
-
 Gores
 == Горы
 
@@ -7161,6 +7146,9 @@ How far the plasma gun tracks a tee
 How far the tractor tracks a tee
 == Как далеко трактор отслеживает ти
 
+How it works
+== Как это работает
+
 How long expression lasts
 == Как долго длится выражение
 
@@ -7181,9 +7169,6 @@ How often the broadcast time updates
 
 How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)
 == Как обрабатывать неактивных игроков (0 = переместить в зрители, 1 = переместить на свободное место зрителя/кик, 2 = кик)
-
-How to use it
-== Как пользоваться
 
 HTTP is not available
 == HTTP недоступен
@@ -7343,6 +7328,9 @@ IME selection background color
 
 IME text color
 == Цвет текста IME
+
+Immediate
+== Immediate
 
 Import and restart
 == Импортировать и перезапустить
@@ -7832,6 +7820,9 @@ Kaomoji
 
 Kawase
 == Kawase
+
+Keep "Auto" unless you need something specific. "FIFO" gives the most stable pacing with no tearing; "Mailbox" keeps latency low on high-refresh displays but can stutter when the GPU falls behind; "Immediate" is useful for measuring raw frame time with V-Sync off, at the cost of visible tearing. If the selected mode is unsupported, the client falls back to FIFO and logs the actual mode.
+== Оставьте «Авто», если нет особой необходимости. «FIFO» даёт самый стабильный темп без разрывов; «Mailbox» снижает задержку на экранах с высокой частотой, но может подёргиваться, когда GPU не успевает; «Immediate» полезно для замера чистого времени кадра при выключенной вертикальной синхронизации, но даёт заметные разрывы. Если выбранный режим не поддерживается, клиент переключается на FIFO и записывает фактический режим в лог.
 
 Keep hook when teleporting
 == Сохранять крюк при телепортации
@@ -8543,6 +8534,9 @@ Lyrics translation
 
 Magic: Spirit Script
 == Магия: духовное письмо
+
+Mailbox
+== Mailbox
 
 Main Asset
 == Основной ресурс
@@ -10038,9 +10032,6 @@ Ok
 Old chat style: no tee icons, no background
 == Старый стиль чата: без иконок ти, без фона
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
-== При достижении лимита старые файлы удаляются, поэтому скопируйте нужные демо в другое место. Бюджет пикселей для скриншота позы находится не здесь, а в окне рендеринга файла .poses.
-
 Old single-segment hook collision line
 == Старая односегментная линия столкновения крюка
 
@@ -10407,9 +10398,6 @@ Overwrite clan even if empty
 Own hook line width
 == Ширина собственной линии крюка
 
-Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
-== Свои — это основной Tee и двойник. Для показа других игроков они должны быть в вашей команде, а сервер должен поддерживать предварительный ввод.
-
 p = Ping latency
 == p = Пинг
 
@@ -10656,8 +10644,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == Результат выбора: %s
 
-Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
-== Сначала выберите режим, затем монитор и разрешение. «Предел частоты кадров отрисовки» ограничивает число кадров при выключенной вертикальной синхронизации; «Частота обновления клиента» ограничивает обработку логики и ввода и вместе с ней рендеринг.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it. "Present mode" only appears on Vulkan: "Auto" follows V-Sync (on: FIFO, off: Immediate, or Mailbox on macOS), "Immediate" presents the newest frame right away and may tear, "Mailbox" replaces the waiting frame without blocking so tearing is rarer but one more frame stays queued, and "FIFO" waits for the next display refresh so it never tears but adds up to one frame of latency.
+== Сначала выберите режим, затем монитор и разрешение. «Предел частоты кадров отрисовки» ограничивает число кадров при выключенной вертикальной синхронизации; «Частота обновления клиента» ограничивает обработку игровой логики и ввода и вместе с ней отрисовку. «Режим представления» показывается только на Vulkan: «Авто» следует вертикальной синхронизации (вкл.: FIFO, выкл.: Immediate, в macOS: Mailbox), «Immediate» сразу показывает новейший кадр и может давать разрывы, «Mailbox» заменяет ожидающий кадр без блокировки, поэтому разрывы реже, но в очереди остаётся лишний кадр, а «FIFO» ждёт следующего обновления экрана — разрывов нет, но добавляется до одного кадра задержки.
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == Выберите части для раскраски, затем режим градиента и цвета.
@@ -11211,9 +11199,6 @@ Prediction margin when frozen
 Prediction time
 == Время предсказания
 
-Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
-== Предсказание обменивает точность на отзывчивость; избыточность может утроить исходящий трафик. «Приоритет игрового трафика» лишь помечает пакеты в Windows и требует QoS-совместимый маршрутизатор.
-
 Prepare settings pages over several frames at startup and while the menu is idle to reduce pauses on first opening.
 == Готовит страницы настроек за несколько кадров при запуске и простое меню, чтобы уменьшить задержку при первом открытии.
 
@@ -11222,6 +11207,9 @@ Preparing chat export: %d%%
 
 Preparing demo playback
 == Подготовка воспроизведения демо
+
+Present mode
+== Режим представления
 
 Preset %d
 == Пресет %d
@@ -11912,6 +11900,9 @@ Receiving
 
 Recent
 == Недавние
+
+Recommended settings
+== Рекомендуемые настройки
 
 Reconnect in %d sec
 == Переподключение через %d сек
@@ -13476,9 +13467,6 @@ Sets chat position, width, font size and visibility.
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Настраивает кодировщик, контейнер и качество за один шаг: «Повседневный» — H.264 + MP4, «Высокое качество» — HEVC + MP4 меньшего размера, «Монтаж» — полностью внутрикадровый H.264 + MP4 с мгновенным переходом, «Обмен» — ProRes 422 HQ + MOV для других редакторов.
 
-Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
-== Задаёт объём анимации интерфейса (переходы, появление карточек, перестановка, ощущение прокрутки) и форму курсора во всех полях ввода.
-
 Sets laser colors for weapons and entities.
 == Задаёт цвета лазеров оружия и объектов.
 
@@ -14666,9 +14654,6 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == Показывает 5 командных рангов таблицы или игрока, начиная с ранга i (по умолчанию 1, -1 для худшего)
-
-Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
-== Показывает FPS, время кадра, RTT и опережение предсказания. Столбцы выше линии превышают бюджет кадра 60 FPS.
 
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == Показывает на экране дробные значения позиции для прыжков с края, чтобы прыгать в нужной точке.
@@ -16080,9 +16065,6 @@ The card only appears while such a bind exists; click its key field to change th
 The command is empty, incomplete, or exceeds the local config line limit.
 == Команда пуста, не завершена или превышает предел строки локальной конфигурации.
 
-The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
-== Область отображения действует на цвет Tee и значки. Каждый значок включается отдельно, независимо от клавиш направления.
-
 The downloaded file is not a valid demo
 == Скачанный файл не является допустимым демо
 
@@ -16157,9 +16139,6 @@ The server rejected the map upload.
 
 The two keys that cast your vote: one for yes and one for no.
 == Две клавиши для голосования: одна за, другая против.
-
-The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
-== Ограничения частоты обновлений и кадров перенесены на страницу графики: они относятся к настройкам рендеринга, а не сюда.
 
 The watermarked screenshot was saved next to the original
 == Снимок с водяным знаком сохранён рядом с оригиналом
@@ -16349,9 +16328,6 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == Включите «Показывать других», чтобы другие команды рисовались полупрозрачно; задайте прозрачность их теней в зависимой строке ниже, а для вида используйте «Показывать фоновые квады» и «Масштаб по умолчанию».
-
-Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== Отметьте «Пропускать главное меню» и используйте «Файл настроек» или «Папка тем», чтобы открыть эти расположения.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Отметьте нужные: показ зажатых клавиш, состояние молота, состояние управления dummy или состояние копии dummy.
@@ -16884,9 +16860,6 @@ Tune zone (map / override)
 Tuning parameter
 == Параметр настройки
 
-Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
-== На слабых машинах выключите: карточки открываются и прокручиваются сразу. Форма курсора только внешняя: все три стиля занимают одно знакоместо.
-
 Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
 == Отключите «Показывать призрак основного мира», чтобы скрыть все ти, приходящие с сервера, включая других игроков; пока призрак включён, ползунок непрозрачности задаёт их видимость. Строки привязок отправляют те же команды, что и меню практики, поэтому открывать чат не нужно.
 
@@ -16931,9 +16904,6 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 
 Turn on "Message merging" in Dream Features.
 == Включите «Message merging» в разделе «Dream Features».
-
-Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== Включите «Текстовые эффекты таблички», откройте «Индивидуальная настройка», затем включите «Рамка», «Градиент», «Радуга» или «Свечение» и задайте диапазоны и цвета.
 
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == Включите новый IME для новой строки и авто-управление IME при вводе, чтобы режим ввода следовал за полем чата; цвета меняются в пункте изменить цвет.
@@ -17430,9 +17400,6 @@ Use alternative world tick calculation making hooks behave as if all players hav
 Use animated title style (overrides qm_title_color_mode)
 == Использовать анимированный стиль титула (переопределяет qm_title_color_mode)
 
-Use cl_show_perf 1 to show the panel.
-== Введите cl_show_perf 1, чтобы показать панель.
-
 Use colored skins for frozen tees
 == Использовать цветные скины для замороженных ти
 
@@ -17877,6 +17844,9 @@ Voting
 Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
 == Версия Vulkan API: 14 = предпочитать 1.4, затем 1.3 и 1.1; 13 = предпочитать 1.3, затем 1.1; 11 = принудительно 1.1
 
+Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo
+== Режим представления Vulkan: 0=авто, 1=Immediate, 2=Mailbox, 3=FIFO
+
 Wait for current vote to end before calling a new one.
 == Дождитесь окончания текущего голосования, прежде чем начинать новое.
 
@@ -18039,9 +18009,6 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == Какой уровень привязки DDRace установлен (автоматически, вам не нужно его использовать).
 
-What this controls
-== Что это настраивает
-
 Wheel
 == Колесо
 
@@ -18098,9 +18065,6 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == Видят ли игроки других по умолчанию (своя команда = 2)
-
-Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
-== Пропуск главного меню, метки карт сообщества, отчёты о сбоях при запуске и доступ к папкам настроек, сохранений и тем.
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == Управлять дамми одновременно (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
@@ -18817,6 +18781,74 @@ Train
 [Bind keyboard key]
 Menu
 == Клавиша меню
+
+[card-wiki]
+Choose off, reduced or full; this single switch drives every animation. Then pick a caret shape for the settings, console and chat input fields.
+== Выберите «Выкл.», «Сокращённо» или «Полностью»; этот переключатель управляет всеми анимациями. Затем выберите форму курсора для настроек, консоли и чата.
+
+[card-wiki]
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== Клиентское предсказание и компенсация задержки: запас предсказания, AntiPing и предсказываемые объекты, предсказываемые события, избыточность исходящих пакетов и маркировка трафика DSCP.
+
+[card-wiki]
+Convenience options for chat, the scoreboard and tune zones.
+== Дополнительные параметры чата, таблицы счёта и зон настроек.
+
+[card-wiki]
+Enable a music source to display its lyrics.
+== Включите источник музыки для показа текста песни.
+
+[card-wiki]
+Highlight held hammer and hook inputs while frozen
+== Подсвечивать удержание молотка и крюка при заморозке
+
+[card-wiki]
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== При достижении лимита старые файлы удаляются, поэтому скопируйте нужные демо в другое место. Бюджет пикселей для скриншота позы находится не здесь, а в окне рендеринга файла .poses.
+
+[card-wiki]
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== Свои — это основной Tee и двойник. Для показа других игроков они должны быть в вашей команде, а сервер должен поддерживать предварительный ввод.
+
+[card-wiki]
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== Предсказание обменивает точность на отзывчивость; избыточность может утроить исходящий трафик. «Приоритет игрового трафика» лишь помечает пакеты в Windows и требует QoS-совместимый маршрутизатор.
+
+[card-wiki]
+Sets how much motion the interface plays (transitions, card entrance, reorder animations, scroll feel) and the shape of the text caret in every input field.
+== Задаёт объём анимации интерфейса (переходы, появление карточек, перестановка, ощущение прокрутки) и форму курсора во всех полях ввода.
+
+[card-wiki]
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== Показывает FPS, время кадра, RTT и опережение предсказания. Столбцы выше линии превышают бюджет кадра 60 FPS.
+
+[card-wiki]
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== Область отображения действует на цвет Tee и значки. Каждый значок включается отдельно, независимо от клавиш направления.
+
+[card-wiki]
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== Ограничения частоты обновлений и кадров перенесены на страницу графики: они относятся к настройкам рендеринга, а не сюда.
+
+[card-wiki]
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== Отметьте «Пропускать главное меню» и используйте «Файл настроек» или «Папка тем», чтобы открыть эти расположения.
+
+[card-wiki]
+Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
+== На слабых машинах выключите: карточки открываются и прокручиваются сразу. Форма курсора только внешняя: все три стиля занимают одно знакоместо.
+
+[card-wiki]
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== Включите «Текстовые эффекты таблички», откройте «Индивидуальная настройка», затем включите «Рамка», «Градиент», «Радуга» или «Свечение» и задайте диапазоны и цвета.
+
+[card-wiki]
+Use cl_show_perf 1 to show the panel.
+== Введите cl_show_perf 1, чтобы показать панель.
+
+[card-wiki]
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== Пропуск главного меню, метки карт сообщества, отчёты о сбоях при запуске и доступ к папкам настроек, сохранений и тем.
 
 [Collision hitbox]
 All players

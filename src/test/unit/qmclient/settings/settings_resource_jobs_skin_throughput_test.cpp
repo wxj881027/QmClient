@@ -1,6 +1,7 @@
 // 设置资源任务测试：按资源任务生命周期独立组织。
 #include <game/client/components/assets_preview_scale.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/skin_load_budget.h>
 #include <game/client/components/settings_resource_jobs.h>
 #include <game/client/components/settings_warmup.h>
 
@@ -11,6 +12,29 @@
 #include <limits>
 #include <sstream>
 #include <vector>
+
+TEST(QmSkinSourceBytesTracker, ReplacesAndRemovesLoadedBytes)
+{
+	CQmSkinSourceBytesTracker Tracker;
+	Tracker.SetLoaded(0, 100);
+	EXPECT_EQ(Tracker.BytesInUse(), 100u);
+	Tracker.SetLoaded(100, 250);
+	EXPECT_EQ(Tracker.BytesInUse(), 250u);
+	Tracker.Remove(250);
+	EXPECT_EQ(Tracker.BytesInUse(), 0u);
+	Tracker.Remove(500);
+	EXPECT_EQ(Tracker.BytesInUse(), 0u);
+}
+
+TEST(QmSkinSourceBytesTracker, ResetAndOverflowStayBounded)
+{
+	CQmSkinSourceBytesTracker Tracker;
+	Tracker.SetLoaded(0, std::numeric_limits<size_t>::max() - 1);
+	Tracker.SetLoaded(0, 10);
+	EXPECT_EQ(Tracker.BytesInUse(), std::numeric_limits<size_t>::max());
+	Tracker.Reset();
+	EXPECT_EQ(Tracker.BytesInUse(), 0u);
+}
 
 TEST(SettingsResourceJobsSkinThroughput, SkinListBackgroundWarmupWaitsForIdleVisibleBacklog)
 {

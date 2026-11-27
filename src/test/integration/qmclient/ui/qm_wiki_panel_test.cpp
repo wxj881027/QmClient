@@ -121,6 +121,15 @@ TEST_F(QmWikiPanel, InfoButtonOpensPanelInTheDrawPhaseAndPanelSurvivesLaterFrame
 	}
 }
 
+TEST_F(QmWikiPanel, CardWikiPanelExposesTwoTopLevelSections)
+{
+	OpenCardWikiPopup(MakeContext(), "deck:appearance-chat-messages", "Chat messages");
+	Render();
+	ASSERT_TRUE(qm_wiki_panel_test::IsOpen());
+	// 卡片 Wiki 只保留“原理与机制 / 建议设置”两节；旧的“这是什么 / 怎么用 / 建议”不再出现在目录里。
+	EXPECT_EQ(qm_wiki_panel_test::TocRowCount(), 2);
+}
+
 TEST_F(QmWikiPanel, InfoButtonIsInertWithoutAWikiEntry)
 {
 	CUIRect InfoButton{40.0f, 40.0f, 16.0f, 16.0f};

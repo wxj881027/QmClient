@@ -6,28 +6,33 @@
 
 #include <cstddef>
 
-// 卡片 Wiki 文案：按 stableId 提供的三段式说明（这是什么 / 怎么用 / 建议）。
-// 纯数据表，不依赖 UI；悬浮摘要与二级面板共用同一条条目，卡片本身不改结构。
+// 卡片 Wiki 文案：按 stableId 提供的两段式说明（原理与机制 / 建议设置）。
+// 纯数据表，不依赖 UI；摘要、机制和建议共用同一条条目，卡片本身不改结构。
 struct SCardWikiCopy
 {
 	const char *m_pStableId;
-	const char *m_pWhat; // 一句话说明这张卡控制什么
-	const char *m_pHow; // 操作路径，使用界面上真实存在的控件名
-	const char *m_pAdvice; // 新手建议或需要留意的副作用
+	const char *m_pSummary; // 一句话说明这张卡控制什么
+	const char *m_pMechanism; // 每个开关/滑杆的作用机制，使用界面上真实存在的控件名
+	const char *m_pRecommendation; // 推荐设置及理由
 
-	constexpr SCardWikiCopy(const char *pStableId, const char *pWhat, const char *pHow, const char *pAdvice) :
-		m_pStableId(pStableId), m_pWhat(pWhat), m_pHow(pHow), m_pAdvice(pAdvice)
+	constexpr SCardWikiCopy(const char *pStableId, const char *pSummary, const char *pMechanism, const char *pRecommendation) :
+		m_pStableId(pStableId), m_pSummary(pSummary), m_pMechanism(pMechanism), m_pRecommendation(pRecommendation)
 	{
 	}
 };
 
-// 弹出的 Wiki 文档：一张卡的三段说明、一个弹窗的完整说明都编译成同一种文档，
+// 弹出的 Wiki 文档：一张卡的两段说明、一个弹窗的完整说明都编译成同一种文档，
 // 面板只认文档，不关心内容来自卡片表还是弹窗表。
 struct SWikiSection
 {
 	const char *m_pHeading; // Localize key
 	const char *const *m_apParagraphs; // Localize key 数组
 	int m_ParagraphCount;
+	// 同一段正文的本地化上下文；空串表示按普通 key 查找。
+	// 卡片 Wiki 用独立上下文，避免长说明与设置页短句共用同一个 key。
+	const char *m_pContext = "";
+	// 旧文档用分号拆步骤；卡片 Wiki 的机制说明本身就用分号断句，不再二次拆成要点。
+	bool m_SplitSemicolons = true;
 };
 
 struct SWikiDocument
@@ -38,7 +43,7 @@ struct SWikiDocument
 	int m_SectionCount;
 };
 
-// 首段同时对卡片 ⓘ 的悬浮提示提供摘要，因此条目一出现就带悬浮说明。
+// 摘要和机制同属第一节，避免把“这张卡是什么”和“开关怎么工作”拆成两个标题。
 const SCardWikiCopy *FindCardWikiCopy(const char *pStableId);
 bool HasCardWikiCopy(const char *pStableId);
 size_t CardWikiCopyCount();

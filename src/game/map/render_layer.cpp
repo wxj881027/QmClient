@@ -678,6 +678,8 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 	if(!Graphics()->IsTileBufferingEnabled() || !m_TileAndQuadBuffering)
 		co_return;
 
+	CMapLoadSliceBudget SliceBudget;
+
 	// prepare all visuals for all tile layers
 	std::vector<CGraphicTile> vTmpTiles;
 	std::vector<CGraphicTileTextureCoords> vTmpTileTexCoords;
@@ -737,10 +739,13 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 	{
 		for(x = 0; x < m_pLayerTilemap->m_Width; ++x)
 		{
-			if(++TilesSinceYield == 4096)
+			// 纹理层每块 tile 的坐标/顶点计算可达数微秒，4096 块会超过 2ms 预算；
+			// 改为每 256 块检查一次时间预算，超出即让出。
+			if(++TilesSinceYield >= 256)
 			{
 				TilesSinceYield = 0;
-				co_await std::suspend_always{};
+				if(SliceBudget.Expired())
+					co_await std::suspend_always{};
 			}
 			unsigned char Index = 0;
 			unsigned char Flags = 0;
@@ -918,6 +923,9 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 		co_return;
 	}
 
+	// 合并与缓冲上传是内存/驱动侧的原子单元，先让出，避免和上一段循环落在同一 2ms 切片。
+	co_await std::suspend_always{};
+
 	std::unique_ptr<void, decltype(&free)> pUploadData(malloc(UploadDataSize), free);
 	if(pUploadData == nullptr)
 	{
@@ -941,7 +949,7 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 
 		for(size_t TileIndex = 0; TileIndex < vTmpTiles.size(); ++TileIndex)
 		{
-			if(TileIndex != 0 && TileIndex % 4096 == 0)
+			if(TileIndex != 0 && TileIndex % 512 == 0 && SliceBudget.Expired())
 				co_await std::suspend_always{};
 			const auto &GraphicTile = vTmpTiles[TileIndex];
 			const auto &GraphicCoords = vTmpTileTexCoords[TileIndex];
@@ -959,12 +967,14 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 		auto *pDst = static_cast<CGraphicTile *>(pUploadData.get());
 		for(size_t Start = 0; Start < vTmpTiles.size(); Start += 4096)
 		{
-			if(Start != 0)
+			if(Start != 0 && SliceBudget.Expired())
 				co_await std::suspend_always{};
 			const size_t Count = std::min<size_t>(4096, vTmpTiles.size() - Start);
 			mem_copy(pDst + Start, vTmpTiles.data() + Start, Count * sizeof(CGraphicTile));
 		}
 	}
+
+	co_await std::suspend_always{};
 
 	// first create the buffer object
 	Visuals.m_BufferObjectIndex = Graphics()->CreateBufferObject(UploadDataSize, pUploadData.release(), 0, true);
@@ -1235,6 +1245,7 @@ CMapLoadTask CRenderLayerQuads::Init()
 	v.OnInit(this);
 	m_VisualQuad = v;
 	CQuadLayerVisuals *pQLayerVisuals = &QmCheckedOptional(m_VisualQuad);
+	CMapLoadSliceBudget SliceBudget;
 
 	const bool Textured = GetTexture().IsValid();
 
@@ -1322,7 +1333,7 @@ CMapLoadTask CRenderLayerQuads::Init()
 		int QuadOffset = 0;
 		for(int QuadClusterId = 0; QuadClusterId < m_pLayerQuads->m_NumQuads - QuadStart; ++QuadClusterId)
 		{
-			if(QuadClusterId != 0 && QuadClusterId % 1024 == 0)
+			if(QuadClusterId != 0 && QuadClusterId % 256 == 0 && SliceBudget.Expired())
 				co_await std::suspend_always{};
 			const CQuad *pQuad = &m_pQuads[QuadStart + QuadClusterId];
 			bool IsGrouped = QuadCluster.m_Grouped && pQuad->m_ColorEnv == QuadCluster.m_ColorEnv && pQuad->m_ColorEnvOffset == QuadCluster.m_ColorEnvOffset && pQuad->m_PosEnv == QuadCluster.m_PosEnv && pQuad->m_PosEnvOffset == QuadCluster.m_PosEnvOffset;
@@ -1346,7 +1357,7 @@ CMapLoadTask CRenderLayerQuads::Init()
 			QuadCluster.m_vQuadRenderInfo.resize(1);
 			for(int QuadClusterId = 0; QuadClusterId < QuadCluster.m_NumQuads; ++QuadClusterId)
 			{
-				if(QuadClusterId != 0 && QuadClusterId % 1024 == 0)
+				if(QuadClusterId != 0 && QuadClusterId % 256 == 0 && SliceBudget.Expired())
 					co_await std::suspend_always{};
 				SetQuadRenderInfo(QuadCluster.m_vQuadRenderInfo[0], QuadCluster.m_StartIndex + QuadClusterId, QuadClusterId == 0);
 			}
@@ -1356,7 +1367,7 @@ CMapLoadTask CRenderLayerQuads::Init()
 			QuadCluster.m_vQuadRenderInfo.resize(QuadCluster.m_NumQuads);
 			for(int QuadClusterId = 0; QuadClusterId < QuadCluster.m_NumQuads; ++QuadClusterId)
 			{
-				if(QuadClusterId != 0 && QuadClusterId % 1024 == 0)
+				if(QuadClusterId != 0 && QuadClusterId % 256 == 0 && SliceBudget.Expired())
 					co_await std::suspend_always{};
 				SetQuadRenderInfo(QuadCluster.m_vQuadRenderInfo[QuadClusterId], QuadCluster.m_StartIndex + QuadClusterId, true);
 			}
@@ -1371,6 +1382,8 @@ CMapLoadTask CRenderLayerQuads::Init()
 	}
 	if(!AllClustersBounded)
 		m_LayerClip.reset();
+
+	co_await std::suspend_always{};
 
 	// gpu upload
 	pQLayerVisuals->m_BufferObjectIndex = Graphics()->CreateBufferObject(UploadDataSize, pUploadData.release(), 0, true);
@@ -1424,6 +1437,7 @@ void CRenderLayerQuads::CQuadLayerVisuals::Unload()
 
 CMapLoadTask CRenderLayerQuads::CalculateQuadClipping(const CQuadCluster &QuadCluster, float aQuadOffsetMin[2], float aQuadOffsetMax[2], bool &Available) const
 {
+	CMapLoadSliceBudget SliceBudget;
 	// check if the grouped clipping is available for early exit
 	if(QuadCluster.m_Grouped)
 	{
@@ -1441,7 +1455,7 @@ CMapLoadTask CRenderLayerQuads::CalculateQuadClipping(const CQuadCluster &QuadCl
 
 	for(int QuadId = QuadCluster.m_StartIndex; QuadId < QuadCluster.m_StartIndex + QuadCluster.m_NumQuads; ++QuadId)
 	{
-		if(QuadId != QuadCluster.m_StartIndex && QuadId % 1024 == 0)
+		if(QuadId != QuadCluster.m_StartIndex && (QuadId - QuadCluster.m_StartIndex) % 256 == 0 && SliceBudget.Expired())
 			co_await std::suspend_always{};
 		const CQuad *pQuad = &m_pQuads[QuadId];
 

@@ -4,6 +4,7 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmCardWiki.h>
 #include <game/client/QmUi/QmWikiDocs.h>
+#include <game/client/QmUi/QmWikiStore.h>
 #include <game/client/QmUi/SettingsCardGeometry.h>
 #include <game/client/QmUi/SettingsCardInfo.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
@@ -13,7 +14,7 @@
 #include <set>
 #include <string>
 
-TEST(CardWikiTest, EveryEntryCarriesIdAndThreeReadableSections)
+TEST(CardWikiTest, EveryEntryCarriesIdAndTwoReadableSections)
 {
 	ASSERT_GT(CardWikiCopyCount(), 0u);
 	std::set<std::string> SeenIds;
@@ -25,16 +26,16 @@ TEST(CardWikiTest, EveryEntryCarriesIdAndThreeReadableSections)
 		SCOPED_TRACE(pCopy->m_pStableId);
 		EXPECT_FALSE(pCopy->m_pStableId[0] == '\0') << "entry " << Index << " has an empty stableId";
 		EXPECT_TRUE(SeenIds.insert(pCopy->m_pStableId).second) << "duplicate stableId: " << pCopy->m_pStableId;
-		ASSERT_NE(pCopy->m_pWhat, nullptr);
-		ASSERT_NE(pCopy->m_pHow, nullptr);
-		ASSERT_NE(pCopy->m_pAdvice, nullptr);
-		EXPECT_GT(str_length(pCopy->m_pWhat), 0) << pCopy->m_pStableId;
-		EXPECT_GT(str_length(pCopy->m_pHow), 0) << pCopy->m_pStableId;
-		EXPECT_GT(str_length(pCopy->m_pAdvice), 0) << pCopy->m_pStableId;
-		// 首段同时是 ⓘ 的悬浮摘要，过长会撑满卡片提示；三段都不允许写成一段。
-		EXPECT_LE(str_length(pCopy->m_pWhat), 220) << pCopy->m_pStableId;
-		EXPECT_LE(str_length(pCopy->m_pHow), 260) << pCopy->m_pStableId;
-		EXPECT_LE(str_length(pCopy->m_pAdvice), 220) << pCopy->m_pStableId;
+		ASSERT_NE(pCopy->m_pSummary, nullptr);
+		ASSERT_NE(pCopy->m_pMechanism, nullptr);
+		ASSERT_NE(pCopy->m_pRecommendation, nullptr);
+		EXPECT_GT(str_length(pCopy->m_pSummary), 0) << pCopy->m_pStableId;
+		EXPECT_GT(str_length(pCopy->m_pMechanism), 0) << pCopy->m_pStableId;
+		EXPECT_GT(str_length(pCopy->m_pRecommendation), 0) << pCopy->m_pStableId;
+		// 摘要保持一句话；机制允许展开每个开关，建议只保留结论与理由。
+		EXPECT_LE(str_length(pCopy->m_pSummary), 220) << pCopy->m_pStableId;
+		EXPECT_LE(str_length(pCopy->m_pMechanism), 1200) << pCopy->m_pStableId;
+		EXPECT_LE(str_length(pCopy->m_pRecommendation), 420) << pCopy->m_pStableId;
 	}
 }
 
@@ -186,4 +187,40 @@ TEST(CardWikiTest, InfoEntryFollowsWikiTableAndInlineText)
 	EXPECT_FALSE(HasSettingsCardInfo(NoId));
 	const SSettingsCardSpec EmptyId{"", "Title", "Subtitle"};
 	EXPECT_FALSE(HasSettingsCardInfo(EmptyId));
+}
+
+TEST(CardWikiTest, ComposedMarkdownUsesTwoTopLevelSections)
+{
+	const SCardWikiCopy *pCopy = CardWikiCopyAt(0);
+	ASSERT_NE(pCopy, nullptr);
+	const char *apMechanismParagraphs[2] = {pCopy->m_pSummary, pCopy->m_pMechanism};
+	const char *apRecommendationParagraphs[1] = {pCopy->m_pRecommendation};
+	const SWikiSection aSections[2] = {
+		{"How it works", apMechanismParagraphs, 2, "card-wiki", false},
+		{"Recommended settings", apRecommendationParagraphs, 1, "card-wiki", false},
+	};
+	const SWikiDocument Document{pCopy->m_pStableId, "Title", aSections, 2};
+	const std::string Markdown = qm_wiki_store::ComposeFromDocument(Document);
+
+	size_t TopLevelHeadings = 0;
+	size_t SubHeadings = 0;
+	size_t LineStart = 0;
+	while(LineStart < Markdown.size())
+	{
+		const size_t LineEnd = Markdown.find('\n', LineStart);
+		const size_t Length = (LineEnd == std::string::npos ? Markdown.size() : LineEnd) - LineStart;
+		const std::string Line = Markdown.substr(LineStart, Length);
+		if(Line.rfind("# ", 0) == 0)
+			++TopLevelHeadings;
+		if(Line.rfind("## ", 0) == 0)
+			++SubHeadings;
+		if(LineEnd == std::string::npos)
+			break;
+		LineStart = LineEnd + 1;
+	}
+	EXPECT_EQ(TopLevelHeadings, 2u);
+	EXPECT_EQ(SubHeadings, 0u);
+	EXPECT_NE(Markdown.find("# How it works"), std::string::npos);
+	EXPECT_NE(Markdown.find("# Recommended settings"), std::string::npos);
+	EXPECT_NE(Markdown.find(pCopy->m_pSummary), std::string::npos);
 }

@@ -412,10 +412,18 @@ static int SettingsSkinMaxPerFrame(const CGameClient *pGameClient)
 
 static float SettingsSkinTargetFrameMs()
 {
-	// 没有显式渲染上限时按 144Hz 计：对 60/75/120Hz 更宽松但不会越帧，
-	// 对 144Hz 正好守住一次刷新间隔。
-	const int RefreshRate = g_Config.m_GfxRefreshRate > 0 ? g_Config.m_GfxRefreshRate : 144;
-	return 1000.0f / (float)maximum(RefreshRate, 30);
+	// 按实际生效的帧率给上传/收尾留余量：渲染上限与客户端更新上限取更严格的那个；
+	// 两者都未限制时才按 144Hz 估算，避免在 300/320Hz 下仍按 144Hz 的宽松预算做同步工作。
+	const int RenderRate = maximum(0, g_Config.m_GfxRefreshRate);
+	const int UpdateRate = maximum(0, g_Config.m_ClRefreshRate);
+	int EffectiveRate = 0;
+	if(RenderRate > 0 && UpdateRate > 0)
+		EffectiveRate = minimum(RenderRate, UpdateRate);
+	else
+		EffectiveRate = maximum(RenderRate, UpdateRate);
+	if(EffectiveRate <= 0)
+		EffectiveRate = 144;
+	return 1000.0f / (float)maximum(EffectiveRate, 30);
 }
 
 // 准入与回收必须共用同一个驻留上限，否则会出现“按 512 准入、按 128 回收”。
@@ -1455,7 +1463,10 @@ void CSkins::FinishSkinPreviewUpload(CSkinContainer *pSkinContainer)
 	pSkinContainer->m_pPendingSkin->m_BloodColor = pSkinContainer->m_SettingsPendingUploadData.m_BloodColor;
 	if(pSkinContainer->m_SettingsPendingUploadData.m_LastModified.has_value())
 		pSkinContainer->SetLastModified(pSkinContainer->m_SettingsPendingUploadData.m_LastModified.value());
-	SkinIt->second->m_SettingsSourceApproxBytes = SettingsSkinSourceBytesEstimate((int)pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, (int)pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, 2);
+	CSkinContainer *pPublishedSkin = SkinIt->second.get();
+	const size_t NewSourceBytes = SettingsSkinSourceBytesEstimate((int)pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, (int)pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, 2);
+	m_SkinSourceBytes.SetLoaded(pPublishedSkin->m_SettingsSourceApproxBytes, NewSourceBytes);
+	pPublishedSkin->m_SettingsSourceApproxBytes = NewSourceBytes;
 	if(pSkinContainer->m_pSkin)
 	{
 		pSkinContainer->m_pSkin->m_OriginalSkin.Unload(Graphics());
@@ -1464,7 +1475,7 @@ void CSkins::FinishSkinPreviewUpload(CSkinContainer *pSkinContainer)
 	pSkinContainer->m_pSkin = std::move(pSkinContainer->m_pPendingSkin);
 	pSkinContainer->m_LoadedSource = SQmSkinSourceIdentity{pSkinContainer->Type() == CSkinContainer::EType::DOWNLOAD, pSkinContainer->StorageType(), pSkinContainer->LastModified()};
 	pSkinContainer->SetState(CSkinContainer::EState::LOADED, BackgroundTracked ? ESettingsResourcePriority::BACKGROUND : ESettingsResourcePriority::VISIBLE);
-	LogSettingsSkinSourceStageEvent("upload_done", pSkinContainer->Name(), pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, (int)SkinIt->second->m_SettingsSourceApproxBytes, std::chrono::duration<double, std::milli>(time_get_nanoseconds() - pSkinContainer->m_SettingsPendingUploadStart).count(), SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS);
+	LogSettingsSkinSourceStageEvent("upload_done", pSkinContainer->Name(), pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, (int)pPublishedSkin->m_SettingsSourceApproxBytes, std::chrono::duration<double, std::milli>(time_get_nanoseconds() - pSkinContainer->m_SettingsPendingUploadStart).count(), SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS);
 	// 已发布皮肤持有头像和描边，清除临时副本才能在回收皮肤时释放素材。
 	DiscardSkinPreviewUpload(pSkinContainer);
 }
@@ -1577,6 +1588,9 @@ void CSkins::OnShutdown()
 		if(Catalog.m_pRequest)
 			Catalog.m_pRequest->Abort();
 		Catalog.m_pRequest.reset();
+		if(Catalog.m_pParseJob)
+			Catalog.m_pParseJob->Abort();
+		Catalog.m_pParseJob.reset();
 	}
 	for(auto &[_, pSkinContainer] : m_Skins)
 	{
@@ -1591,6 +1605,7 @@ void CSkins::OnShutdown()
 	}
 	m_vSkinDownloadNames.clear();
 	m_LoadingStats = {};
+	m_SkinSourceBytes.Reset();
 	m_VerifiedSkinCacheUrls.clear();
 	m_Skins.clear();
 	m_UnresolvedSkinScanState = {};
@@ -1608,8 +1623,14 @@ void CSkins::OnUpdate()
 	auto LogStage = [&](const char *pStage) {
 		if(!PerfEnabled)
 			return;
-		// 只记录超出帧预算的阶段，区分同步文件操作、回收和终局上传。
-		QmPerfLogStage("perf/skins", pStage, StageTimer.ElapsedMs(), false, Client());
+		// 2ms 以上就记录：11ms 级卡顿必须能落到具体子阶段，而不是只看到 skins 整项。
+		const double DurationMs = StageTimer.ElapsedMs();
+		if(DurationMs >= 2.0)
+		{
+			char aPayload[192];
+			str_format(aPayload, sizeof(aPayload), "event=skins_update_phase stage=%s duration_ms=%.3f skins=%zu", pStage, DurationMs, m_Skins.size());
+			QmPerfLogPayload("perf/skins", aPayload, Client());
+		}
 		StageTimer.Reset();
 	};
 	const std::chrono::nanoseconds Now = time_get_nanoseconds();
@@ -2121,18 +2142,14 @@ void CSkins::UnloadLoadedSkinTextures(CSkinContainer *pSkinContainer)
 	pSkinContainer->m_pSkin->m_ColorableSkin.Unload(Graphics());
 	pSkinContainer->m_pSkin.reset();
 	pSkinContainer->m_LoadedSource.reset();
+	m_SkinSourceBytes.Remove(pSkinContainer->m_SettingsSourceApproxBytes);
 	pSkinContainer->m_SettingsSourceApproxBytes = 0;
 	QueueSkinTexturesUnloaded(pSkinContainer->Name());
 }
 
 void CSkins::UpdateUnloadSkins(CSkinLoadingStats &Stats)
 {
-	size_t SourceBytesInUse = 0;
-	for(const auto &[_, pSkinContainer] : m_Skins)
-	{
-		if(pSkinContainer->m_pSkin != nullptr)
-			SourceBytesInUse += pSkinContainer->SettingsSourceApproxBytes();
-	}
+	const size_t SourceBytesInUse = m_SkinSourceBytes.BytesInUse();
 	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
 	const size_t ConfiguredLoadedLimit = (size_t)maximum(0, g_Config.m_ClSkinsLoadedMax);
 	const size_t ResidencyLimit = TeeSettingsActive ? ConfiguredLoadedLimit : SettingsSkinInactiveResidencyLimit(ConfiguredLoadedLimit);
@@ -2621,8 +2638,12 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 
 void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 {
+	// Poll 会同步读取下载结果和磁盘身份；一次最多占 1ms，剩余会话下一帧继续。
+	const auto DownloadLoopStart = time_get_nanoseconds();
 	for(auto It = m_vSkinDownloadNames.begin(); It != m_vSkinDownloadNames.end();)
 	{
+		if(time_get_nanoseconds() - DownloadLoopStart >= std::chrono::milliseconds(1))
+			break;
 		auto SkinIt = m_Skins.find(*It);
 		if(SkinIt == m_Skins.end() || !SkinIt->second->m_pDownloadSession)
 		{
@@ -2636,7 +2657,10 @@ void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 			++It;
 			continue;
 		}
+		const auto PollStart = time_get_nanoseconds();
 		const auto Result = pContainer->m_pDownloadSession->Poll();
+		const auto PollEnd = time_get_nanoseconds();
+		auto StatDuration = std::chrono::nanoseconds(0);
 		const std::optional<ESkinSource> &DownloadedSource = pContainer->m_pDownloadSession->DownloadedSource();
 		if(DownloadedSource.has_value())
 			RecordSkinSource(pContainer, DownloadedSource.value());
@@ -2648,7 +2672,9 @@ void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 			char aPath[IO_MAX_PATH_LENGTH];
 			const char *pCanonicalName = CanonicalSkinName(pContainer->Name());
 			str_format(aPath, sizeof(aPath), "downloadedskins/%s.png", pCanonicalName);
+			const auto StatStart = time_get_nanoseconds();
 			pContainer->m_pLoadJob->m_Data.ReadLastModified(Storage(), aPath, IStorage::TYPE_SAVE);
+			StatDuration = time_get_nanoseconds() - StatStart;
 			const std::string &DownloadedUrl = pContainer->m_pDownloadSession->DownloadedUrl();
 			if(!DownloadedUrl.empty() && pContainer->m_pLoadJob->m_Data.m_LastModified.has_value())
 				m_VerifiedSkinCacheUrls[pCanonicalName] = {DownloadedUrl, *pContainer->m_pLoadJob->m_Data.m_LastModified};
@@ -2666,6 +2692,16 @@ void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 			pContainer->m_pDownloadSession.reset();
 			It = m_vSkinDownloadNames.erase(It);
 			continue;
+		}
+		if(QmPerfEnabled() && PollEnd - PollStart + StatDuration >= std::chrono::milliseconds(1))
+		{
+			char aPayload[256];
+			str_format(aPayload, sizeof(aPayload), "event=slow_skin_download_poll skin=%s poll_ms=%.3f stat_ms=%.3f result=%d",
+				pContainer->Name(),
+				std::chrono::duration<double, std::milli>(PollEnd - PollStart).count(),
+				std::chrono::duration<double, std::milli>(StatDuration).count(),
+				(int)Result);
+			QmPerfLogPayload("perf/skins", aPayload, Client());
 		}
 		++It;
 	}
@@ -2771,6 +2807,7 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 	const bool ReplacingLoadedSkin = pSkinContainer->m_State == CSkinContainer::EState::LOADED;
 	if(!m_SkinUploadFrameBudget.CanUpload())
 		return ESkinProcessResult::BREAK_UPLOAD;
+	const auto FinalizeFrameStart = time_get_nanoseconds();
 	const int MaxSkinsPerFrame = SettingsSkinMaxPerFrame(GameClient());
 	const auto FailUpload = [&] {
 		pSkinContainer->m_pLoadJob.reset();
@@ -2784,6 +2821,7 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 	if(!pSkinContainer->m_pPendingSkin &&
 		!BeginSkinPreviewUpload(pSkinContainer, std::move(pSkinContainer->m_pLoadJob->m_Data)))
 		return FailUpload();
+	const auto FinalizeBeginEnd = time_get_nanoseconds();
 	CSkinPreviewUploadBudget SkinPreviewUploadBudget(SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS - (int)pSkinContainer->m_SettingsPendingUploadSprite,
 		GameClient()->GpuUploadLimiter(), SettingsFrameBudgetOrNull(GameClient()));
 	while(pSkinContainer->m_SettingsPendingUploadSprite < SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS)
@@ -2810,7 +2848,25 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 	if(!ReplacingLoadedSkin)
 		Stats.m_NumLoading--;
 	SkinsProcessedThisFrame++;
+	const auto FinalizeUploadEnd = time_get_nanoseconds();
+	const int FinalizedSpriteCount = pSkinContainer->m_SettingsPendingUploadSprite;
 	FinishSkinPreviewUpload(pSkinContainer);
+	const auto FinalizeFinishEnd = time_get_nanoseconds();
+	const auto TotalNs = FinalizeFinishEnd - FinalizeFrameStart;
+	if(QmPerfEnabled() && TotalNs >= std::chrono::milliseconds(4))
+	{
+		char aPayload[320];
+		str_format(aPayload, sizeof(aPayload),
+			"event=slow_skin_finalize skin=%s total_ms=%.3f begin_ms=%.3f upload_ms=%.3f finish_ms=%.3f sprite=%d replacing=%d",
+			pSkinContainer->Name(),
+			std::chrono::duration<double, std::milli>(TotalNs).count(),
+			std::chrono::duration<double, std::milli>(FinalizeBeginEnd - FinalizeFrameStart).count(),
+			std::chrono::duration<double, std::milli>(FinalizeUploadEnd - FinalizeBeginEnd).count(),
+			std::chrono::duration<double, std::milli>(FinalizeFinishEnd - FinalizeUploadEnd).count(),
+			FinalizedSpriteCount,
+			ReplacingLoadedSkin ? 1 : 0);
+		QmPerfLogPayloadForce("perf/skins", aPayload, Client());
+	}
 	++m_SettingsSourceUploadsCompleted;
 	GameClient()->OnSkinUpdate(pSkinContainer->Name());
 	pSkinContainer->m_pLoadJob = nullptr;
@@ -3594,7 +3650,7 @@ bool CSkins::LoadSkinCatalogCache(SSkinCatalogRuntime &Catalog)
 	return Valid;
 }
 
-bool CSkins::ParseSkinCatalog(const SSkinCatalogSource &Source, const void *pFileData, size_t FileSize, SSkinCatalogSnapshot &Snapshot) const
+bool CSkins::ParseSkinCatalogData(const SSkinCatalogSource &Source, const void *pFileData, size_t FileSize, SSkinCatalogSnapshot &Snapshot)
 {
 	if(pFileData == nullptr || FileSize == 0 || FileSize > SKIN_CATALOG_MAX_BYTES)
 		return false;
@@ -3629,6 +3685,22 @@ bool CSkins::ParseSkinCatalog(const SSkinCatalogSource &Source, const void *pFil
 	return true;
 }
 
+bool CSkins::ParseSkinCatalog(const SSkinCatalogSource &Source, const void *pFileData, size_t FileSize, SSkinCatalogSnapshot &Snapshot) const
+{
+	return ParseSkinCatalogData(Source, pFileData, FileSize, Snapshot);
+}
+
+CSkins::CSkinCatalogParseJob::CSkinCatalogParseJob(SSkinCatalogSource Source, std::vector<unsigned char> vData) :
+	m_Source(std::move(Source)),
+	m_vData(std::move(vData))
+{
+}
+
+void CSkins::CSkinCatalogParseJob::Run()
+{
+	m_Success = !m_vData.empty() && CSkins::ParseSkinCatalogData(m_Source, m_vData.data(), m_vData.size(), m_Snapshot);
+}
+
 void CSkins::QueueSkinCatalogRequests()
 {
 	for(SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
@@ -3652,6 +3724,31 @@ void CSkins::ProcessSkinCatalogRequests()
 {
 	for(SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
 	{
+		// 目录解析在 worker 完成，主线程只接管结果并发布，避免 HTTP 完成帧出现 10ms+ 解析停顿。
+		if(Catalog.m_pParseJob != nullptr)
+		{
+			if(!Catalog.m_pParseJob->Finished())
+				continue;
+			const bool ParseSuccess = Catalog.m_pParseJob->Success();
+			SSkinCatalogSnapshot Snapshot = Catalog.m_pParseJob->TakeSnapshot();
+			Catalog.m_pParseJob.reset();
+			// 解析成功后才提交临时 HTTP 文件；解析失败时由 Validation 析构丢弃临时文件，
+			// 不能覆盖已有的有效缓存。
+			bool CommitSuccess = false;
+			if(Catalog.m_pRequest != nullptr)
+			{
+				auto pRequest = std::move(Catalog.m_pRequest);
+				CHttpResponseValidation Validation(*pRequest);
+				if(ParseSuccess && Snapshot.m_Loaded)
+					CommitSuccess = Validation.Commit();
+			}
+			if(ParseSuccess && Snapshot.m_Loaded && CommitSuccess)
+				PublishSkinCatalog(Catalog, std::move(Snapshot));
+			else
+				log_warn("skins", "Failed to parse or commit skin catalog %s; keeping cached entries", Catalog.m_Source.m_Url.c_str());
+			continue;
+		}
+
 		if(Catalog.m_pRequest == nullptr || !Catalog.m_pRequest->Done())
 			continue;
 		// 请求完成不等于 HTTP 成功：断网、TLS 失败或中止都会进入非 DONE 终态。
@@ -3662,20 +3759,31 @@ void CSkins::ProcessSkinCatalogRequests()
 		bool Success = false;
 		if(RequestState == EHttpState::DONE)
 		{
-			CHttpResponseValidation Validation(*pRequest);
-			SSkinCatalogSnapshot Snapshot;
 			if(StatusCode == 200)
 			{
 				unsigned char *pData = nullptr;
 				size_t Size = 0;
 				pRequest->Result(&pData, &Size);
-				Success = ParseSkinCatalog(Catalog.m_Source, pData, Size, Snapshot);
+				if(pData != nullptr && Size > 0 && Size <= SKIN_CATALOG_MAX_BYTES)
+				{
+					std::vector<unsigned char> vData(pData, pData + Size);
+					// 临时文件在 worker 解析完成前不能提交或销毁，否则 Result 指针会失效。
+					Catalog.m_pRequest = std::move(pRequest);
+					Catalog.m_pParseJob = std::make_shared<CSkinCatalogParseJob>(Catalog.m_Source, std::move(vData));
+					Engine()->AddJob(Catalog.m_pParseJob);
+					Success = true;
+				}
+				else
+				{
+					CHttpResponseValidation Validation(*pRequest);
+				}
 			}
-			else if(StatusCode == 304)
-				Success = Catalog.m_Snapshot.m_Loaded;
-			Success = Success && Validation.Commit();
-			if(Success && Snapshot.m_Loaded)
-				PublishSkinCatalog(Catalog, std::move(Snapshot));
+			else
+			{
+				CHttpResponseValidation Validation(*pRequest);
+				if(StatusCode == 304)
+					Success = Catalog.m_Snapshot.m_Loaded && Validation.Commit();
+			}
 		}
 		if(!Success)
 		{
@@ -3689,12 +3797,134 @@ void CSkins::PublishSkinCatalog(SSkinCatalogRuntime &Catalog, SSkinCatalogSnapsh
 {
 	if(Catalog.m_Snapshot.m_ContentHash == Snapshot.m_ContentHash)
 		return;
+	std::vector<std::string> vRemovedNames;
+	if(Catalog.m_Snapshot.m_Loaded)
+	{
+		vRemovedNames.reserve(Catalog.m_Snapshot.m_Entries.size());
+		for(const auto &[_, Entry] : Catalog.m_Snapshot.m_Entries)
+		{
+			if(Snapshot.m_Entries.find(CSkinNameIndex::Key(Entry.m_Name.c_str())) == Snapshot.m_Entries.end())
+				vRemovedNames.push_back(Entry.m_Name);
+		}
+	}
 	Catalog.m_Snapshot = std::move(Snapshot);
+	m_vPendingSkinCatalogEntries.reserve(m_vPendingSkinCatalogEntries.size() + Catalog.m_Snapshot.m_Entries.size());
 	RefreshSkinCatalogSourceMasks();
+
+	if(!vRemovedNames.empty())
+	{
+		// 旧目录中已移除的条目可能仍在本帧尚未合并的队列里。只过滤候选名，
+		// 避免每次目录更新都扫描并丢弃整份目录。
+		std::unordered_set<std::string> RemovedKeys;
+		RemovedKeys.reserve(vRemovedNames.size());
+		for(const std::string &Name : vRemovedNames)
+			RemovedKeys.emplace(CSkinNameIndex::Key(Name.c_str()));
+		const size_t PendingBefore = m_vPendingSkinCatalogEntries.size();
+		m_vPendingSkinCatalogEntries.erase(std::remove_if(
+							   m_vPendingSkinCatalogEntries.begin(), m_vPendingSkinCatalogEntries.end(),
+							   [&](const qm_skin_catalog::SEntry &Entry) {
+								   if(RemovedKeys.find(CSkinNameIndex::Key(Entry.m_Name.c_str())) == RemovedKeys.end())
+									   return false;
+								   return CatalogSourcesForName(Entry.m_Name.c_str(), false) == ESkinSourceMask::NONE &&
+									  CatalogSourcesForName(Entry.m_Name.c_str(), true) == ESkinSourceMask::NONE;
+							   }),
+			m_vPendingSkinCatalogEntries.end());
+		if(m_vPendingSkinCatalogEntries.size() != PendingBefore)
+			m_SkinCatalogMergeCursor = 0;
+	}
+
 	for(const auto &[_, Entry] : Catalog.m_Snapshot.m_Entries)
 		m_vPendingSkinCatalogEntries.push_back(Entry);
+
+	if(!vRemovedNames.empty())
+	{
+		std::vector<std::string> vRemoveContainers;
+		for(const std::string &Name : vRemovedNames)
+		{
+			if(CatalogSourcesForName(Name.c_str(), false) != ESkinSourceMask::NONE ||
+				CatalogSourcesForName(Name.c_str(), true) != ESkinSourceMask::NONE)
+				continue;
+			const auto It = m_Skins.find(Name);
+			if(It == m_Skins.end())
+				continue;
+			const CSkinContainer *pSkinContainer = It->second.get();
+			const bool InAnyCatalog =
+				CatalogSourcesForName(Name.c_str(), false) != ESkinSourceMask::NONE ||
+				CatalogSourcesForName(Name.c_str(), true) != ESkinSourceMask::NONE;
+			if(!ShouldRemoveStaleCatalogOnly(
+				   pSkinContainer->IsCatalogOnly(), pSkinContainer->m_pSkin != nullptr,
+				   pSkinContainer->m_SkinSource, CatalogOnlySkinReferenced(pSkinContainer), InAnyCatalog))
+				continue;
+			vRemoveContainers.push_back(Name);
+		}
+		if(!vRemoveContainers.empty())
+		{
+			// 列表条目持有容器指针，先清空已发布和待物化的列表再销毁容器。
+			if(m_pSkinListPlanJob)
+			{
+				m_pSkinListPlanJob->Abort();
+				m_pSkinListPlanJob.reset();
+			}
+			m_vPendingSkinListEntries.clear();
+			m_SkinList.ClearPlan();
+			for(const std::string &Name : vRemoveContainers)
+				RemoveSkinContainer(Name.c_str());
+			log_info("skins", "Removed %" PRIzu " stale catalog skins after refreshing %s", vRemoveContainers.size(), Catalog.m_Source.m_Url.c_str());
+		}
+	}
 	m_SkinList.ForceRefresh();
 	log_info("skins", "Loaded skin catalog %s: %" PRIzu " names", Catalog.m_Source.m_Url.c_str(), Catalog.m_Snapshot.m_Entries.size());
+}
+
+bool CSkins::CatalogOnlySkinReferenced(const CSkinContainer *pSkinContainer) const
+{
+	if(pSkinContainer == nullptr)
+		return false;
+	if(pSkinContainer->m_pSkin != nullptr || pSkinContainer->m_SkinSource != ESkinSource::UNKNOWN)
+		return true;
+	if(str_comp_nocase(pSkinContainer->Name(), g_Config.m_ClPlayerSkin) == 0 ||
+		str_comp_nocase(pSkinContainer->Name(), g_Config.m_ClDummySkin) == 0)
+		return true;
+	if(IsFavorite(pSkinContainer->Name()))
+		return true;
+	for(const std::vector<CSkinQueueEntry> &Queue : m_aSkinQueue)
+	{
+		for(const CSkinQueueEntry &Entry : Queue)
+		{
+			if(str_comp_nocase(Entry.m_SkinName.c_str(), pSkinContainer->Name()) == 0)
+				return true;
+		}
+	}
+	return m_SkinSources.Find(pSkinContainer->Name()).has_value();
+}
+
+void CSkins::RemoveSkinContainer(const char *pSkinName)
+{
+	const auto It = m_Skins.find(pSkinName);
+	if(It == m_Skins.end())
+		return;
+	CSkinContainer *pSkinContainer = It->second.get();
+	pSkinContainer->m_pDownloadSession.reset();
+	if(pSkinContainer->m_pLoadJob)
+	{
+		pSkinContainer->m_pLoadJob->Abort();
+		pSkinContainer->m_pLoadJob.reset();
+	}
+	if(pSkinContainer->m_pPendingSkin)
+		DiscardSkinPreviewUpload(pSkinContainer);
+	pSkinContainer->ClearUsage();
+	pSkinContainer->ClearBackgroundUsage();
+	if(pSkinContainer->m_StateCounted)
+	{
+		--m_LoadingStats.StateCount(pSkinContainer->m_State);
+		pSkinContainer->m_StateCounted = false;
+	}
+	m_SkinNameIndex.Remove(pSkinContainer->Name());
+	m_SkinNotFoundKeys.erase(CSkinNameIndex::Key(pSkinContainer->Name()));
+	m_vSkinDownloadNames.erase(std::remove_if(m_vSkinDownloadNames.begin(), m_vSkinDownloadNames.end(),
+					   [&](const std::string &Name) { return str_comp_nocase(Name.c_str(), pSkinContainer->Name()) == 0; }),
+		m_vSkinDownloadNames.end());
+	m_Skins.erase(It);
 }
 
 ESkinSourceMask CSkins::CatalogSourcesForName(const char *pName, bool RequestSources) const
@@ -3841,8 +4071,10 @@ void CSkins::ApplySkinListPlan(std::vector<SSettingsSkinListEntry> &&vPlannedEnt
 	}
 	m_SkinList.m_vSkins = std::move(m_vPendingSkinListEntries);
 	m_SkinList.m_MergeCursor = FirstPageEntries;
-	// 计划完成即请求首屏名字，不去等目录/纹理或全量 merge 完成。
-	for(int Index = 0; Index < FirstPageEntries; ++Index)
+	// 设置页未打开时不主动拉取首屏皮肤；目录条目可能已在后台刷新，
+	// 否则启动阶段会为了不可见的列表发出网络请求，旧目录条目也会产生 404。
+	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
+	for(int Index = 0; TeeSettingsActive && Index < FirstPageEntries; ++Index)
 	{
 		if(m_SkinList.m_vSkins[Index].SkinContainer() != nullptr)
 			m_SkinList.m_vSkins[Index].RequestLoad(ESettingsResourcePriority::VISIBLE);
@@ -3960,11 +4192,12 @@ const CSkins::CSkinContainer *CSkins::FindContainerOrNullptr(const char *pName, 
 	{
 		char aNameWithPrefix[2 * MAX_SKIN_LENGTH + 2]; // Larger than skin name length to allow IsValidName to check if it's too long
 		str_format(aNameWithPrefix, sizeof(aNameWithPrefix), "%s_%s", pSkinPrefix, pName);
-		// If we find something, use it, otherwise fall back to normal skins.
-		const CSkinContainer *pSkinContainer = FindContainerImpl(aNameWithPrefix, RequestLoad);
-		if(pSkinContainer != nullptr && pSkinContainer->Skin() != nullptr)
+		// 只有已经加载的前缀皮肤才覆盖原名。不能为了探测前缀而新建容器并
+		// 发下载请求：任意前缀（例如 kitty）都会对不存在的 kitty_* 名字产生 404。
+		const auto PrefixedContainer = m_Skins.find(aNameWithPrefix);
+		if(PrefixedContainer != m_Skins.end() && PrefixedContainer->second->Skin() != nullptr)
 		{
-			return pSkinContainer;
+			return PrefixedContainer->second.get();
 		}
 	}
 	return FindContainerImpl(pName, RequestLoad);
@@ -4523,6 +4756,10 @@ void CSkins::CSkinLoadJob::Run()
 std::unique_ptr<CQmSkinDownloadSession> CSkins::TryCreateTrackedSkinDownloadSession(const CSkinContainer *pSkinContainer)
 {
 	dbg_assert(pSkinContainer != nullptr, "Download session requires a skin container");
+	// 目录条目的来源掩码为空只表示“目录已不再提供它”，不能当成未知来源去
+	// 轮询所有下载站。正常目录条目一定带有至少一个可请求来源。
+	if(pSkinContainer->IsCatalogOnly() && pSkinContainer->EffectiveRequestSources() == ESkinSourceMask::NONE)
+		return nullptr;
 	const char *pName = pSkinContainer->Name();
 	return QmCreateTrackedSkinDownloadSession(m_vSkinDownloadNames, pName, [&] {
 		const std::string Name = CanonicalSkinName(pName);

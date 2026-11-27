@@ -93,6 +93,7 @@ private:
 	// IME support
 	bool m_UsesNativeImeUi = true;
 	std::string m_CompositionString;
+	std::string m_PendingCancelledComposition;
 	int m_CompositionCursor;
 	CQmImeCandidateState m_ImeCandidates;
 

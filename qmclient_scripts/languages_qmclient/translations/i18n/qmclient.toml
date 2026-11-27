@@ -15823,6 +15823,22 @@ turkish = "IME metin rengi"
 polish = "Kolor tekstu IME"
 
 [[message]]
+key = "Immediate"
+[message.translations]
+simplified_chinese = "Immediate"
+traditional_chinese = "Immediate"
+japanese = "Immediate"
+korean = "Immediate"
+russian = "Immediate"
+german = "Immediate"
+spanish = "Immediate"
+french = "Immediate"
+brazilian_portuguese = "Immediate"
+portuguese = "Immediate"
+turkish = "Immediate"
+polish = "Immediate"
+
+[[message]]
 key = "Import"
 [message.translations]
 simplified_chinese = "导入"
@@ -19635,6 +19651,22 @@ brazilian_portuguese = "Letra: pesquisando..."
 portuguese = "Letra: a pesquisar..."
 turkish = "Şarkı sözleri: aranıyor..."
 polish = "Tekst utworu: wyszukiwanie..."
+
+[[message]]
+key = "Mailbox"
+[message.translations]
+simplified_chinese = "Mailbox"
+traditional_chinese = "Mailbox"
+japanese = "Mailbox"
+korean = "Mailbox"
+russian = "Mailbox"
+german = "Mailbox"
+spanish = "Mailbox"
+french = "Mailbox"
+brazilian_portuguese = "Mailbox"
+portuguese = "Mailbox"
+turkish = "Mailbox"
+polish = "Mailbox"
 
 [[message]]
 key = "Main team %d / Dummy team %d"
@@ -25800,6 +25832,22 @@ brazilian_portuguese = "Cor da ponta da linha de gancho pressionada"
 portuguese = "Cor da ponta da linha de gancho premida"
 turkish = "Basılı kanca çizgisi ucu rengi"
 polish = "Kolor końcówki linii haka przy wciśniętym klawiszu"
+
+[[message]]
+key = "Present mode"
+[message.translations]
+simplified_chinese = "呈现模式"
+traditional_chinese = "呈現模式"
+japanese = "表示モード"
+korean = "표시 모드"
+russian = "Режим представления"
+german = "Präsentationsmodus"
+spanish = "Modo de presentación"
+french = "Mode de présentation"
+brazilian_portuguese = "Modo de apresentação"
+portuguese = "Modo de apresentação"
+turkish = "Sunum modu"
+polish = "Tryb prezentacji"
 
 [[message]]
 key = "Preview and apply a fixed appearance preset"
@@ -40251,6 +40299,22 @@ brazilian_portuguese = "Versão da API Vulkan: 14 = preferir 1.4, depois 1.3 e 1
 portuguese = "Versão da API Vulkan: 14 = preferir 1.4, depois 1.3 e 1.1; 13 = preferir 1.3, depois 1.1; 11 = forçar 1.1"
 turkish = "Vulkan API sürümü: 14 = önce 1.4, sonra 1.3 ve 1.1'i tercih et; 13 = önce 1.3, sonra 1.1'i tercih et; 11 = 1.1'i zorla"
 polish = "Wersja API Vulkan: 14 = preferuj 1.4, potem 1.3 i 1.1; 13 = preferuj 1.3, potem 1.1; 11 = wymuś 1.1"
+
+[[message]]
+key = "Vulkan presentation mode: 0=auto, 1=immediate, 2=mailbox, 3=fifo"
+[message.translations]
+simplified_chinese = "Vulkan 呈现模式：0=自动，1=Immediate，2=Mailbox，3=FIFO"
+traditional_chinese = "Vulkan 呈現模式：0=自動，1=Immediate，2=Mailbox，3=FIFO"
+japanese = "Vulkan の表示モード：0=自動、1=Immediate、2=Mailbox、3=FIFO"
+korean = "Vulkan 표시 모드: 0=자동, 1=Immediate, 2=Mailbox, 3=FIFO"
+russian = "Режим представления Vulkan: 0=авто, 1=Immediate, 2=Mailbox, 3=FIFO"
+german = "Vulkan-Präsentationsmodus: 0=Auto, 1=Immediate, 2=Mailbox, 3=FIFO"
+spanish = "Modo de presentación de Vulkan: 0=automático, 1=Immediate, 2=Mailbox, 3=FIFO"
+french = "Mode de présentation Vulkan : 0=auto, 1=Immediate, 2=Mailbox, 3=FIFO"
+brazilian_portuguese = "Modo de apresentação do Vulkan: 0=automático, 1=Immediate, 2=Mailbox, 3=FIFO"
+portuguese = "Modo de apresentação do Vulkan: 0=automático, 1=Immediate, 2=Mailbox, 3=FIFO"
+turkish = "Vulkan sunum modu: 0=otomatik, 1=Immediate, 2=Mailbox, 3=FIFO"
+polish = "Tryb prezentacji Vulkan: 0=automatyczny, 1=Immediate, 2=Mailbox, 3=FIFO"
 
 [[message]]
 key = "Wait for current vote to end before calling a new one."

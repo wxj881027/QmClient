@@ -1566,6 +1566,8 @@ int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Ico
 
 int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor, std::optional<bool> HoveredOverride)
 {
+	// 主菜单长帧定位：单个按钮耗时超过阈值时记录标签，区分字体/图集首次构建与常规绘制。
+	CPerfTimer ButtonTimer(QmPerfEnabled());
 	if(Icon != EQmIcon::COUNT && (pText == nullptr || pText[0] == '\0') && pImageName == nullptr && pIconTexture == nullptr)
 		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, true, std::nullopt, false, false, nullptr, nullptr, -1.0f, HoveredOverride);
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
@@ -1677,7 +1679,16 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 			Ui()->DoLabel(&Text, pText, ResolvedTextFontSize, TEXTALIGN_MC, MenuButtonLabelProps(Text));
 	}
 
-	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
+	const int Result = Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
+	const double ButtonMs = ButtonTimer.ElapsedMs();
+	if(ButtonMs >= 4.0)
+	{
+		char aPayload[320];
+		str_format(aPayload, sizeof(aPayload), "event=slow_menu_button duration_ms=%.3f label=%s image=%s",
+			ButtonMs, pText != nullptr ? pText : "", pImageName != nullptr ? pImageName : "");
+		QmPerfLogPayload("perf/menu", aPayload, Client());
+	}
+	return Result;
 }
 
 int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float FontSize, bool CapsuleTab)
@@ -7926,7 +7937,7 @@ bool CMenus::MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRe
 	// CUi::DoLabelStreamed 完全一致（同一个谓词），否则这里排队、那边不重建
 	// 会逐帧空转。
 	const bool BakedColorChanged = !pElementRect->BakedColorMatches(LabelProps.m_vColorSplits, TextRender()->GetTextColor());
-	const bool StyleChanged = BakedColorChanged || pElementRect->m_TextPixelScale != Graphics()->ScreenPixelScale() || pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
+	const bool StyleChanged = BakedColorChanged || pElementRect->m_TextPixelScale != Ui()->UiTextPixelScale() || pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
 	const bool NeedsBuild =
 		(!pElementRect->m_UITextContainer.Valid() && pText[0] != '\0' && StrLen != 0) ||
 		TextChanged ||
