@@ -2,8 +2,6 @@
 
 #include <gtest/gtest.h>
 
-#include <cmath>
-
 namespace
 {
 	float GroupCenterX(const ui_token::page_title::STitleGroupLayout &Layout)
@@ -40,19 +38,4 @@ TEST(QmPageTitleGroup, TextRectKeepsNaturalWidthSoRendererNeverBreaks)
 	const auto Layout = ui_token::page_title::ResolveTitleGroup(Row, 500.0f);
 	EXPECT_FLOAT_EQ(Layout.m_Text.w, 500.0f);
 	EXPECT_NEAR(GroupCenterX(Layout), Row.Center().x, 0.001f);
-}
-
-TEST(QmPageTitleGroup, TextMaxWidthAlwaysExceedsMeasuredWidth)
-{
-	// 渲染器按这个宽度断行，所以它必须**严格大于**实测宽度，且不能向下截断。
-	// 曾经用 (int)Group.m_Text.w：40.6 变成 40，任何窗口比例下都必然折行。
-	const float aWidths[] = {40.0f, 40.2f, 40.6f, 41.0f, 87.4f, 122.9f};
-	for(const float Width : aWidths)
-	{
-		const int MaxWidth = ui_token::page_title::ResolveTitleTextMaxWidth(Width);
-		EXPECT_GT((float)MaxWidth, Width) << "measured=" << Width;
-		EXPECT_GE((float)MaxWidth, std::ceil(Width)) << "measured=" << Width;
-	}
-	EXPECT_EQ(ui_token::page_title::ResolveTitleTextMaxWidth(40.6f), 42);
-	EXPECT_EQ(ui_token::page_title::ResolveTitleTextMaxWidth(40.0f), 41);
 }

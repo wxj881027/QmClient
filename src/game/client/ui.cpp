@@ -206,6 +206,7 @@ void CUIElement::SUIElementRect::Reset()
 	m_Corners = -1;
 	m_BackgroundAlphaScale = 1.0f;
 	m_Text.clear();
+	m_TextPixelScale = {};
 	m_FontSize = -1.0f;
 	m_TextAlign = -1;
 	m_LabelMaxWidth = -2.0f;
@@ -2295,6 +2296,8 @@ void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, cons
 	RectEl.m_aQmIcons = Icons.m_aIcons;
 	RectEl.m_NumQmIcons = Icons.m_Count;
 	RectEl.m_FontPreset = TextRender()->GetFontPreset();
+	// 缓存比较请求字号；排版时为窄行缩小的实际字号保存在光标里。
+	RectEl.m_FontSize = Size;
 	const int Flags = GetFlagsForLabelProperties(LabelProps, pReadCursor);
 	const SCursorAndBoundingBox TextBounds = CalcFontSizeCursorHeightAndBoundingBox(TextRender(), pText, Flags, Size, pRect->w, LabelProps);
 
@@ -2315,7 +2318,7 @@ void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, cons
 	// 布局的残留，套用到本段会整体错位，所以这里总是按本次调用重新指定。
 	Cursor.m_vColorSplits = LabelProps.m_vColorSplits;
 
-	RectEl.m_FontSize = Size;
+	RectEl.m_TextPixelScale = Graphics()->ScreenPixelScale();
 	RectEl.m_TextAlign = Align;
 	RectEl.m_LabelMaxWidth = LabelProps.m_MaxWidth;
 	RectEl.m_LabelFlags = Flags;
@@ -2390,7 +2393,7 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	// 没变也必须继续复用（色段相同的标签不逐帧重建）。比较只对着缓存里烘入的
 	// 那一份做，没有逐帧文本扫描。
 	const bool BakedColorChanged = !RectEl.BakedColorMatches(LabelProps.m_vColorSplits, TextRender()->GetTextColor());
-	bool StyleChanged = BakedColorChanged || RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
+	bool StyleChanged = BakedColorChanged || RectEl.m_TextPixelScale != Graphics()->ScreenPixelScale() || RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
 
 	if(ColorChanged)
 	{

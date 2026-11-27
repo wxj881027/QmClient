@@ -592,6 +592,7 @@ namespace
 		void TextColor(ColorRGBA Color) { m_Color = Color; }
 		void TextOutlineColor(ColorRGBA Color) { m_Outline = Color; }
 		void SetRenderFlags(unsigned Flags) { m_Flags = Flags; }
+		const STextContainerIndex *CachedDrawContainer(CTextCursor *, const char *, int) { return nullptr; }
 		void CreateTextContainer(STextContainerIndex &Container, CTextCursor *pCursor, const char *, int)
 		{
 			m_BuildColor = m_Color;
