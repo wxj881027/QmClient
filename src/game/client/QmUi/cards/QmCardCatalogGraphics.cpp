@@ -108,7 +108,6 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	// 还是后面的卡片定义构建。
 	const auto QmGfxNowMs = [] { return time_get() * 1000.0 / (double)time_freq(); };
 	const double QmGfxEntryMs = QmGfxNowMs();
-	const SSettingsPageLayoutFrame GraphicsPage = Ctx.m_Page;
 	static bool CheckSettings;
 	CheckSettings = false;
 	static const int MAX_RESOLUTIONS = 256;
@@ -222,7 +221,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	static CButtonContainer s_GraphicsSignalIconColorResetId;
 
 	const bool RenderOnly = Ui()->RenderOnly();
-	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pCardEffectsDefault, pThemeDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, ShowGraphicsMode, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
+	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pCardEffectsDefault, pThemeDefault, pIconsDefault, pInteractionDefault, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, ShowGraphicsMode, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(6);
 		const SSettingsCardSpec ModesSpec{pModesDefault->m_pStableId, Localize(pModesDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pModesDefault)};
 		// 副标题以注册表描述为唯一来源，与其他卡片一致；不再对本卡单独关闭副标题。
@@ -240,7 +239,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			vCards.push_back(std::move(Definition));
 		};
 
-		AddCard(ModesSpec, [this, GraphicsMetrics, GraphicsPage, OldWindowMode, GraphicsModesTargetContentHeight](CUIRect ContentRect) {
+		AddCard(ModesSpec, [this, GraphicsMetrics, OldWindowMode, GraphicsModesTargetContentHeight](CUIRect ContentRect) {
 		char aBuf[128];
 		CSettingsContentLayoutFlow Flow(ContentRect);
 		CUIRect ModeList;
@@ -262,7 +261,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		static CScrollRegion s_WindowModeDropDownScrollRegion;
 		s_WindowModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_WindowModeDropDownScrollRegion;
 		CUi::SDropDownProperties WindowModeDropDownProps;
-		WindowModeDropDownProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
+		WindowModeDropDownProps.m_pPopupViewport = &m_SettingsPopupViewport;
 		// 同一行已经有标题，再弹配置名/长说明的悬浮提示只会挡住列表，这里不挂提示。
 		const int NewWindowMode = DoSettingsDropDown(&WindowModeDropDown, OldWindowMode, apWindowModes, std::size(apWindowModes), s_WindowModeDropDownState, WindowModeDropDownProps, nullptr);
 		if(OldWindowMode != NewWindowMode)
@@ -337,7 +336,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				Graphics()->ResizeToScreen();
 			}
 		} });
-		const FSettingsCardRenderMeasured RenderDisplay = [this, GraphicsMetrics, GraphicsPage, ShowGraphicsMode, BodySize, DoGraphicsNumericField, OldWindowMode](CUIRect &ContentRect) {
+		const FSettingsCardRenderMeasured RenderDisplay = [this, GraphicsMetrics, ShowGraphicsMode, BodySize, DoGraphicsNumericField, OldWindowMode](CUIRect &ContentRect) {
 			char aBuf[128];
 			CSettingsContentLayoutFlow Flow(ContentRect);
 			const auto RowAction = [&](const char *pId, float Height, auto &&Action) {
@@ -372,7 +371,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					static CScrollRegion s_ScreenDropDownScrollRegion;
 					s_ScreenDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ScreenDropDownScrollRegion;
 					CUi::SDropDownProperties ScreenDropDownProps;
-					ScreenDropDownProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
+					ScreenDropDownProps.m_pPopupViewport = &m_SettingsPopupViewport;
 					const int NewScreen = DoSettingsDropDown(&ScreenDropDown, g_Config.m_GfxScreen, s_vpScreenNames.data(), s_vpScreenNames.size(), s_ScreenDropDownState, ScreenDropDownProps, &g_Config.m_GfxScreen);
 					if(NewScreen != g_Config.m_GfxScreen)
 						Graphics()->SwitchWindowScreen(NewScreen, true);
@@ -387,7 +386,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				}
 			});
 
-			const auto DoGraphicsChoiceRow = [this, GraphicsMetrics, GraphicsPage](CUIRect Row, const char *pLabel, const char *pId, const char **ppNames, size_t Count, int Current, CUi::SDropDownState &State, CScrollRegion &ScrollRegion, const void *pConfigValue, auto &&OnChanged) {
+			const auto DoGraphicsChoiceRow = [this, GraphicsMetrics](CUIRect Row, const char *pLabel, const char *pId, const char **ppNames, size_t Count, int Current, CUi::SDropDownState &State, CScrollRegion &ScrollRegion, const void *pConfigValue, auto &&OnChanged) {
 				if(ppNames == nullptr || Count == 0)
 					return;
 				for(size_t Index = 0; Index < Count; ++Index)
@@ -399,7 +398,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				DoSettingsMenuLabel(SETTINGS_GRAPHICS, -1, -1, pId, &Label, pLabel, GraphicsMetrics.m_BodySize, TEXTALIGN_ML);
 				State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;
 				CUi::SDropDownProperties DropDownProps;
-				DropDownProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
+				DropDownProps.m_pPopupViewport = &m_SettingsPopupViewport;
 				const int NewValue = DoSettingsDropDown(&DropDown, Current, ppNames, Count, State, DropDownProps, pConfigValue, nullptr, &Row);
 				if(NewValue != Current)
 					OnChanged(NewValue);

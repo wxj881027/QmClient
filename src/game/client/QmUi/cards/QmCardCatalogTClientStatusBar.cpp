@@ -327,7 +327,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 				static CScrollRegion s_DropDownScrollRegion;
 				s_DropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_DropDownScrollRegion;
 				CUi::SDropDownProperties DropDownProps;
-				DropDownProps.m_pPopupViewport = &Page.m_ScrollViewport;
+				DropDownProps.m_pPopupViewport = &m_SettingsPopupViewport;
 				const int TypeSelectedNew = DoSettingsDropDown(&DropDownRect, s_TypeSelectedOld, s_DropDownNames.data(), s_DropDownNames.size(), s_DropDownState, DropDownProps, g_Config.m_QmStatusBarScheme);
 				if(Flow.Input() && !ReadOnly && !Ui()->RenderOnly() && s_TypeSelectedOld != TypeSelectedNew)
 				{

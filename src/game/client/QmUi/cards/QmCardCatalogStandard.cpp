@@ -98,6 +98,7 @@ void CMenus::RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool 
 	Ctx.m_ReadOnly = ReadOnly;
 	Ctx.m_Metrics = ResolveSettingsContentMetrics(MainView.w);
 	Ctx.m_Page = SettingsPageLayout(MainView, Ctx.m_Metrics.m_UiScale);
+	m_SettingsPopupViewport = Ctx.m_Page.m_ScrollViewport;
 	Ctx.m_LabelWidth = ResolveSettingsCardLabelWidth(Ctx.m_Page.m_TwoColumns ? Ctx.m_Page.m_aColumns[0].w : Ctx.m_Page.m_ContentViewport.w, Ctx.m_Metrics);
 	Ctx.m_UiContext = SettingsUiContext(pTab, Ctx.m_Metrics.m_UiScale);
 	if(ReadOnly)

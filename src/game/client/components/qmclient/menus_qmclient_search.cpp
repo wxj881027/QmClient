@@ -462,6 +462,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		ShiftRectDown(DeckPage.m_aColumns[0]);
 		ShiftRectDown(DeckPage.m_aColumns[1]);
 	}
+	// 搜索结果复用各页卡片定义；下拉框弹层必须使用当前结果卡组的实时 viewport。
+	m_SettingsPopupViewport = DeckPage.m_ScrollViewport;
 
 	SSettingsCardDeckInput InputState;
 	InputState.m_MouseX = ResultsReadOnly ? 0.0f : Ui()->MouseX();

@@ -3414,6 +3414,9 @@ private:
 	SSettingsCardDeckDisplayCycleState m_SettingsCardDeckDisplayState;
 	SSettingsShellLayoutFrame m_SettingsShellLayout;
 	SSettingsContentMetrics m_SettingsContentMetrics;
+	// 卡片定义按 100px 宽度桶缓存，不能把构建时的页面 viewport 存进下拉框；
+	// 每帧渲染前更新这块实时矩形，卡片内的弹层统一引用它。
+	CUIRect m_SettingsPopupViewport{};
 	std::vector<SSettingsToggleSize> m_vSettingsToggleGroupSizes;
 	SSettingsDynamicToggleGrid m_SettingsToggleGroupGrid;
 	bool m_SettingsShellLayoutValid = false;
