@@ -764,13 +764,13 @@ TEST(SkinUploadBudget, AllowsMultipleSpritesUntilTimeIsExhausted)
 {
 	using namespace std::chrono_literals;
 	CQmSkinUploadFrameBudget Budget;
-	ASSERT_TRUE(Budget.CanUpload());
+	ASSERT_TRUE(Budget.CanUpload(10));
 	Budget.RecordUpload(200us);
-	EXPECT_TRUE(Budget.CanUpload());
+	EXPECT_TRUE(Budget.CanUpload(10));
 	Budget.RecordUpload(799us);
-	EXPECT_TRUE(Budget.CanUpload());
+	EXPECT_TRUE(Budget.CanUpload(10));
 	Budget.RecordUpload(1us);
-	EXPECT_FALSE(Budget.CanUpload());
+	EXPECT_FALSE(Budget.CanUpload(10));
 }
 
 TEST(SkinUploadBudget, SharesTimeAcrossUpdatesAndResetsForNextFrame)
@@ -778,14 +778,14 @@ TEST(SkinUploadBudget, SharesTimeAcrossUpdatesAndResetsForNextFrame)
 	using namespace std::chrono_literals;
 	CQmSkinUploadFrameBudget Budget;
 	Budget.RecordUpload(1200us, true, 4096);
-	Budget.RecordUpload(800us, false, 0);
-	EXPECT_FALSE(Budget.CanUpload());
+	Budget.RecordUpload(800us, false, 4096);
+	EXPECT_FALSE(Budget.CanUpload(10));
 	EXPECT_EQ(Budget.Attempts(), 2);
 	EXPECT_EQ(Budget.Submitted(), 1);
 	EXPECT_EQ(Budget.PreparedBytes(), 4096u);
 	EXPECT_EQ(Budget.UploadTime(), 2ms);
 	Budget.Reset();
-	EXPECT_TRUE(Budget.CanUpload());
+	EXPECT_TRUE(Budget.CanUpload(10));
 	EXPECT_EQ(Budget.Attempts(), 0);
 	EXPECT_EQ(Budget.Submitted(), 0);
 	EXPECT_EQ(Budget.PreparedBytes(), 0u);
@@ -798,12 +798,53 @@ TEST(SkinUploadBudget, HonorsConfiguredLimit)
 	CQmSkinUploadFrameBudget Budget;
 	Budget.Reset(2ms);
 	Budget.RecordUpload(1500us);
-	EXPECT_TRUE(Budget.CanUpload());
+	EXPECT_TRUE(Budget.CanUpload(10));
 	Budget.RecordUpload(600us);
-	EXPECT_FALSE(Budget.CanUpload());
+	EXPECT_FALSE(Budget.CanUpload(10));
 	Budget.Reset(3ms);
 	Budget.RecordUpload(2500us);
-	EXPECT_TRUE(Budget.CanUpload());
+	EXPECT_TRUE(Budget.CanUpload(10));
+}
+
+TEST(SkinUploadBudget, FastSubmissionsShareTheCountLimitUntilRender)
+{
+	using namespace std::chrono_literals;
+	CQmSkinUploadFrameBudget Budget;
+	EXPECT_FALSE(Budget.CanUpload(0));
+	ASSERT_TRUE(Budget.CanUpload(2));
+	Budget.RecordUpload(0ns);
+	ASSERT_TRUE(Budget.CanUpload(2));
+	Budget.RecordUpload(0ns);
+	EXPECT_FALSE(Budget.CanUpload(2));
+	Budget.Reset();
+	EXPECT_TRUE(Budget.CanUpload(2));
+}
+
+TEST(SkinUploadBudget, ChecksTheNextSpriteAgainstRemainingBytesBeforeSubmission)
+{
+	using namespace std::chrono_literals;
+	CQmSkinUploadFrameBudget Budget;
+	const size_t Limit = CQmSkinUploadFrameBudget::MAX_PREPARED_BYTES_PER_FRAME;
+	Budget.RecordUpload(0ns, true, Limit - 64);
+	EXPECT_FALSE(Budget.CanUpload(10, 65));
+	ASSERT_TRUE(Budget.CanUpload(10, 64));
+	Budget.RecordUpload(0ns, true, 64);
+	EXPECT_FALSE(Budget.CanUpload(10, 1));
+}
+
+TEST(SkinUploadBudget, OversizedSpriteCanProgressAloneOnNextFrame)
+{
+	using namespace std::chrono_literals;
+	CQmSkinUploadFrameBudget Budget;
+	const size_t Oversized = CQmSkinUploadFrameBudget::MAX_PREPARED_BYTES_PER_FRAME + 1;
+	Budget.RecordUpload(0ns, true, 1);
+	EXPECT_FALSE(Budget.CanUpload(10, Oversized));
+	Budget.Reset();
+	ASSERT_TRUE(Budget.CanUpload(10, Oversized));
+	Budget.RecordUpload(0ns, true, Oversized);
+	EXPECT_FALSE(Budget.CanUpload(10, 0));
+	Budget.Reset();
+	EXPECT_TRUE(Budget.CanUpload(10, 1));
 }
 
 TEST(SkinUploadBudget, ActiveTeeRequestsUseShortPollingInterval)
@@ -915,6 +956,10 @@ TEST(Skins, PreparedTexturesKeepValidSpritesWhenOneSpriteIsOutOfBounds)
 	EXPECT_EQ(pPrepared->Image(0, 0).m_pData[0], 23);
 	EXPECT_FALSE(pPrepared->Available(0, 11));
 	EXPECT_FALSE(pPrepared->Available(1, 11));
+	EXPECT_EQ(pPrepared->PreparedBytesForSprite(0), 16u);
+	EXPECT_EQ(pPrepared->PreparedBytesForSprite(12), 16u);
+	EXPECT_EQ(pPrepared->PreparedBytesForSprite(11), 0u);
+	EXPECT_EQ(pPrepared->PreparedBytesForSprite(23), 0u);
 	EXPECT_EQ(pPrepared->Image(0, 11).m_pData, nullptr);
 	Source.Free();
 }

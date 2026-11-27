@@ -1320,7 +1320,7 @@ static bool LoadSkinSpriteTexture(IGraphics *pGraphics, IGraphics::CTextureHandl
 	return true;
 }
 
-bool CSkins::UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer, size_t *pPreparedBytes)
+bool CSkins::UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer)
 {
 	if(pSkinContainer == nullptr || pSkinContainer->m_pPendingSkin == nullptr)
 		return false;
@@ -1332,11 +1332,7 @@ bool CSkins::UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer, size_t 
 		const CImageInfo &Source = Variant == 0 ? Data.m_Info : Data.m_InfoGrayscale;
 		CImageInfo &PreparedImage = Data.m_pPreparedTextures->Image(Variant, Index);
 		const bool Available = Data.m_pPreparedTextures->Available(Variant, Index);
-		const size_t PreparedBytes = pPreparedBytes != nullptr && Available ? PreparedImage.DataSize() : 0;
-		const bool Loaded = LoadSkinSpriteTexture(Graphics(), &Target, PreparedImage, Source, Available, &g_pData->m_aSprites[SpriteId]);
-		if(Loaded && pPreparedBytes != nullptr)
-			*pPreparedBytes = PreparedBytes;
-		return Loaded;
+		return LoadSkinSpriteTexture(Graphics(), &Target, PreparedImage, Source, Available, &g_pData->m_aSprites[SpriteId]);
 	};
 	switch(pSkinContainer->m_SettingsPendingUploadSprite)
 	{
@@ -2769,7 +2765,8 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 	std::chrono::nanoseconds MaxTime)
 {
 	const bool ReplacingLoadedSkin = pSkinContainer->m_State == CSkinContainer::EState::LOADED;
-	if(!m_SkinUploadFrameBudget.CanUpload())
+	const int MaxUploadAttempts = GameClient()->GpuUploadLimiter()->MaxUploadsPerFrame();
+	if(!m_SkinUploadFrameBudget.CanUpload(MaxUploadAttempts))
 		return ESkinProcessResult::BREAK_UPLOAD;
 	const int MaxSkinsPerFrame = SettingsSkinMaxPerFrame(GameClient());
 	const auto FailUpload = [&] {
@@ -2788,7 +2785,8 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 		GameClient()->GpuUploadLimiter(), SettingsFrameBudgetOrNull(GameClient()));
 	while(pSkinContainer->m_SettingsPendingUploadSprite < SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS)
 	{
-		if(!m_SkinUploadFrameBudget.CanUpload())
+		const size_t PreparedBytes = pSkinContainer->m_SettingsPendingUploadData.m_pPreparedTextures->PreparedBytesForSprite(pSkinContainer->m_SettingsPendingUploadSprite);
+		if(!m_SkinUploadFrameBudget.CanUpload(MaxUploadAttempts, PreparedBytes))
 			return ESkinProcessResult::BREAK_UPLOAD;
 		if(!SkinPreviewUploadBudget.Consume())
 		{
@@ -2798,9 +2796,8 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 			LogSkinSettingsResourcePerf("upload", 0, MaxSkinsPerFrame, Stats.m_NumLoading, ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET, 0.0);
 			return ESkinProcessResult::BREAK_GPU_LIMIT;
 		}
-		size_t PreparedBytes = 0;
 		const auto UploadStart = time_get_nanoseconds();
-		const bool Uploaded = UploadNextSkinPreviewSprite(pSkinContainer, &PreparedBytes);
+		const bool Uploaded = UploadNextSkinPreviewSprite(pSkinContainer);
 		m_SkinUploadFrameBudget.RecordUpload(time_get_nanoseconds() - UploadStart, Uploaded, PreparedBytes);
 		if(!Uploaded)
 			return FailUpload();

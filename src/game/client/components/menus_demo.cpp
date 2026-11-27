@@ -2796,6 +2796,11 @@ void CMenus::AdvanceDemoBrowserMetadata(int HeaderBudget, int DateBudget, const 
 	};
 	ClampVisibleWindow(VisibleFirst, VisibleEnd);
 	const bool HasVisibleWindow = VisibleFirst >= 0 && VisibleEnd > VisibleFirst;
+	// 首次读取始终推进。慢盘上的单次读取可能超时，此时该批不再打开下一个文件。
+	const auto ConsumeRead = [](int &RemainingBudget, const CPerfTimer &Timer) {
+		constexpr double READ_BATCH_BUDGET_MS = 1.0;
+		RemainingBudget = Timer.ElapsedMs() >= READ_BATCH_BUDGET_MS ? 0 : RemainingBudget - 1;
+	};
 	if(!m_DemoHeaderFetchComplete && HeaderBudget > 0)
 	{
 		CPerfTimer Timer;
@@ -2818,7 +2823,7 @@ void CMenus::AdvanceDemoBrowserMetadata(int HeaderBudget, int DateBudget, const 
 				if(!Item.m_InfosLoaded)
 				{
 					FetchHeader(Item);
-					--RemainingBudget;
+					ConsumeRead(RemainingBudget, Timer);
 				}
 				if(Item.m_InfosLoaded)
 				{
@@ -2837,7 +2842,7 @@ void CMenus::AdvanceDemoBrowserMetadata(int HeaderBudget, int DateBudget, const 
 			if(!Item.m_InfosLoaded)
 			{
 				FetchHeader(Item);
-				--RemainingBudget;
+				ConsumeRead(RemainingBudget, Timer);
 			}
 			if(Item.m_InfosLoaded)
 			{
@@ -2849,6 +2854,9 @@ void CMenus::AdvanceDemoBrowserMetadata(int HeaderBudget, int DateBudget, const 
 		if(m_DemoHeaderFetchComplete)
 		{
 			std::stable_sort(m_vDemos.begin(), m_vDemos.end());
+			// 重排后，另一批尚未读取的文件可能落到其游标之前。
+			if(!m_DemoDateFetchComplete)
+				m_DemoDateFetchCursor = 0;
 			DemolistOnUpdate(false);
 		}
 		if(QmPerfEnabled())
@@ -2882,7 +2890,7 @@ void CMenus::AdvanceDemoBrowserMetadata(int HeaderBudget, int DateBudget, const 
 				if(!Item.m_DateLoaded)
 				{
 					EnsureDemoDate(Item);
-					--RemainingBudget;
+					ConsumeRead(RemainingBudget, Timer);
 				}
 				if(Item.m_DateLoaded)
 				{
@@ -2901,7 +2909,7 @@ void CMenus::AdvanceDemoBrowserMetadata(int HeaderBudget, int DateBudget, const 
 			if(!Item.m_DateLoaded)
 			{
 				EnsureDemoDate(Item);
-				--RemainingBudget;
+				ConsumeRead(RemainingBudget, Timer);
 			}
 			if(Item.m_DateLoaded)
 			{
@@ -2913,6 +2921,8 @@ void CMenus::AdvanceDemoBrowserMetadata(int HeaderBudget, int DateBudget, const 
 		if(m_DemoDateFetchComplete)
 		{
 			std::stable_sort(m_vDemos.begin(), m_vDemos.end());
+			if(!m_DemoHeaderFetchComplete)
+				m_DemoHeaderFetchCursor = 0;
 			DemolistOnUpdate(false);
 		}
 		if(QmPerfEnabled())

@@ -36,6 +36,12 @@ public:
 		return aSprites[Index];
 	}
 	CImageInfo &Image(size_t Variant, size_t Index) { return m_aaImages[Variant][Index]; }
+	size_t PreparedBytesForSprite(size_t Sprite) const
+	{
+		const size_t Variant = Sprite / m_aaImages[0].size();
+		const size_t Index = Sprite % m_aaImages[0].size();
+		return Available(Variant, Index) ? m_aaImages[Variant][Index].DataSize() : 0;
+	}
 	bool Available(size_t Variant, size_t Index) const { return m_aaAvailable[Variant][Index]; }
 	void SetAvailable(size_t Variant, size_t Index, bool Available) { m_aaAvailable[Variant][Index] = Available; }
 };

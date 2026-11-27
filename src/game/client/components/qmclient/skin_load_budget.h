@@ -18,14 +18,25 @@ inline bool QmSkinCanFinalize(int Processed, std::chrono::nanoseconds Elapsed, s
 class CQmSkinUploadFrameBudget
 {
 public:
-	// 多次逻辑更新共享真实上传时间；允许在同一帧内继续上传多个精灵。
-	bool CanUpload() const { return m_UploadTime < m_Limit; }
+	static constexpr size_t MAX_PREPARED_BYTES_PER_FRAME = 4 * 1024 * 1024;
+
+	bool CanUpload(int MaxAttempts, size_t NextPreparedBytes = 0) const
+	{
+		if(m_UploadTime >= m_Limit || m_Attempts >= MaxAttempts)
+			return false;
+		// 大于整帧预算的单张精灵可以独占一帧，否则它永远无法开始上传。
+		if(m_Attempts == 0)
+			return true;
+		return m_PreparedBytes < MAX_PREPARED_BYTES_PER_FRAME &&
+		       NextPreparedBytes <= MAX_PREPARED_BYTES_PER_FRAME - m_PreparedBytes;
+	}
 	void RecordUpload(std::chrono::nanoseconds Duration, bool Submitted = true, size_t PreparedBytes = 0)
 	{
 		m_UploadTime += Duration;
 		m_Attempts++;
 		m_Submitted += Submitted;
-		m_PreparedBytes += PreparedBytes;
+		if(Submitted)
+			m_PreparedBytes += PreparedBytes;
 	}
 	int Attempts() const { return m_Attempts; }
 	int Submitted() const { return m_Submitted; }

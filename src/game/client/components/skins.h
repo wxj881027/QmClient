@@ -1092,7 +1092,7 @@ private:
 	static bool PrepareSkinData(const char *pName, CSkinLoadData &Data);
 	void LoadSkinFinish(CSkinContainer *pSkinContainer, CSkinLoadData &Data);
 	bool BeginSkinPreviewUpload(CSkinContainer *pSkinContainer, CSkinLoadData &&Data);
-	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer, size_t *pPreparedBytes = nullptr);
+	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer);
 	void FinishSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void DiscardSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void LoadSkinDirect(const char *pName);
