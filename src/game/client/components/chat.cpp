@@ -4433,9 +4433,10 @@ void CChat::OnRender()
 		// 行距与真实历史用同一条推进量：预览逐行上移 RowHeight + ExtraLineSpacing，
 		// 最后一行底部同样停在输入行上沿，改行距时编辑器不会和实机错位。
 		const float PreviewStep = RowHeight + ExtraLineSpacing;
-		int PreviewIndex = 0;
-		for(float PreviewY = PreviewBottom - PreviewStep; PreviewY >= CHAT_HEIGHT_MIN; PreviewY -= PreviewStep, ++PreviewIndex)
+		const int PreviewRows = (int)std::floor((PreviewBottom - CHAT_HEIGHT_MIN) / maximum(1.0f, PreviewStep));
+		for(int PreviewIndex = 0; PreviewIndex < PreviewRows; ++PreviewIndex)
 		{
+			const float PreviewY = PreviewBottom - PreviewStep * (float)(PreviewIndex + 1);
 			const SPreviewLine &Line = s_aPreviewLines[PreviewIndex % (int)std::size(s_aPreviewLines)];
 			char aPreviewText[256];
 			str_format(aPreviewText, sizeof(aPreviewText), "%s: %s", Line.m_pPrefix, Line.m_pMessage);

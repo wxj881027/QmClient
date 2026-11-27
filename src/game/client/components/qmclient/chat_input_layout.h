@@ -18,11 +18,12 @@ inline float QmChatInputRowHeight(float FontSize)
 	return ui_token::chat::input::RowHeight(FontSize);
 }
 
-// 历史区底边：输入行本身占一整行，最后一条消息必须停在「全体」上方。
+// 历史区底边：输入行只占一行文字（「全体」/「聊天」前缀那一行），
+// 翻译按钮的胶囊高度不属于行距，不能拿来当留白，否则消息和输入行之间会多出半行。
 // 真正聊天与 HUD 编辑器的固定预览都从这里取值，两个画面才不会一个贴底、一个悬空。
 inline float QmChatHistoryBottom(float BaseY, float FontSize)
 {
-	return BaseY - std::max(FontSize, QmChatInputRowHeight(FontSize));
+	return BaseY - std::max(0.0f, FontSize);
 }
 
 // 圆形图标按钮：宽高都等于行高（正方形 ⇒ 绘制层按胶囊档裁成正圆），
