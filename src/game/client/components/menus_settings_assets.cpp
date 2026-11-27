@@ -1181,6 +1181,8 @@ static int s_CurCustomTab = ASSETS_TAB_ENTITIES;
 namespace
 {
 	constexpr const char *WORKSHOP_ASSETS_URL = "https://www.ddrace.cn/data/assets.json";
+	// 精简贴图源：比 assets.json 小一个数量级，且 map 条目自带预览图哈希。
+	constexpr const char *WORKSHOP_TEXTURES_URL = "https://www.ddrace.cn/api/community/v1/textures";
 	const char *AssetResourceCategoryIdByTab(int Tab)
 	{
 		if(Tab == ASSETS_TAB_ENTITIES)
@@ -1226,6 +1228,8 @@ namespace
 		std::string m_ImageUrl;
 		std::string m_DownloadUrl;
 		std::string m_ThumbUrl;
+		// 预览图后缀由服务端下发（当前是 !/format/webp），客户端不要写死。
+		std::string m_ThumbSuffix;
 		std::string m_ThumbCachePath;
 		std::string m_InstallPath;
 		IGraphics::CTextureHandle m_ThumbTexture;
@@ -1258,6 +1262,7 @@ namespace
 			m_ImageUrl(Other.m_ImageUrl),
 			m_DownloadUrl(Other.m_DownloadUrl),
 			m_ThumbUrl(Other.m_ThumbUrl),
+			m_ThumbSuffix(Other.m_ThumbSuffix),
 			m_ThumbCachePath(Other.m_ThumbCachePath),
 			m_InstallPath(Other.m_InstallPath),
 			m_ThumbTexture(Other.m_ThumbTexture),
@@ -1323,6 +1328,7 @@ namespace
 		std::unordered_set<std::string> m_vReadyThumbQueued;
 		std::shared_ptr<IHttpRequest> m_pListTask;
 		std::shared_ptr<IHttpRequest> m_pEntityBgPreviewTask;
+		bool m_TriedLegacyCatalog = false;
 		bool m_Requested = false;
 		bool m_RefreshRequested = false;
 		bool m_EntityBgPreviewRequested = false;
@@ -1872,7 +1878,8 @@ namespace
 
 		qm_storage::EnsureFolder(pStorage, qm_storage::CACHE_WORKSHOP_THUMBS_DIR);
 		char aWebpUrl[IO_MAX_PATH_LENGTH];
-		str_format(aWebpUrl, sizeof(aWebpUrl), "%s!/format/webp", pThumbSourceUrl);
+		const char *pThumbSuffix = Asset.m_ThumbSuffix.empty() ? "!/format/webp" : Asset.m_ThumbSuffix.c_str();
+		str_format(aWebpUrl, sizeof(aWebpUrl), "%s%s", pThumbSourceUrl, pThumbSuffix);
 		auto pThumbTask = HttpGetFile(aWebpUrl, pStorage, Asset.m_ThumbCachePath.c_str(), IStorage::TYPE_SAVE);
 		pThumbTask->Timeout(CTimeout{8000, 20000, 100, 10});
 		pThumbTask->LogProgress(HTTPLOG::FAILURE);
@@ -2787,6 +2794,9 @@ namespace
 
 	void ApplyEntityBgPreviewThumbUrls(SWorkshopHudState &WorkshopState)
 	{
+		// 紧凑目录自带预览地址；没有旧 preview-map 时不要清空已有缩略图 URL。
+		if(WorkshopState.m_EntityBgPreviewBaseUrl.empty() || WorkshopState.m_vEntityBgPreviewExtByName.empty())
+			return;
 		char aThumbUrl[IO_MAX_PATH_LENGTH * 2];
 		for(SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
 		{
@@ -2815,6 +2825,128 @@ namespace
 		return false;
 	}
 
+	// 两个目录格式（完整 assets.json / 紧凑 textures）共用的落盘字段计算。
+	static bool FinalizeWorkshopAsset(SWorkshopHudAsset &Asset, const SAssetResourceCategory &Category,
+		std::unordered_set<std::string> &vUsedLocalNames)
+	{
+		char aExt[16];
+		GuessUrlExtension(Asset.m_ImageUrl.c_str(), aExt, sizeof(aExt));
+		if(aExt[0] == '\0')
+			str_copy(aExt, "png", sizeof(aExt));
+
+		std::string SafeInstallName = BuildSafeFilename(Asset.m_Name.c_str(), Asset.m_Id.c_str(), aExt);
+		const size_t DotPos = SafeInstallName.find_last_of('.');
+		const std::string PreferredLocalBaseName = DotPos == std::string::npos ? SafeInstallName : SafeInstallName.substr(0, DotPos);
+		const std::string LocalBaseName = UniqueWorkshopAssetBaseName(Category, PreferredLocalBaseName, Asset.m_Id.c_str(), vUsedLocalNames);
+		if(LocalBaseName != PreferredLocalBaseName)
+			SafeInstallName = LocalBaseName + "." + aExt;
+		if(str_comp(Category.m_pId, "entity_bg") == 0)
+			Asset.m_LocalName = "entity_bg/" + LocalBaseName;
+		else
+			Asset.m_LocalName = LocalBaseName;
+		vUsedLocalNames.insert(Asset.m_LocalName);
+		char aInstallPath[IO_MAX_PATH_LENGTH];
+		str_format(aInstallPath, sizeof(aInstallPath), "%s/%s", Category.m_pInstallFolder, SafeInstallName.c_str());
+		Asset.m_InstallPath = aInstallPath;
+		if(str_comp(Category.m_pId, "entity_bg") == 0)
+			NormalizeEntityBgWorkshopAsset(Asset, nullptr);
+
+		char aSafeId[80];
+		str_copy(aSafeId, Asset.m_Id.c_str(), sizeof(aSafeId));
+		SanitizeFilenameInPlace(aSafeId);
+		if(aSafeId[0] == '\0')
+			str_copy(aSafeId, "asset", sizeof(aSafeId));
+		char aThumbPath[IO_MAX_PATH_LENGTH];
+		// Always use webp for thumbnail cache to save space
+		str_format(aThumbPath, sizeof(aThumbPath), "%s/%s.webp", qm_storage::CACHE_WORKSHOP_THUMBS_DIR, aSafeId);
+		Asset.m_ThumbCachePath = aThumbPath;
+		return WorkshopAssetHasRequiredDownloadUrl(Category.m_pId, !Asset.m_DownloadUrl.empty());
+	}
+
+	// 解析 /api/community/v1/textures 的紧凑格式：
+	//   base + h + "." + (x 或 png)     下载地址
+	//   base + w + ".png" + suffix      预览地址（.map 条目）
+	//   u / i                            服务端给出的完整兜底地址
+	bool ParseWorkshopTextureSource(const json_value *pRoot, const SAssetResourceCategory &Category,
+		std::vector<SWorkshopHudAsset> &vOut, char *pErr, int ErrSize)
+	{
+		vOut.clear();
+		std::unordered_set<std::string> vUsedLocalNames;
+		const json_value *pData = pRoot && pRoot->type == json_object ? json_object_get(pRoot, "data") : &json_value_none;
+		if(pData == &json_value_none || pData->type != json_object)
+		{
+			str_copy(pErr, "Texture source is missing data", ErrSize);
+			return false;
+		}
+		const json_value *pBase = json_object_get(pData, "base");
+		const json_value *pSuffix = json_object_get(pData, "suffix");
+		const json_value *pAssets = json_object_get(pData, "assets");
+		if(pBase == &json_value_none || pBase->type != json_string || pAssets == &json_value_none || pAssets->type != json_array)
+		{
+			str_copy(pErr, "Texture source is incomplete", ErrSize);
+			return false;
+		}
+		const std::string Base = json_string_get(pBase);
+		const std::string Suffix = pSuffix != &json_value_none && pSuffix->type == json_string && json_string_get(pSuffix)[0] != '\0' ?
+										   json_string_get(pSuffix) :
+										   "!/format/webp";
+
+		vOut.reserve(pAssets->u.array.length);
+		for(unsigned i = 0; i < pAssets->u.array.length; ++i)
+		{
+			const json_value &Entry = (*pAssets)[i];
+			if(Entry.type != json_object)
+				continue;
+
+			const json_value *pCategory = json_object_get(&Entry, "c");
+			const json_value *pHash = json_object_get(&Entry, "h");
+			if(pCategory == &json_value_none || pCategory->type != json_string ||
+				pHash == &json_value_none || pHash->type != json_string)
+				continue;
+			if(!WorkshopCategoryMatches(json_string_get(pCategory), Category))
+				continue;
+
+			const json_value *pId = json_object_get(&Entry, "id");
+			const json_value *pName = json_object_get(&Entry, "n");
+			const json_value *pAuthor = json_object_get(&Entry, "a");
+			const json_value *pExt = json_object_get(&Entry, "x");
+			const json_value *pPreview = json_object_get(&Entry, "w");
+			const json_value *pUrl = json_object_get(&Entry, "u");
+			const json_value *pImage = json_object_get(&Entry, "i");
+
+			std::string Download = pUrl != &json_value_none && pUrl->type == json_string ?
+						       json_string_get(pUrl) :
+						       Base + json_string_get(pHash) + "." +
+							       (pExt != &json_value_none && pExt->type == json_string ? json_string_get(pExt) : "png");
+			std::string Image;
+			if(pImage != &json_value_none && pImage->type == json_string)
+				Image = json_string_get(pImage);
+			else if(pPreview != &json_value_none && pPreview->type == json_string)
+				Image = Base + json_string_get(pPreview) + ".png" + Suffix;
+			else
+				Image = Download + Suffix;
+
+			SWorkshopHudAsset Asset;
+			Asset.m_Id = pId != &json_value_none && pId->type == json_string ? json_string_get(pId) : std::to_string(i);
+			Asset.m_Name = pName != &json_value_none && pName->type == json_string ? json_string_get(pName) : Asset.m_Id;
+			Asset.m_Author = pAuthor != &json_value_none && pAuthor->type == json_string ? NormalizeWorkshopAuthorName(json_string_get(pAuthor)) : "";
+			Asset.m_ImageUrl = NormalizeWorkshopAssetUrl(Image.c_str());
+			Asset.m_DownloadUrl = NormalizeWorkshopAssetUrl(Download.c_str());
+			if(Asset.m_ImageUrl.empty())
+				continue;
+			Asset.m_ThumbSuffix = Suffix;
+			// 紧凑格式已经给出预览图地址；entity_bg 的 image 就是预览图。
+			Asset.m_ThumbUrl = Asset.m_ImageUrl;
+			if(!FinalizeWorkshopAsset(Asset, Category, vUsedLocalNames))
+				continue;
+			vOut.push_back(std::move(Asset));
+		}
+
+		std::sort(vOut.begin(), vOut.end(), [](const SWorkshopHudAsset &Left, const SWorkshopHudAsset &Right) { return str_comp(Left.m_Name.c_str(), Right.m_Name.c_str()) < 0; });
+		str_copy(pErr, "", ErrSize);
+		return true;
+	}
+
 	bool ParseWorkshopAssets(const json_value *pRoot, const SAssetResourceCategory &Category, std::vector<SWorkshopHudAsset> &vOut, char *pErr, int ErrSize)
 	{
 		vOut.clear();
@@ -2824,6 +2956,12 @@ namespace
 			str_copy(pErr, "Invalid workshop response", ErrSize);
 			return false;
 		}
+
+		// 紧凑格式：data 是对象且带 assets 数组。先于旧格式判断。
+		const json_value *pDataProbe = json_object_get(pRoot, "data");
+		if(pDataProbe != &json_value_none && pDataProbe->type == json_object &&
+			json_object_get(pDataProbe, "assets") != &json_value_none)
+			return ParseWorkshopTextureSource(pRoot, Category, vOut, pErr, ErrSize);
 
 		const json_value *pAssets = json_object_get(pRoot, "assets");
 		bool LegacyApi = false;
@@ -2887,37 +3025,8 @@ namespace
 			if(Asset.m_DownloadUrl.empty() && WorkshopEntityBgAllowsImageUrlFallback(Category.m_pId))
 				Asset.m_DownloadUrl = Asset.m_ImageUrl;
 			Asset.m_ThumbUrl = str_comp(Category.m_pId, "entity_bg") == 0 ? "" : Asset.m_ImageUrl;
-
-			char aExt[16];
-			GuessUrlExtension(Asset.m_ImageUrl.c_str(), aExt, sizeof(aExt));
-
-			std::string SafeInstallName = BuildSafeFilename(Asset.m_Name.c_str(), Asset.m_Id.c_str(), aExt);
-			const size_t DotPos = SafeInstallName.find_last_of('.');
-			const std::string PreferredLocalBaseName = DotPos == std::string::npos ? SafeInstallName : SafeInstallName.substr(0, DotPos);
-			const std::string LocalBaseName = UniqueWorkshopAssetBaseName(Category, PreferredLocalBaseName, Asset.m_Id.c_str(), vUsedLocalNames);
-			if(LocalBaseName != PreferredLocalBaseName)
-				SafeInstallName = LocalBaseName + "." + aExt;
-			if(str_comp(Category.m_pId, "entity_bg") == 0)
-				Asset.m_LocalName = "entity_bg/" + LocalBaseName;
-			else
-				Asset.m_LocalName = LocalBaseName;
-			vUsedLocalNames.insert(Asset.m_LocalName);
-			char aInstallPath[IO_MAX_PATH_LENGTH];
-			str_format(aInstallPath, sizeof(aInstallPath), "%s/%s", Category.m_pInstallFolder, SafeInstallName.c_str());
-			Asset.m_InstallPath = aInstallPath;
-			if(str_comp(Category.m_pId, "entity_bg") == 0)
-				NormalizeEntityBgWorkshopAsset(Asset, nullptr);
-
-			char aSafeId[80];
-			str_copy(aSafeId, Asset.m_Id.c_str(), sizeof(aSafeId));
-			SanitizeFilenameInPlace(aSafeId);
-			if(aSafeId[0] == '\0')
-				str_copy(aSafeId, "asset", sizeof(aSafeId));
-			char aThumbPath[IO_MAX_PATH_LENGTH];
-			// Always use webp for thumbnail cache to save space
-			str_format(aThumbPath, sizeof(aThumbPath), "%s/%s.webp", qm_storage::CACHE_WORKSHOP_THUMBS_DIR, aSafeId);
-			Asset.m_ThumbCachePath = aThumbPath;
-			if(!WorkshopAssetHasRequiredDownloadUrl(Category.m_pId, !Asset.m_DownloadUrl.empty()))
+			Asset.m_ThumbSuffix = "!/format/webp";
+			if(!FinalizeWorkshopAsset(Asset, Category, vUsedLocalNames))
 				continue;
 
 			vOut.push_back(std::move(Asset));
@@ -2955,6 +3064,7 @@ namespace
 		WorkshopState.m_RefreshRequested = false;
 		WorkshopState.m_EntityBgPreviewRequested = false;
 		WorkshopState.m_LoadFailed = false;
+		WorkshopState.m_TriedLegacyCatalog = false;
 		// Keep m_CacheTime and m_LastRefreshTime for cache reuse
 		str_copy(WorkshopState.m_aError, "");
 	}
@@ -6480,7 +6590,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		};
 
 		auto StartWorkshopListTask = [&]() {
-			auto pTask = HttpGet(WORKSHOP_ASSETS_URL);
+			// 优先紧凑贴图源；服务端整体 503 时回退到旧的 assets.json。
+			auto pTask = HttpGet(WorkshopState.m_TriedLegacyCatalog ? WORKSHOP_ASSETS_URL : WORKSHOP_TEXTURES_URL);
 			pTask->Timeout(CTimeout{10000, 20000, 200, 10});
 			pTask->LogProgress(HTTPLOG::FAILURE);
 			pTask->FailOnErrorStatus(false);
@@ -6563,7 +6674,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 			WorkshopState.m_pListTask.reset();
 
-			if(Parsed)
+			if(!Parsed && !WorkshopState.m_TriedLegacyCatalog)
+			{
+				// 紧凑源不可用时回退一次完整目录；只在本次运行尝试一次，避免死循环。
+				WorkshopState.m_TriedLegacyCatalog = true;
+				WorkshopState.m_LoadFailed = false;
+				str_copy(WorkshopState.m_aError, "");
+				StartWorkshopListTask();
+			}
+			else if(Parsed)
 			{
 				// Incremental update: merge new data with existing data
 				// Build a map of existing assets by ID for quick lookup
@@ -6651,7 +6770,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						}),
 					WorkshopState.m_vAssets.end());
 
-				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+				// 紧凑目录已经自带预览地址时，不再用旧的 preview-map 覆盖。
+				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && !WorkshopState.m_EntityBgPreviewBaseUrl.empty())
 					ApplyEntityBgPreviewThumbUrls(WorkshopState);
 				PruneWorkshopDecodeThumbQueue(WorkshopState);
 				PruneWorkshopReadyThumbQueue(WorkshopState);
