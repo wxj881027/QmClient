@@ -87,6 +87,9 @@ TEST(QmMonitoringRuntimeContract, MenuTextBackgroundBudgetOnlyUsesDisplayHeadroo
 	// 否则永远算成 0，预建计划根本跑不起来。
 	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target160Hz, 1.1f, 1.4f), 1.0f);
 	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target160Hz, 5.9f, 6.1f), 0.0f);
+	// p95 贴住刷新周期但均值仍有余量时，保留一个极小后台步，不能被单次抖动永久归零。
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target160Hz, 5.3f, 6.2f), 0.1f);
+	EXPECT_NEAR(QmMenuTextBackgroundBudgetMs(Target160Hz, 5.3f, 5.4f), 0.35f, 0.01f);
 	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(0.0f, 0.0f, 0.0f), 0.0f);
 	// 加载画面允许比后台预热吃得更满，但单步仍不能超过显示器剩余时间：
 	// 60Hz 下 8ms 单步上限仍可吃满；160Hz 下要收紧；360Hz 高负载时直接让出。
@@ -96,6 +99,14 @@ TEST(QmMonitoringRuntimeContract, MenuTextBackgroundBudgetOnlyUsesDisplayHeadroo
 	EXPECT_FLOAT_EQ(QmMenuTextLoadingBudgetMs(Target360Hz, 2.8f, 2.9f), 0.0f);
 	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(true, Target360Hz, 2.8f, 2.9f), 0.0f);
 	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(false, Target360Hz, 2.8f, 2.9f), 0.0f);
+}
+
+TEST(QmMonitoringRuntimeContract, UiRenderDeltaClampsLongFrames)
+{
+	EXPECT_FLOAT_EQ(QmUiRenderDeltaSeconds(-1.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmUiRenderDeltaSeconds(0.01f), 0.01f);
+	EXPECT_FLOAT_EQ(QmUiRenderDeltaSeconds(0.5f), QM_UI_RENDER_DELTA_MAX_SEC);
+	EXPECT_FLOAT_EQ(QmUiRenderDeltaSeconds(1.0f / 60.0f), 1.0f / 60.0f);
 }
 
 TEST(QmMonitoringRuntimeContract, MenuTextIdlePrewarmYieldsToInteractiveUi)

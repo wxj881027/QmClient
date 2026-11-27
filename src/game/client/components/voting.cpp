@@ -661,7 +661,7 @@ void CVoting::RenderMiniVoteHudPanel(const SQmMiniVoteHudLayout &Layout, float A
 	TextRender()->TextColor(TextColor);
 	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(Alpha));
 
-	Layout.m_Panel.Draw(VoteHudSurface(Alpha), Corners, Token::RADIUS);
+	Layout.m_Panel.Draw(VoteHudSurface(Alpha), Corners, Token::MINI_RADIUS);
 
 	int Seconds = PreviewVote ? 24 : SecondsLeft();
 	if(Seconds < 0)

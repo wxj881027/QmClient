@@ -1085,6 +1085,12 @@ context = "Editor"
 simplified_chinese = "复制当前协作房间码。"
 
 [[message]]
+key = "Could not generate the quad art image."
+context = "Editor"
+[message.translations]
+simplified_chinese = "无法生成四边形图像。"
+
+[[message]]
 key = "Could not generate the tile art image."
 context = "Editor"
 [message.translations]
@@ -1707,6 +1713,12 @@ key = "Drawing tools"
 context = "Editor"
 [message.translations]
 simplified_chinese = "绘图工具"
+
+[[message]]
+key = "Drawing tools require the active physics layers."
+context = "Editor"
+[message.translations]
+simplified_chinese = "绘图工具需要启用物理层。"
 
 [[message]]
 key = "Duplicate"
@@ -2463,6 +2475,12 @@ key = "Failed to write image to file '%s'."
 context = "Editor"
 [message.translations]
 simplified_chinese = "无法将图像写入文件“%s”。"
+
+[[message]]
+key = "Failed to write sound to file '%s'."
+context = "Editor"
+[message.translations]
+simplified_chinese = "无法将声音写入文件“%s”。"
 
 [[message]]
 key = "Falloff"
@@ -3634,6 +3652,18 @@ context = "Editor"
 simplified_chinese = "否"
 
 [[message]]
+key = "No image selected."
+context = "Editor"
+[message.translations]
+simplified_chinese = "未选择图像。"
+
+[[message]]
+key = "No sound selected."
+context = "Editor"
+[message.translations]
+simplified_chinese = "未选择声音。"
+
+[[message]]
 key = "No tile layer selected"
 context = "Editor"
 [message.translations]
@@ -4396,6 +4426,12 @@ context = "Editor"
 simplified_chinese = "保存失败：无法将临时地图文件“%s”移动到“%s”。"
 
 [[message]]
+key = "Saving failed: Could not prepare or queue the map."
+context = "Editor"
+[message.translations]
+simplified_chinese = "保存失败：无法准备或排队保存地图。"
+
+[[message]]
 key = "Saving failed: Could not remove old map file '%s'."
 context = "Editor"
 [message.translations]
@@ -4406,6 +4442,12 @@ key = "Saving failed: Could not replace map file '%s'; the previous version was 
 context = "Editor"
 [message.translations]
 simplified_chinese = "保存失败：无法替换地图文件“%s”；旧版本已恢复或保留在“%s”。"
+
+[[message]]
+key = "Saving failed: Could not write map file '%s'."
+context = "Editor"
+[message.translations]
+simplified_chinese = "保存失败：无法写入地图文件“%s”。"
 
 [[message]]
 key = "saving quads layer"
@@ -5242,6 +5284,12 @@ context = "Editor"
 simplified_chinese = "同步中断：HTTP 服务不可用"
 
 [[message]]
+key = "Sync interrupted: the map was loaded, but the editor could not refresh it"
+context = "Editor"
+[message.translations]
+simplified_chinese = "同步已中断：地图已加载，但编辑器无法刷新它"
+
+[[message]]
 key = "Sync interrupted: the room does not exist or has expired"
 context = "Editor"
 [message.translations]
@@ -5398,10 +5446,34 @@ context = "Editor"
 simplified_chinese = "客户端最多支持 64 个图像，但将所选图像作为图块画添加需要更多图像。"
 
 [[message]]
+key = "The drawing is too large. Split it into smaller strokes."
+context = "Editor"
+[message.translations]
+simplified_chinese = "绘图过大，请拆分为更小的笔画。"
+
+[[message]]
+key = "The drawing preview is too large to display."
+context = "Editor"
+[message.translations]
+simplified_chinese = "绘图预览过大，无法显示。"
+
+[[message]]
 key = "The file '%s' already exists.\\n\\nAre you sure that you want to overwrite it?"
 context = "Editor"
 [message.translations]
 simplified_chinese = "文件“%s”已存在。\n\n你确定要覆盖它吗？"
+
+[[message]]
+key = "The file path is too long."
+context = "Editor"
+[message.translations]
+simplified_chinese = "文件路径过长。"
+
+[[message]]
+key = "The game and physics layers must have matching dimensions before they can be extended."
+context = "Editor"
+[message.translations]
+simplified_chinese = "扩展前，游戏层和物理层的尺寸必须一致。"
 
 [[message]]
 key = "The map contains unsaved data, you might want to save it before you create a new map.\\n\\nContinue anyway?"
@@ -5432,6 +5504,18 @@ key = "The name of the selected envelope."
 context = "Editor"
 [message.translations]
 simplified_chinese = "当前选中动画的名称。"
+
+[[message]]
+key = "The quad art is too large. Increase the image pixel size or decrease the quad pixel size."
+context = "Editor"
+[message.translations]
+simplified_chinese = "四边形图像过大，请增大图像像素尺寸或减小四边形像素尺寸。"
+
+[[message]]
+key = "The requested tile layer dimensions are too large."
+context = "Editor"
+[message.translations]
+simplified_chinese = "请求的图块层尺寸过大。"
 
 [[message]]
 key = "The room is full; up to 4 people can collaborate"

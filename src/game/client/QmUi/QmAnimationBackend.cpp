@@ -228,6 +228,9 @@ bool CQmAnimationBackend::StartTrack(const STrackKey &Key, const SUiAnimRequest 
 	Track.m_Velocity = StartVelocity;
 	Track.m_RestTimerSec = 0.0f;
 	Track.m_Transition = Request.m_Transition;
+	Track.m_Clock = Track.m_Transition.m_Clock;
+	Track.m_StepStartValue = StartValue;
+	Track.m_DisplayValue = StartValue;
 	if(Track.m_Transition.m_DurationSec < 0.0f)
 		Track.m_Transition.m_DurationSec = 0.0f;
 	if(Track.m_Transition.m_DelaySec < 0.0f)
@@ -323,7 +326,8 @@ namespace
 bool CQmAnimationBackend::StartTrackInterrupt(const STrackKey &Key, const SUiAnimRequest &Request, const SActiveTrack &Active)
 {
 	// 先复制当前状态再移除旧轨道，避免立即完成的接管请求把旧轨道遗留在表中。
-	const float StartValue = Active.m_Current;
+	// 打断以玩家当前看到的值为起点；LOGIC 轨道的 m_Current 可能领先一逻辑步。
+	const float StartValue = Active.m_DisplayValue;
 	const float StartVelocity = Active.m_Velocity;
 	const uint32_t ActiveTrackId = Active.m_TrackId;
 
@@ -469,7 +473,7 @@ float CQmAnimationBackend::CurrentValueFor(const STrackKey &Key, float DefaultVa
 {
 	const auto ItActive = m_ActiveTracks.find(Key);
 	if(ItActive != m_ActiveTracks.end())
-		return ItActive->second.m_Current;
+		return ItActive->second.m_DisplayValue;
 
 	const auto ItValue = m_Values.find(Key);
 	if(ItValue != m_Values.end())
@@ -636,14 +640,29 @@ void CQmAnimationBackend::AdvanceSpring(SActiveTrack &Track, float Dt, EUiAnimPr
 
 void CQmAnimationBackend::Advance(float Dt)
 {
-	if(!std::isfinite(Dt) || Dt <= 0.0f)
+	Advance(Dt, Dt);
+}
+
+void CQmAnimationBackend::Advance(float DtVisual, float DtLogic, float LogicFraction)
+{
+	if(!std::isfinite(DtVisual) || DtVisual < 0.0f)
+		DtVisual = 0.0f;
+	if(!std::isfinite(DtLogic) || DtLogic < 0.0f)
+		DtLogic = 0.0f;
+	LogicFraction = std::clamp(std::isfinite(LogicFraction) ? LogicFraction : 1.0f, 0.0f, 1.0f);
+	if(DtVisual <= 0.0f && DtLogic <= 0.0f)
 		return;
-	m_TimeSec += Dt;
+	m_TimeSec += DtVisual;
 	// 值缓存的使用时钟按帧推进，与 m_TimeSec 解耦（只在淘汰判据里当"最近第几帧"用）。
 	m_ValueUseCounter++;
 
 	constexpr float KSpringRestHoldSec = 0.033f;
-	const auto AdvanceTrack = [&](const STrackKey &Key, SActiveTrack &Track, float Elapsed, float &Remaining) {
+	const auto DisplayValue = [](const SActiveTrack &Track, float Fraction) {
+		if(Track.m_Clock != EUiAnimClock::LOGIC)
+			return Track.m_Current;
+		return Track.m_StepStartValue + (Track.m_Current - Track.m_StepStartValue) * std::clamp(Fraction, 0.0f, 1.0f);
+	};
+	const auto AdvanceTrack = [&](const STrackKey &Key, SActiveTrack &Track, float Elapsed, float &Remaining, float Fraction) {
 		Remaining = 0.0f;
 		// 关闭动效后结算已有轨道和队列；显式忽略全局等级的轨道保持时间推进。
 		if(Track.m_Transition.m_RespectMotionLevel && qm_animation::NormalizeMotionLevel(g_Config.m_QmUiMotionLevel) == 0)
@@ -651,6 +670,8 @@ void CQmAnimationBackend::Advance(float Dt)
 			Remaining = Elapsed;
 			return true;
 		}
+		if(Track.m_Clock == EUiAnimClock::LOGIC)
+			Track.m_StepStartValue = Track.m_Current;
 		Track.m_ElapsedSec += Elapsed;
 		const float Delay = std::max(0.0f, Track.m_Transition.m_DelaySec);
 		if(Track.m_Transition.m_Driver == EUiAnimDriver::SPRING)
@@ -659,7 +680,8 @@ void CQmAnimationBackend::Advance(float Dt)
 			const float ActiveDt = std::min(Elapsed, std::max(0.0f, Track.m_ElapsedSec - Delay));
 			if(ActiveDt > 0.0f)
 				AdvanceSpring(Track, ActiveDt, Key.m_Property);
-			StoreValue(Key, Track.m_Current);
+			Track.m_DisplayValue = DisplayValue(Track, Fraction);
+			StoreValue(Key, Track.m_DisplayValue);
 			return Track.m_RestTimerSec >= KSpringRestHoldSec;
 		}
 
@@ -669,7 +691,8 @@ void CQmAnimationBackend::Advance(float Dt)
 		Track.m_Current = Track.m_Start + (Track.m_Target - Track.m_Start) * Progress;
 		// 有限差分速度用于被打断后的弹簧接续。
 		Track.m_Velocity = (Track.m_Current - Previous) / Elapsed;
-		StoreValue(Key, Track.m_Current);
+		Track.m_DisplayValue = DisplayValue(Track, Fraction);
+		StoreValue(Key, Track.m_DisplayValue);
 		if(RawProgress < 1.0f)
 			return false;
 		// 固定时长轨道可精确交接剩余时间；后续轨道仍保留自己的延迟。
@@ -681,13 +704,27 @@ void CQmAnimationBackend::Advance(float Dt)
 	{
 		STrackKey m_Key;
 		float m_Remaining;
+		EUiAnimClock m_Clock;
 	};
 	std::deque<SCompletedTrack> vCompleted;
 	for(auto &[Key, Track] : m_ActiveTracks)
 	{
+		const bool Logic = Track.m_Clock == EUiAnimClock::LOGIC;
+		const float Elapsed = Logic ? DtLogic : DtVisual;
+		if(Elapsed <= 0.0f)
+		{
+			// 本帧没有推进对应时钟：LOGIC 轨道仍要把展示值插值到下一逻辑步，
+			// 否则高刷屏上会连续多帧停在同一进度。
+			if(Logic)
+			{
+				Track.m_DisplayValue = DisplayValue(Track, LogicFraction);
+				StoreValue(Key, Track.m_DisplayValue);
+			}
+			continue;
+		}
 		float Remaining;
-		if(AdvanceTrack(Key, Track, Dt, Remaining))
-			vCompleted.push_back({Key, Remaining});
+		if(AdvanceTrack(Key, Track, Elapsed, Remaining, Logic ? LogicFraction : 1.0f))
+			vCompleted.push_back({Key, Remaining, Track.m_Clock});
 	}
 
 	for(const SCompletedTrack &Completed : vCompleted)
@@ -702,8 +739,12 @@ void CQmAnimationBackend::Advance(float Dt)
 			ItTrack = m_ActiveTracks.find(Completed.m_Key);
 			if(ItTrack == m_ActiveTracks.end())
 				break;
-			const float Elapsed = Remaining;
-			if(!AdvanceTrack(Completed.m_Key, ItTrack->second, Elapsed, Remaining))
+			// 队列续接只在同一时钟内传递剩余时间；跨时钟类别的后续轨道
+			// 从下一帧自己的步长开始，不能用另一条时钟的时间提前推进。
+			const float Elapsed = ItTrack->second.m_Clock == Completed.m_Clock ? Remaining : 0.0f;
+			if(Elapsed <= 0.0f)
+				break;
+			if(!AdvanceTrack(Completed.m_Key, ItTrack->second, Elapsed, Remaining, 1.0f))
 				break;
 		}
 	}

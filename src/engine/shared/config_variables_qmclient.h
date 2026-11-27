@@ -63,20 +63,24 @@ MACRO_CONFIG_INT(QmTextCaretStyle, qm_text_caret_style, 0, 0, 2, CFGFLAG_CLIENT 
 // DDNet 页内子页签：未发布，不做配置迁移，直接给默认值。
 MACRO_CONFIG_INT(QmDdnetTab, qm_ddnet_tab, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "DDNet settings sub-tab: 0=general, 1=network compensation")
 MACRO_CONFIG_INT(QmGraphicsTab, qm_graphics_tab, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Graphics settings sub-tab: 0=display, 1=visual effects")
+// 后台限帧：0=跟随显示器刷新率（默认），1=自定义 cl_refresh_rate_inactive，2=不限。
+// 跟随显示器每帧读 gfx_screen_refresh_rate，切换显示器或刷新率后自动跟上；
+// 显示器刷新率未知或超出合理范围时，按 DDNet 原有的 120 Hz 后台默认值兜底。
+MACRO_CONFIG_INT(QmBackgroundRefreshMode, qm_background_refresh_mode, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Background frame rate: 0=follow display refresh rate, 1=custom cl_refresh_rate_inactive, 2=unlimited")
 MACRO_CONFIG_INT(QmUiScale, qm_ui_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global UI size percentage")
 MACRO_CONFIG_INT(QmMobileCameraMode, qm_mobile_camera_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mobile spectator camera: 0=joystick pad, 1=drag the view")
 MACRO_CONFIG_INT(QmDefaultsProfileVersion, qm_defaults_profile_version, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Default appearance profile migration version")
 MACRO_CONFIG_STR(QmNewsReadRelease, qm_news_read_release, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last viewed client release notes")
 MACRO_CONFIG_INT(QmNewsReadVersion, qm_news_read_version, -1, -1, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last viewed announcement version")
 MACRO_CONFIG_STR(QmNewsReadContentId, qm_news_read_content_id, 65, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last viewed announcement content revision")
-// 默认保持原版手感：每档从静止重新起步、不继承上一档速度，与已发布版本一致。
-// 顺滑（继承速度）与弹簧两档保留在设置里，由玩家主动切换。
-MACRO_CONFIG_INT(QmUiScrollFeel, qm_ui_scroll_feel, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring")
+// 默认使用弹簧手感；原版（每档从静止重新起步）与顺滑保留为可切回的兜底档。
+// 枚举仍把原版钉在 0，测试环境的零初始化因此解析为原版，需要真实手感断言的
+// 用例必须显式设置档位。
+MACRO_CONFIG_INT(QmUiScrollFeel, qm_ui_scroll_feel, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring")
 MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global wheel distance scale (10=default); settings card pages scroll 12x this per tick")
 MACRO_CONFIG_INT(QmUiScrollBounce, qm_ui_scroll_bounce, 25, 0, 64, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops")
 MACRO_CONFIG_INT(QmUiScrollSpringResponse, qm_ui_scroll_spring_response, 300, 80, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel response time in milliseconds; lower reaches the target sooner")
 MACRO_CONFIG_INT(QmUiScrollSpringDamping, qm_ui_scroll_spring_damping, 90, 50, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel damping ratio in percent; 100 stops without overshoot")
-MACRO_CONFIG_INT(QmCountryFlagAnim, qm_country_flag_anim, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable bounce-in entrance animation when country flags finish loading")
 MACRO_CONFIG_INT(QmUiCardRainbowTitles, qm_ui_card_rainbow_titles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card titles use rainbow colors")
 MACRO_CONFIG_INT(QmUiCardBorders, qm_ui_card_borders, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show settings card borders")
 MACRO_CONFIG_COL(QmUiCardBorderColor, qm_ui_card_border_color, 0x1AFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Settings card border color")
@@ -94,7 +98,6 @@ MACRO_CONFIG_INT(QmUiPasswordIconStyle, qm_ui_password_icon_style, 1, 0, 1, CFGF
 MACRO_CONFIG_INT(QmHudIslandSignalColorMode, qm_hud_island_signal_color_mode, 1, 1, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom")
 MACRO_CONFIG_COL(QmHudIslandSignalColor, qm_hud_island_signal_color, 0x00D1AB, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic island connection icon custom color")
 MACRO_CONFIG_INT(QmUiColorInterpolation, qm_ui_color_interpolation, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform")
-MACRO_CONFIG_INT(QmRectCornerSegments, qm_rect_corner_segments, 16, 8, 48, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI rounded corner segments (even numbers recommended)")
 MACRO_CONFIG_STR(QmGlobalCardOrder, qm_global_card_order, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global card ordering (format: stableId|tab|col|order; semicolon-separated)")
 MACRO_CONFIG_STR(QmSettingsCardCollapsed, qm_settings_card_collapsed, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons")
 MACRO_CONFIG_STR(QmSettingsCardWidths, qm_settings_card_widths, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card widths: stableId for full width, !stableId for half width, separated by semicolons")
@@ -353,6 +356,7 @@ MACRO_CONFIG_COL(QmHitboxColorTee, qm_hitbox_color_tee, 0x0080FF80, CFGFLAG_CLIE
 MACRO_CONFIG_COL(QmHitboxColorWeapon, qm_hitbox_color_weapon, 0x002BFF80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Weapon range color")
 
 // Entity Overlay / 实体叠加
+MACRO_CONFIG_COL(QmEntityOverlayFreezeColor, qm_entity_overlay_freeze_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze/deep freeze tile entity tint color")
 MACRO_CONFIG_INT(QmEntityOverlayDeathAlpha, qm_entity_overlay_death_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Override Death Tile Entity Alpha (0-100)")
 MACRO_CONFIG_INT(QmEntityOverlayFreezeAlpha, qm_entity_overlay_freeze_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Override Freeze Tile Entity Alpha (0-100)")
 MACRO_CONFIG_INT(QmEntityOverlayUnfreezeAlpha, qm_entity_overlay_unfreeze_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Override Entity Alpha for Unfreeze Tiles (0-100)")
@@ -873,6 +877,7 @@ MACRO_CONFIG_INT(QmChatScrollbarRight, qm_chat_scrollbar_right, 0, 0, 1, CFGFLAG
 #endif
 MACRO_CONFIG_INT(QmChatRelatedOnly, qm_chat_related_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players")
 MACRO_CONFIG_INT(QmChatSaveDraft, qm_chat_save_draft, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep unsent message on chat close")
+MACRO_CONFIG_INT(QmPerfAutoRecord, qm_perf_auto_record, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically record performance diagnostics on startup")
 MACRO_CONFIG_INT(QmChatCommandCompletion, qm_chat_command_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show command completion in chat")
 MACRO_CONFIG_INT(QmChatEmojiCompletion, qm_chat_emoji_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show emoji completion in chat")
 MACRO_CONFIG_COL(QmChatCompletionBgColor, qm_chat_completion_bg_color, 0x00002C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat completion background color")
@@ -886,9 +891,6 @@ MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFG
 MACRO_CONFIG_INT(QmEchoMergeWindowMs, qm_echo_merge_window_ms, 2000, 0, 60000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)")
 MACRO_CONFIG_INT(QmChatHideSystemPrefix, qm_chat_hide_system_prefix, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide the *** prefix before server chat messages")
 MACRO_CONFIG_INT(QmChatLineSpacing, qm_chat_line_spacing, 0, 0, 32, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Extra vertical spacing between chat lines in pixels (0 = default)")
-MACRO_CONFIG_INT(QmChatAnimSlideOut, qm_chat_anim_slide_out, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable left swipe offset on chat fade")
-MACRO_CONFIG_INT(QmChatAnimFadeDurationMs, qm_chat_anim_fade_duration_ms, 300, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat fade smooth time (milliseconds)")
-MACRO_CONFIG_INT(QmHideChatBubbles, qm_hide_chat_bubbles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide own chat bubble (only when authenticated in remote console)")
 MACRO_CONFIG_INT(QmChatBubble, qm_chat_bubble, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show chat bubbles above players")
 MACRO_CONFIG_INT(QmChatBubbleStyle, qm_chat_bubble_style, 3, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)")
 MACRO_CONFIG_INT(QmChatBubbleCustomColors, qm_chat_bubble_custom_colors, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use custom chat bubble colors")
@@ -1024,14 +1026,6 @@ MACRO_CONFIG_STR(QmTranslateBaiduKey, qm_translate_baidu_key, 256, "", CFGFLAG_C
 
 // Translate - DeepL - 额度与重置周期由实际订阅决定
 MACRO_CONFIG_STR(QmTranslateDeeplKey, qm_translate_deepl_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "DeepL API Key (free keys end with :fx)")
-
-// Translate Button Colors - 翻译按钮自定义颜色
-MACRO_CONFIG_INT(QmTranslateColorAlphaMigrated, qm_translate_color_alpha_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation color alpha migration completed flag")
-MACRO_CONFIG_COL(QmTranslateBtnColorDisabled, qm_translate_btn_color_disabled, 0xD1000029, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation button cancel color")
-MACRO_CONFIG_COL(QmTranslateBtnColorEnabled, qm_translate_btn_color_enabled, 0xE69E5E86, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation button active color")
-MACRO_CONFIG_COL(QmTranslateMenuBgColor, qm_translate_menu_bg_color, 0xF200001F, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation menu background color")
-MACRO_CONFIG_COL(QmTranslateMenuOptionSelected, qm_translate_menu_option_selected, 0xE69E5E86, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation menu selected color")
-MACRO_CONFIG_COL(QmTranslateMenuOptionNormal, qm_translate_menu_option_normal, 0xE6000033, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation menu normal color")
 
 // Jump Hint / 跳跃提示 - 根据位置小数部分显示跳跃速查表（由 qm_jump_hint 迁移而来）
 MACRO_CONFIG_INT(QmJumpHint, qm_jump_hint, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show a fixed HUD reference with fractional coordinates for takeoff and double jumps near tile edges.")

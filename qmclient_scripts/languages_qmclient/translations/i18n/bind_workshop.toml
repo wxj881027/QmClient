@@ -1062,13 +1062,3 @@ simplified_chinese = "同时开火"
 key = "Zoom 11"
 [message.translations]
 simplified_chinese = "视野 11"
-
-[[message]]
-key = "Bounding box of the whole selection; edit geometry with a single node selected."
-[message.translations]
-simplified_chinese = "整组选区的外框；只选一个节点才能改尺寸。"
-
-[[message]]
-key = "nodes selected"
-[message.translations]
-simplified_chinese = "个节点已选中"

@@ -149,7 +149,7 @@ namespace qm_card_catalog
 				CUIRect List;
 				if(Flow.Control("general-language-list", GeneralLanguageListHeight, List))
 				{
-					pMenus->PrepareLanguagePageCache(List.w, false);
+					pMenus->PrepareLanguagePageCache(List.w, false, &GeneralMetrics);
 					pMenus->RenderLanguageSelection(List, &GeneralMetrics);
 				}
 			};

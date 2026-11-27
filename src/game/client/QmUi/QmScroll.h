@@ -54,8 +54,9 @@ inline bool QmScrollLineVisibleInViewportTop(float LineTop, float LineBottom, fl
 }
 
 // 滚轮手感档位。ORIGINAL 必须占 0：g_Config 在未跑配置加载时（测试环境）是零初始化，
-// 0 必须是生产默认档，否则测试与线上手感会静默分叉。档位在设置界面的展示顺序
-// （原版 → 顺滑 → 弹簧）由卡片侧单独映射，不依赖枚举值大小。
+// 零初始化应解析为最保守的原版手感；生产默认档由 qm_ui_scroll_feel 的配置默认值
+// 决定（当前 SPRING），需要真实手感断言的用例必须显式设置档位。档位在设置界面的
+// 展示顺序（原版 → 顺滑 → 弹簧）由卡片侧单独映射，不依赖枚举值大小。
 enum class EQmScrollFeel
 {
 	ORIGINAL = 0,

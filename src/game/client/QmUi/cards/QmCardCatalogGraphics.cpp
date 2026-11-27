@@ -199,8 +199,10 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	// 动态高度只交给 Card Deck 处理。页面私有动画会让 measure revision 每帧变化，
 	// 与 Deck 的高度轨道叠加后产生双重缓动和背景闪动。
 	const uint64_t GraphicsModesMeasureRevision = static_cast<uint64_t>(std::max(0, s_NumNodes));
-	const int GraphicsDisplayRowCount = 7 + (Graphics()->GetNumScreens() > 1 ? 1 : 0) + GraphicsBackendRowCount;
+	const bool BackgroundRefreshCustomVisible = g_Config.m_QmBackgroundRefreshMode == 1;
+	const int GraphicsDisplayRowCount = 8 + (BackgroundRefreshCustomVisible ? 1 : 0) + (Graphics()->GetNumScreens() > 1 ? 1 : 0) + GraphicsBackendRowCount;
 	uint64_t GraphicsDisplayMeasureRevision = (static_cast<uint64_t>(std::max(0, GraphicsDisplayRowCount)) << 32) ^ static_cast<uint64_t>(std::max(0, OldWindowMode));
+	GraphicsDisplayMeasureRevision = GraphicsDisplayMeasureRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_QmBackgroundRefreshMode);
 	GraphicsDisplayMeasureRevision = GraphicsDisplayMeasureRevision * 1099511628211ULL ^ static_cast<uint64_t>(GpuList.m_CanSelect);
 	GraphicsDisplayMeasureRevision = GraphicsDisplayMeasureRevision * 1099511628211ULL ^ str_quickhash(Graphics()->GetRendererString());
 	GraphicsDisplayMeasureRevision = GraphicsDisplayMeasureRevision * 1099511628211ULL ^ str_quickhash(Graphics()->GetVersionString());
@@ -471,6 +473,42 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				if(const auto *pMetadata = SettingsLabelMetadata("graphics-lower-update-rate"))
 					GameClient()->m_Tooltips.DoToolTip(&s_LowerUpdateRate, &Button, Localize(pMetadata->m_pTip));
 			});
+
+			// 后台限帧：窗口失焦时主循环的节拍。跟随显示器每帧读 gfx_screen_refresh_rate，
+			// 换显示器或改刷新率后自动跟上；自定义沿用 cl_refresh_rate_inactive；不限关闭后台节流。
+			CUIRect BackgroundRefreshRow;
+			if(Flow.Control("graphics-background-refresh", GraphicsMetrics.m_LineHeight, BackgroundRefreshRow))
+			{
+				static CButtonContainer s_aBackgroundRefreshButtons[3];
+				const char *apBackgroundRefreshLabels[] = {
+					Localize("Follow display"),
+					Localize("Custom"),
+					Localize("Unlimited"),
+				};
+				CUIRect BackgroundRefreshLabel, BackgroundRefreshSegments;
+				SplitSettingsControlRow(BackgroundRefreshRow, GraphicsMetrics, &BackgroundRefreshLabel, &BackgroundRefreshSegments, ESettingsControlWidth::LONG_CHOICE);
+				Ui()->DoLabel(&BackgroundRefreshLabel, Localize("Background frame rate"), BodySize, TEXTALIGN_ML);
+				const int CurrentMode = std::clamp(g_Config.m_QmBackgroundRefreshMode, 0, 2);
+				const int NewMode = DoSegmentedChoice(s_aBackgroundRefreshButtons, apBackgroundRefreshLabels, 3, CurrentMode, BackgroundRefreshSegments, ui_token::radius::BASE, nullptr, BodySize, &g_Config.m_QmBackgroundRefreshMode);
+				if(NewMode != CurrentMode)
+					g_Config.m_QmBackgroundRefreshMode = NewMode;
+			}
+
+			// 自定义频率是从属行：其它模式下不存在、不占高，显隐走统一布局过渡。
+			static SettingsDependentRows s_BackgroundRefreshLimitRows;
+			if(const auto BackgroundRefreshLimitRows = s_BackgroundRefreshLimitRows.Reveal(Ui(), Flow, g_Config.m_QmBackgroundRefreshMode == 1, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
+			{
+				CUIRect BackgroundRefreshLimitRow;
+				if(Flow.Control("graphics-background-refresh-limit", GraphicsMetrics.m_LineHeight, BackgroundRefreshLimitRow, ui_token::settings::SubRowGap(GraphicsMetrics.m_LineSpacing)))
+				{
+					char aRefreshSuffix[32];
+					str_copy(aRefreshSuffix, " ");
+					str_append(aRefreshSuffix, Localize("Hz", "Hertz"));
+					DoGraphicsNumericField("graphics-background-refresh-limit", &g_Config.m_ClRefreshRateInactive, &g_Config.m_ClRefreshRateInactive, BackgroundRefreshLimitRow, Localize("Background frame rate limit"), 10, 10000, &CUi::ms_LinearScrollbarScale, aRefreshSuffix, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_DELAYUPDATE, 0, 10000);
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClRefreshRateInactive, &BackgroundRefreshLimitRow, Localize("Updates per second while the window is inactive; 0 = unlimited"));
+				}
+			}
+			Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
 
 			if(ShowGraphicsMode)
 			{
@@ -1050,7 +1088,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-scroll-feel-label", &Label, Localize("Scroll feel"), BodySize, TEXTALIGN_ML);
 				static CButtonContainer s_aScrollFeelButtons[3];
 				// 展示顺序（原版 → 顺滑 → 弹簧）由这里显式映射，不依赖枚举值大小；
-				// 枚举把生产默认的原版档钉在 0，测试环境的零初始化与线上保持一致。
+				// 枚举把原版钉在 0（零初始化语义），生产默认档由配置默认值决定。
 				static constexpr EQmScrollFeel s_aScrollFeelOrder[] = {EQmScrollFeel::ORIGINAL, EQmScrollFeel::SMOOTH, EQmScrollFeel::SPRING};
 				const char *apScrollFeelLabels[] = {Localize("Original"), Localize("Smooth"), Localize("Spring")};
 				int CurrentScrollFeel = 1;

@@ -576,7 +576,7 @@ export function generateReport(
     ? stutterDiagnostics.featureStates.filter(feature => feature.stutterId === worstStutterWindow.stutterId && feature.segment === worstStutterWindow.segment).slice(0, 80)
     : [];
   const stutterDiagnosticsHtml = !stutterDiagnostics.available
-    ? '<p class="body-text" style="color:rgba(var(--ink-rgb),0.4);font-style:italic">本次日志未包含卡顿诊断数据。请开启 <code>qm_pref 1 50</code> 并采集实际游戏帧。</p>'
+    ? '<p class="body-text" style="color:rgba(var(--ink-rgb),0.4);font-style:italic">本次日志未包含卡顿诊断数据。请开启 <code>qm_perf 1</code> 并采集实际游戏帧。</p>'
     : `<div class="coverage-panel">
       <div class="coverage-title">
         <span>300 FPS / 3.333ms Diagnosis</span>
@@ -852,7 +852,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-weigh
     <span class="label">Report Generation</span><span class="value">${generationDurationLabel}</span>
   </div>
   ${biased ? `<div style="max-width:var(--max-w);margin:0 auto;padding:1rem 2rem;border-bottom:1px solid var(--hairline);font-family:var(--mono);font-size:0.75rem;color:var(--warn);background:var(--warn-bg)">
-    ⚠ Sampling Bias Detected — 当前采样阈值估计 p5=${samplingThresholdMs.toFixed(1)}ms（旧版过滤阈值约 4ms），日志可能仅包含超过阈值的帧，合规率和百分位统计不能反映实际帧分布。建议设置 <code style="background:rgba(0,0,0,0.06);padding:0.1em 0.3em;border-radius:2px">qm_pref 1 50</code> 后重新采集。
+    ⚠ Sampling Bias Detected — 当前采样阈值估计 p5=${samplingThresholdMs.toFixed(1)}ms（旧版过滤阈值约 4ms），日志可能仅包含超过阈值的帧，合规率和百分位统计不能反映实际帧分布。建议设置 <code style="background:rgba(0,0,0,0.06);padding:0.1em 0.3em;border-radius:2px">qm_perf 1</code> 后重新采集。
   </div>` : ''}
 </header>
 
@@ -1257,7 +1257,7 @@ ${pages.length > 1 ? `<section class="section">
     <span class="section-num">§${pages.length > 1 ? '12' : '11'}</span>
     <h2>数据采集方法</h2>
   </div>
-  <p>性能数据通过 QmClient 内置的统一性能诊断系统；新日志的帧统计使用 <code>perf/frame</code> 完整渲染间隔，菜单和组件阶段仅用于归因采集，只需启用 <code>qm_pref 1 50</code>。日志输出至 <code>%APPDATA%/DDNet/dumps/QmClient_Perf/</code>。</p>
+  <p>性能数据通过 QmClient 内置的统一性能诊断系统；新日志的帧统计使用 <code>perf/frame</code> 完整渲染间隔，菜单和组件阶段仅用于归因采集，只需启用 <code>qm_perf 1</code>。日志输出至 <code>%APPDATA%/DDNet/dumps/QmClient_Perf/</code>。</p>
   <p>帧预算基准：240Hz → 4.17ms，120Hz → 8.33ms，60Hz → 16.67ms。百分位采用最近秩法 (nearest-rank)。直方图分桶 [0, 2, 4, 8, 16, 33, 100, 500] ms。</p>
   ${biased ? `<p style="color:var(--warn)">当前采样阈值估计 p5=${samplingThresholdMs.toFixed(1)}ms（旧版日志的过滤行为）。日志可能仅包含超过阈值的帧，因此本报告中的合规率和百分位仅反映被采样帧的分布，不能代表实际渲染性能。统一诊断会批量记录完整渲染间隔；大日志分析阶段若再次抽样，会单独标记。</p>` : ''}
   <p>判定标准：p99 &lt; 16.67ms 且尖峰 &lt; 5 → <span class="badge ok">PASS</span>；p99 &lt; 33ms 或尖峰 &ge; 1 → <span class="badge warn">WARN</span>；p99 &ge; 33ms 或尖峰 &ge; 5 → <span class="badge bad">FAIL</span>。</p>

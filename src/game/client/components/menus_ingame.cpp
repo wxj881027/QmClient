@@ -40,6 +40,7 @@
 #include <game/client/animstate.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
+#include <game/client/components/qmclient/browser_workspace_route.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/rank_demo_sort.h>
 #include <game/client/components/qmclient/rank_list_controller.h>
@@ -869,6 +870,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 		CUIRect MenuContent = MainView;
 		const CUIRect MenuContentClip = MainView;
+		// 过渡趟只绘制：命中与按钮状态必须在目标矩形上结算。
+		CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), TransitionActive);
 		if(TransitionActive)
 		{
 			Ui()->ClipEnable(&MenuContentClip);
@@ -2430,11 +2433,15 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	}
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-	if(NewPage != g_Config.m_UiPage)
+	// 统计数据和收藏地图共用服务器导航；在统计子页点任一服务器页签（包括当前
+	// 收藏地图页签）都要回到服务器列表，否则会停在统计页看起来像没响应。
+	if(PressedServerTab >= 0 || NewPage != g_Config.m_UiPage)
 		SetMenuPage(NewPage);
 
-	// 浏览页由 RenderServerbrowser 绘制服务器列表、状态栏与工具箱，不叠加整页背景。
-	RenderServerbrowser(MainView, false);
+	if(QmBrowserWorkspace::ResolveIngameContent(m_MenuPage, PAGE_STATS) == QmBrowserWorkspace::EIngameContent::STATISTICS)
+		RenderStatistics(MainView);
+	else
+		RenderServerbrowser(MainView, false); // 服务器列表、状态栏与工具箱，不叠加整页背景。
 }
 // ghost stuff
 int CMenus::GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)

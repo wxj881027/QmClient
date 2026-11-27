@@ -11,6 +11,10 @@
 
 namespace
 {
+	// 卡顿窗口往往紧邻下一次卡顿：快照必须小到不会自己制造下一帧尖峰。
+	constexpr size_t QM_STUTTER_MAX_FEATURE_SNAPSHOTS = 128;
+	constexpr double QM_STUTTER_MIN_COMPONENT_SAMPLE_MS = 0.05;
+
 	void CollectFeature(const SConfigVariable *pVariable, void *pUser)
 	{
 		if(pVariable == nullptr || pVariable->m_Type != SConfigVariable::VAR_INT)
@@ -21,7 +25,10 @@ namespace
 		const auto &Variable = static_cast<const SIntConfigVariable &>(*pVariable);
 		if(Variable.m_Max <= 0 || Variable.m_Min != 0 || *Variable.m_pVariable == 0)
 			return;
-		static_cast<std::vector<std::pair<std::string, int>> *>(pUser)->emplace_back(pName, *Variable.m_pVariable);
+		auto *pValues = static_cast<std::vector<std::pair<std::string, int>> *>(pUser);
+		if(pValues->size() >= QM_STUTTER_MAX_FEATURE_SNAPSHOTS)
+			return;
+		pValues->emplace_back(pName, *Variable.m_pVariable);
 	}
 }
 
@@ -182,7 +189,8 @@ bool CQmStutterCapture::EmitWindow(const SFrame &Frame, const SQmStutterFrameDec
 	for(size_t i = 0; i < m_vComponents.size(); ++i)
 	{
 		const auto LogSamples = [&](const char *pCallback, CQmStutterSampleSeries &Samples) {
-			if(Samples.Empty())
+			// 0.0x ms 的组件只是计时噪声，逐条落盘会反过来放大卡顿。
+			if(Samples.Empty() || Samples.Max() < QM_STUTTER_MIN_COMPONENT_SAMPLE_MS)
 				return;
 			char aComponentPayload[512];
 			str_format(aComponentPayload, sizeof(aComponentPayload),

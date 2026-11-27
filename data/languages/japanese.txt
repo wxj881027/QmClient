@@ -28,9 +28,6 @@
 "Advanced options" adds category filters and colors; join, version, rules and help texts still stay in chat.
 == 詳細オプションでカテゴリ絞り込みと色を追加できます。参加・バージョン・ルール・ヘルプの文言はチャットに残ります。
 
-"Button - Enabled" only shows while automatic outgoing translation is on; "Reset translation colors" undoes your changes.
-== ボタン - 有効は自動送信翻訳がオンのときだけ表示されます。翻訳の色をリセットで変更を元に戻せます。
-
 "Copy all" only copies the filtered rows, so clear the search first if you want your whole list.
 == すべてコピーは絞り込んだ行だけをコピーするので、全体が欲しいときは先に検索を消してください。
 
@@ -89,7 +86,7 @@
 == %d / %d マップ
 
 %d entries
-== %d entries
+== %d 件
 
 %d items selected
 == %d 個のアイテムが選択されました
@@ -167,19 +164,19 @@
 == %s があなたとの交換をリクエストしました。交換を完了するには %s 秒待ってから /swap %s と入力してください。
 
 %s is full. Waiting for a slot...
-== %s is full. Waiting for a slot...
+== %s は満員です。空きを待っています…
 
 %s joined this server
 == %s がこのサーバーに参加しました
 
 %s moved to %s. Following in %d seconds...
-== %s moved to %s. Following in %d seconds...
+== %s は %s に移動しました。%d 秒後に追跡します…
 
 %s not found
 == %s が見つかりません
 
 %s requires a password. Connect manually to enter it.
-== %s requires a password. Connect manually to enter it.
+== %s にはパスワードが必要です。手動で接続して入力してください。
 
 %s translating to %s
 == %s が %s に翻訳中
@@ -367,7 +364,7 @@
 
 []
 [Clan] %s
-== [Clan] %s
+== [クラン] %s
 
 _ or ' ' = blank spacer
 == _ または ' ' = 空白スペーサー
@@ -442,7 +439,7 @@ A vote is currently active.
 == 現在投票が進行中です。
 
 A war group already has this name
-== A war group already has this name
+== 同じ名前の戦争グループが既にあります
 
 Abort
 == 中止
@@ -583,10 +580,10 @@ Add a voting option
 == 投票オプションを追加
 
 Add an entry manually
-== Add an entry manually
+== 項目を手動で追加
 
 Add by
-== Add by
+== 追加方法
 
 Add category
 == カテゴリを追加
@@ -640,7 +637,7 @@ Add phrase
 == フレーズを追加
 
 Add player '%s' to '%s'
-== Add player '%s' to '%s'
+== プレイヤー「%s」を「%s」に追加
 
 Add players or groups, then choose which markers and chat highlights apply to them.
 == プレイヤーやグループを追加し、適用するマーカーやチャットの強調表示を選びます。
@@ -655,7 +652,7 @@ Add team name:
 == 友好プレイヤーを追加：
 
 Add the entire clan '%s' to '%s'
-== Add the entire clan '%s' to '%s'
+== クラン「%s」全体を「%s」に追加
 
 Add to %s
 == %s に追加
@@ -673,7 +670,7 @@ Add to queue
 == キューに追加
 
 Add to war list
-== Add to war list
+== 敵対リストに追加
 
 Add war clan:
 == 敵対クランを追加：
@@ -764,6 +761,9 @@ Adjust TClient heads-up display elements
 
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == 表示オプションを調整します。混雑したサーバーに入る前に、投票を開いてレイアウトを確認してください。
+
+Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
+== ここでツールチップの文字サイズとバウンスアニメーションを調整します。背景はポップアップ層の色に従います。
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -856,7 +856,7 @@ All combined
 == すべて結合
 
 All groups
-== All groups
+== すべてのグループ
 
 All items
 == すべての項目
@@ -928,10 +928,10 @@ Alpha
 == アルファ
 
 Already first (none is the fixed fallback group)
-== Already first (none is the fixed fallback group)
+== すでに先頭です（none は固定のフォールバックグループ）
 
 Already last
-== Already last
+== すでに末尾です
 
 Also apply to dummy
 == ダミーにも適用する
@@ -980,9 +980,6 @@ Angle:
 
 Angular gradient
 == 角度グラデーション
-
-Animate country flags
-== 国旗をアニメーション
 
 Animated title style id
 == タイトルのアニメーションスタイル ID
@@ -1204,7 +1201,7 @@ Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is igno
 == 自殺禁止と自殺許可の2つを割り当てます。禁止キーを押した後は、許可キーを押すまでKは無視されます。
 
 Assigned group
-== Assigned group
+== 割り当て先グループ
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == 円形バインドホイールの各スロットにコマンドとラベルを割り当てます。
@@ -1377,6 +1374,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 Auto weapon switch
 == 自動武器切り替え
 
+Auto-accept team invites
+== チーム招待を自動承認
+
 Auto-accept team invites by sending /team <n>
 == /team <n> を送信してチーム招待を自動承認
 
@@ -1517,6 +1517,9 @@ Automatically re-join team 0 after finish (only if unlocked).
 
 Automatically record demos
 == デモを自動録画
+
+Automatically record performance diagnostics on startup
+== 起動時にパフォーマンス診断を自動記録
 
 Automatically record replays
 == リプレイを自動録画
@@ -1679,6 +1682,15 @@ Background Draw
 
 Background draw
 == 背景描画
+
+Background frame rate
+== バックグラウンドのフレームレート
+
+Background frame rate limit
+== バックグラウンドのフレームレート上限
+
+Background frame rate: 0=follow display refresh rate, 1=custom cl_refresh_rate_inactive, 2=unlimited
+== バックグラウンドのフレームレート: 0=ディスプレイのリフレッシュレートに追従、1=cl_refresh_rate_inactive をカスタム、2=無制限
 
 Background image in menu
 == メニューの背景画像
@@ -1980,12 +1992,6 @@ Build the status text shown above Tees
 Built-in
 == 内蔵
 
-Button - Disabled
-== ボタン - 無効
-
-Button - Enabled
-== ボタン - 有効
-
 Button browser
 == ボタンブラウザ
 
@@ -2005,16 +2011,16 @@ Buttons with this behavior execute some predefined actions.
 == この動作のボタンは、いくつかの定義済みアクションを実行します。
 
 By clan
-== By clan
+== クラン順
 
 By clan name
-== By clan name
+== クラン名順
 
 By player
-== By player
+== プレイヤー順
 
 By player name
-== By player name
+== プレイヤー名順
 
 By row
 == 行ごと
@@ -2113,13 +2119,13 @@ Cannot open word list file. Previous words remain active.
 == 単語リストファイルを開けません。以前の単語を引き続き使用します。
 
 Cannot prepare word list. Previous words remain active.
-== Cannot prepare word list. Previous words remain active.
+== 単語リストを準備できません。以前の単語を引き続き使用します。
 
 Cannot read complete word list file. Previous words remain active.
 == 単語リストファイルを完全に読み込めません。以前の単語を引き続き使用します。
 
 Cannot read the wiki file
-== Cannot read the wiki file
+== Wiki ファイルを読み込めません
 
 Cannot remove the wiki file
 == Wiki ファイルを削除できません
@@ -2304,9 +2310,6 @@ Chat export cancelled
 Chat export failed
 == チャットエクスポート失敗
 
-Chat fade smooth time (milliseconds)
-== チャットメッセージフェードアウトのスムーズ時間（ms）
-
 Chat font size
 == チャットフォントサイズ
 
@@ -2467,7 +2470,7 @@ Choose the menu map and background colors
 == Choose the menu map and background colors
 
 Choose the new group color
-== Choose the new group color
+== 新しいグループの色を選択
 
 Choose when recording starts and how demos are named; playback speed and camera follow are separate.
 == 録画を始めるタイミングとデモの命名方法を選びます。再生速度とカメラ追従は別項目です。
@@ -2524,7 +2527,7 @@ Clan color in friends list
 == フレンドリストのクラン色
 
 Clan friend
-== Clan friend
+== クランのフレンド
 
 Clan member entry color in friend list
 == フレンドリストのクランメンバー項目の色
@@ -2536,7 +2539,7 @@ Clan Name
 == クラン名
 
 Clan name
-== Clan name
+== クラン名
 
 Clan name size on nameplate
 == ネームプレート上のクラン名のサイズ
@@ -2810,9 +2813,6 @@ Colors for chat command and emoji completion
 
 Colors of the hook collision line, in case of a possible collision with:
 == フック補助線の色（以下の対象と衝突する可能性がある場合）：
-
-Colors of the translate button in the chat input and of the language menu that button opens.
-== チャット入力欄の翻訳ボタンと、そのボタンで開く言語メニューの色。
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 == スコアボードの行を色分けします：認証済みプレイヤー、同じクランのプレイヤー、フレンド、フレンドリスト内のクランメンバー。
@@ -3373,7 +3373,7 @@ Could not add this entry.
 == この項目を追加できませんでした。
 
 Could not apply %s. The console could not parse the value.
-== Could not apply %s. The console could not parse the value.
+== %s を適用できませんでした。コンソールが値を解析できません。
 
 Could not back up configuration files.
 == 設定ファイルをバックアップできませんでした。
@@ -3659,9 +3659,6 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
-
-Customize translate button and menu colors
-== 翻訳ボタンとメニューの色をカスタマイズ
 
 Customize vote display and interaction
 == Customize vote display and interaction
@@ -4000,13 +3997,13 @@ Delete demo
 == デモを削除
 
 Delete entry
-== Delete entry
+== 項目を削除
 
 Delete folder
 == フォルダを削除
 
 Delete group
-== Delete group
+== グループを削除
 
 Delete screenshot
 == スクリーンショットを削除
@@ -4207,13 +4204,13 @@ Display
 == ディスプレイ
 
 Display and blocking rules
-== Display and blocking rules
+== 表示とブロックのルール
 
 Display index
 == 表示インデックス
 
 Display locations and blocking options
-== Display locations and blocking options
+== 表示位置とブロックの詳細
 
 Display mode
 == 表示モード
@@ -4977,9 +4974,6 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 背景 3D パーティクルの軌跡を有効化
 
-Enable bounce-in entrance animation when country flags finish loading
-== 国旗アイコン読み込み完了時にバウンス入場アニメーションを再生
-
 Enable camera drift
 == カメラドリフトを有効化
 
@@ -5005,7 +4999,7 @@ Enable client-initiated self-kill (K key / kill command)
 == クライアント発の自殺を有効化（Kキー / killコマンド）
 
 Enable collision hitboxes
-== Enable collision hitboxes
+== ヒットボックスを有効化
 
 Enable colored console output
 == コンソールのカラー出力を有効にする
@@ -5135,9 +5129,6 @@ Enable Kugou Music hook integration
 
 Enable Kugou Music lyrics
 == Kugou Music 歌詞を有効化
-
-Enable left swipe offset on chat fade
-== チャットメッセージフェードアウト時に左スライドオフセットを有効化
 
 Enable LLM thinking mode (may increase response time)
 == LLM 思考モードを有効化（応答時間が増加する可能性あり）
@@ -5335,7 +5326,7 @@ Enable the selected Gores helpers, such as hammer switching and fast input, whil
 == Gores モード中、ハンマーの持ち替えや高速入力など、選択した補助機能を有効にします。
 
 Enable the war list to change this setting
-== Enable the war list to change this setting
+== この設定を変更するには敵対リストを有効にしてください
 
 Enable thinking mode
 == 思考モードを有効にする
@@ -5458,25 +5449,25 @@ Enter a phrase.
 == フレーズを入力してください。
 
 Enter a player or clan name first
-== Enter a player or clan name first
+== 先にプレイヤー名またはクラン名を入力してください
 
 Enter a valid group name (other than none)
-== Enter a valid group name (other than none)
+== 有効なグループ名を入力してください（none 以外）
 
 Enter clan name (matches all members)
-== Enter clan name (matches all members)
+== クラン名を入力（全メンバーに一致）
 
 Enter fast practice
 == 高速練習に入る
 
 Enter group name
-== Enter group name
+== グループ名を入力
 
 Enter Password
 == パスワードを入力
 
 Enter player name
-== Enter player name
+== プレイヤー名を入力
 
 Enter solo mode
 == ソロモードに入る
@@ -5527,7 +5518,7 @@ Entrance overshoot
 == 登場時のオーバーシュート
 
 Entries and blocking
-== Entries and blocking
+== エントリーとブロック
 
 Entries in it will fall back to none.
 == 中の項目は none に戻ります。
@@ -5632,7 +5623,7 @@ Exit and install
 == 終了してインストール
 
 Exit editing
-== Exit editing
+== 編集を終了
 
 Exit fast practice
 == 高速練習を終了
@@ -5674,7 +5665,7 @@ Export failed
 == エクスポートに失敗しました
 
 Export failed. Could not compose %d edited slot(s).
-== 書き出しに失敗しました。編集したパーツ %d 個を合成できませんでした。
+== エクスポートに失敗しました。編集済みスロット %d 個を合成できませんでした。
 
 Export name contains invalid characters.
 == エクスポート名に無効な文字が含まれています。
@@ -5720,9 +5711,6 @@ Exported to %s
 
 Exporting chat images: %d
 == チャット画像をエクスポート中：%d
-
-Expose playback controls to the operating system
-== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == 外部コンソールパスワード。エコノミーを有効にするには設定が必要
@@ -5860,7 +5848,7 @@ Fake CTF flags
 == 偽の CTF フラッグ
 
 Fallback group
-== Fallback group
+== フォールバックグループ
 
 Fast encode
 == 速いエンコード
@@ -5974,7 +5962,7 @@ Fill in the connect and join command fields, separate several commands with semi
 == 接続コマンドと参加コマンドの欄を入力し、複数のコマンドはセミコロンで区切ります。サーバーの準備ができていないときは遅延を増やしてください。
 
 Filter by group
-== Filter by group
+== グループで絞り込む
 
 Filter chat messages by regular expression
 == 正規表現でチャットメッセージをフィルタリング
@@ -6103,7 +6091,10 @@ Follow
 == フォロー
 
 Follow a player across servers for this session
-== Follow a player across servers for this session
+== このセッション中、サーバーをまたいでプレイヤーを追跡
+
+Follow display
+== ディスプレイに追従
 
 Follow graphics setting
 == グラフィック設定に従う
@@ -6136,7 +6127,7 @@ Following %s across servers
 == %s をサーバー間で追跡中
 
 Following %s to %s
-== Following %s to %s
+== %s を追って %s へ移動中
 
 Following: %s
 == 追跡中: %s
@@ -6235,10 +6226,10 @@ Freeze
 == フリーズ
 
 Freeze and death borders
-== Freeze and death borders
+== フリーズと死亡の境界
 
 Freeze and death check points
-== Freeze and death check points
+== フリーズ判定と死亡判定の地点
 
 Freeze bar opacity (0 invisible, 100 fully visible)
 == フリーズバーの不透明度（0 不可視、100 完全可視）
@@ -6250,7 +6241,7 @@ Freeze heart / health pickup
 == フリーズハート / 体力回復アイテム
 
 Freeze hitbox color
-== Freeze hitbox color
+== フリーズ判定の色
 
 Freeze Laser Inner Color
 == フリーズレーザー内側の色
@@ -6268,16 +6259,22 @@ Freeze opacity
 == フリーズの不透明度
 
 Freeze projectiles and lasers
-== Freeze projectiles and lasers
+== フリーズ弾とレーザー
 
 Freeze stars
 == フリーズスター
+
+Freeze tile color
+== フリーズタイルの色
 
 Freeze tile outline color
 == フリーズタイルアウトラインの色
 
 Freeze tile outline width
 == フリーズタイルの輪郭幅
+
+Freeze/deep freeze tile entity tint color
+== フリーズ/深層フリーズタイルの実体の色
 
 Frequently asked questions
 == よくある質問
@@ -6598,7 +6595,7 @@ Glow range
 == グロー範囲
 
 Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
-== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== グリフのラスタライズ: 0=同期のみ、1=バックグラウンド CPU ワーカーで先読み、2=バックグラウンド GPU カバレッジで先読み（表示中のテキストは常に同期）
 
 Go back one marker
 == マーカーを1つ戻る
@@ -6739,13 +6736,13 @@ Ground jump
 == 地上ジャンプ
 
 Group color
-== Group color
+== グループの色
 
 Group name
 == グループ名
 
 Group names can use up to 15 UTF-8 bytes
-== Group names can use up to 15 UTF-8 bytes
+== グループ名は UTF-8 で最大 15 バイトまで使用できます
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 入力支援をまとめた項目です。高速入力、自動マージン、サブティック照準、カーソルの挙動を含みます。
@@ -6772,7 +6769,7 @@ Hammer and gun switching made for Gores (KOG) servers, with optional Axiom login
 == Gores（KOG）サーバー向けのハンマーと銃の切り替え。Axiom ログインと高速入力は任意です。
 
 Hammer and hook range
-== Hammer and hook range
+== ハンマーとフックの範囲
 
 Hammer hit
 == ハンマーヒット
@@ -6927,9 +6924,6 @@ Hide non-friend names/clans and show client ID
 Hide other players' ghosts when frozen
 == 凍結時に他のプレイヤーのゴーストを非表示
 
-Hide own chat bubble (only when authenticated in remote console)
-== 自分のチャットバブルを非表示（リモートコンソール認証時のみ有効）
-
 Hide player messages
 == プレイヤーメッセージを非表示
 
@@ -7039,10 +7033,10 @@ Hit feedback
 == ヒット確認音
 
 Hitbox line opacity
-== Hitbox line opacity
+== ヒットボックス線の不透明度
 
 Hitbox player scope: 0=self only, 1=self and dummy, 2=all players
-== Hitbox player scope: 0=self only, 1=self and dummy, 2=all players
+== ヒットボックス表示対象: 0=自分のみ、1=自分とダミー、2=すべてのプレイヤー
 
 HJ assist
 == HJ アシスト
@@ -7863,9 +7857,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 Keep the feeling of the maximum cursor distance independent of resolution
 == 最大カーソル距離の感覚を解像度に依存させない
 
-Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
-== 暗い背景には明るい文字が見やすいです。既定の見た目に戻すにはヒントの外観をリセットを押します。
-
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 == チームカラーとは別の色にしてください。同じだと同クランの名前がチームパネルに溶け込み、読みにくくなります。
 
@@ -8255,9 +8246,6 @@ Link style
 
 Links open in the system browser.
 == リンクはシステムのブラウザーで開きます。
-
-Links the music playing on your system with the system media controls, and can show its title in the top-left HUD.
-== システムで再生中の音楽をシステムのメディアコントロールに連携し、その曲名を左上の HUD に表示できます。
 
 Links to related project and community websites.
 == 関連プロジェクトやコミュニティサイトへのリンクです。
@@ -8821,7 +8809,7 @@ Match %d of %d
 == %d / %d の一致
 
 Match by
-== Match by
+== 照合方法
 
 Match ghost by map version instead of map name
 == マップ名ではなくマップバージョンでゴーストを一致させる
@@ -8965,7 +8953,7 @@ may cause delay
 == 遅延が発生する可能性があります
 
 Measure a fixed cold glyph batch with performance diagnostics enabled
-== Measure a fixed cold glyph batch with performance diagnostics enabled
+== パフォーマンス診断を有効にして固定のコールドグリフバッチを測定
 
 Medium
 == 中
@@ -8978,9 +8966,6 @@ Mention option color
 
 Menu accent panel opacity
 == メニューアクセントパネルの不透明度
-
-Menu background
-== メニュー背景
 
 Menu button hover
 == メニューボタンのホバー
@@ -9005,12 +8990,6 @@ Menu music
 
 Menu opacity (0-100)
 == メニュー不透明度（Menu opacity 0-100）
-
-Menu option - normal
-== メニューオプション - 通常
-
-Menu option - selected
-== メニューオプション - 選択中
 
 Menu panel color
 == メニューパネルの色
@@ -9205,7 +9184,7 @@ Move a friend category to a position
 == フレンドカテゴリを指定位置へ移動
 
 Move down (decrease priority)
-== Move down (decrease priority)
+== 下へ移動（優先度を下げる）
 
 Move left
 == 左に移動
@@ -9223,7 +9202,7 @@ Move to category
 == カテゴリに移動
 
 Move up (increase match color priority)
-== Move up (increase match color priority)
+== 上へ移動（マッチ色の優先度を上げる）
 
 Movement
 == 移動
@@ -9598,7 +9577,7 @@ New version available
 == 新しいバージョンが利用可能です
 
 New war group
-== New war group
+== 新しい戦争グループ
 
 Newest first
 == リリースが新しい順
@@ -9718,7 +9697,7 @@ No empty team left.
 == 空いているチームはもうありません。
 
 No entries match
-== No entries match
+== 一致する項目がありません
 
 No entries yet
 == エントリがまだありません
@@ -9947,9 +9926,6 @@ Note
 
 Note:
 == メモ：
-
-Nothing appears until a media app is playing; use the buttons to check which app the system reports.
-== メディアアプリが再生するまで何も表示されません。ボタンでシステムがどのアプリを認識しているか確認できます。
 
 Nothing hookable
 == フック可能なものはありません
@@ -10291,7 +10267,7 @@ Optional export range in seconds. Leave empty to export the whole demo.
 == 省略可能な書き出し範囲（秒）。空欄ならデモ全体を書き出します。
 
 Optional reason (can appear under the name plate)
-== Optional reason (can appear under the name plate)
+== 任意の理由（ネームプレートの下に表示可能）
 
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == 任意で指定できる開始・終了時刻（秒）。両方空欄ならデモ全体を書き出します。
@@ -10360,7 +10336,7 @@ Outline opacity
 == 輪郭の不透明度
 
 Outline where freeze, deep freeze and death tiles take effect
-== Outline where freeze, deep freeze and death tiles take effect
+== フリーズ・深層フリーズ・死亡タイルの効果範囲を枠で表示
 
 Outlines can be distracting in fast maps; lower the opacity instead of disabling them.
 == 速いマップでは輪郭が邪魔になることがあるので、切らずに不透明度を下げてください。
@@ -10637,9 +10613,6 @@ Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 
 Phrase
 == フレーズ
-
-Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
-== ヒントの背景色と文字色を選び、ヒントの文字サイズをドラッグし、小さく弾む動きが欲しければヒントのバウンスアニメーションをオンにします。
 
 Pick a color preset or a custom color, then choose regular or bold weight.
 == プリセット色かカスタム色を選び、次にウェイトを標準か太字から選びます。
@@ -11476,7 +11449,7 @@ Project and community websites
 == プロジェクトとコミュニティのサイト
 
 Projectiles, explosions and regular lasers
-== Projectiles, explosions and regular lasers
+== 発射物、爆発、通常レーザー
 
 ProRes profile
 == ProRes プロファイル
@@ -11704,7 +11677,7 @@ Quick action menu for players
 == プレイヤー向けクイックアクションメニュー
 
 Quick add
-== Quick add
+== クイック追加
 
 Quintic Bezier
 == 5次ベジェ
@@ -12546,8 +12519,8 @@ Reset to defaults
 Reset tooltip appearance
 == ツールチップの外観を初期化
 
-Reset translation colors
-== 翻訳の配色を初期化
+Reset tooltip appearance to restore the default font size and bounce animation.
+== ツールチップの外観をリセットすると、既定の文字サイズとバウンスアニメーションに戻ります。
 
 Reset tuning after each map change
 == マップ変更ごとにチューニングをリセット
@@ -13087,7 +13060,7 @@ Search donor asset
 == ドナーアセットを検索
 
 Search entries or reasons
-== Search entries or reasons
+== 項目や理由を検索
 
 Search ghosts
 == ゴーストを検索
@@ -13156,7 +13129,7 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 == /practicecmdlist で利用可能な練習コマンドの一覧を確認できます。よく使われるのは /telecursor、/lasttp、/rescue です
 
 See freeze and death borders, character check points, shield pickups and weapon ranges.
-== See freeze and death borders, character check points, shield pickups and weapon ranges.
+== マップ上のフリーズ・死亡の境界、キャラクター判定点、シールドの取得範囲、武器範囲を表示します。
 
 See you at the next checkpoint.
 == 次のチェックポイントで会おう。
@@ -13186,7 +13159,7 @@ Select a saved .map file (client limit: 64 MiB).
 == 保存済みの .map ファイルを選択してください（クライアントの上限: 64 MiB）。
 
 Select a target group
-== Select a target group
+== 対象グループを選択
 
 Select all chat
 == チャットをすべて選択
@@ -13234,7 +13207,7 @@ Self
 == 自身
 
 Self and dummy
-== Self and dummy
+== 自分とダミー
 
 Self and friends
 == 自分とフレンドのみ
@@ -13425,9 +13398,6 @@ Server-side ghost opacity during fast practice (%)
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 背景色と背景の不透明度を設定し、次に文字色、選択文字色、選択背景色を決めます。下にプレビューが付きます。
 
-Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
-== ボタンにはボタン - 無効とボタン - 有効を設定し、ポップアップにはメニュー背景と 2 行のメニュー項目を設定します。
-
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == 表示モードをキー表示か常に表示にし、ピストルのガイド線や忍者経路の予測を選び、色・線幅・不透明度を調整します。
 
@@ -13600,7 +13570,7 @@ Sharpen
 == シャープン
 
 Shield pickup range
-== Shield pickup range
+== シールドの取得範囲
 
 Short pain voice
 == 短い被ダメージボイス
@@ -13984,13 +13954,13 @@ Show hammer status
 == ハンマーステータスを表示
 
 Show hazard borders, character check points and weapon ranges
-== Show hazard borders, character check points and weapon ranges
+== 地形の危険範囲、キャラクター判定点、武器範囲を表示
 
 Show health, shields and ammo
 == 体力、シールド、弾薬を表示
 
 Show hitboxes for
-== Show hitboxes for
+== 表示対象
 
 Show Hook Collision
 == フック衝突を表示
@@ -14448,9 +14418,6 @@ Show skin names in nameplate
 Show skin release date and author
 == スキンの公開日と作者を表示
 
-Show song info in top-left corner
-== 左上に曲情報を表示
-
 Show spectate option
 == 観戦項目を表示
 
@@ -14530,7 +14497,7 @@ Show text entities
 == テキストエンティティを表示
 
 Show the areas where freeze projectiles and lasers can freeze a Tee
-== Show the areas where freeze projectiles and lasers can freeze a Tee
+== フリーズ弾とレーザーが Tee を凍らせる範囲を表示
 
 Show the chat scrollbar on the right
 == チャットのスクロールバーを右側に表示
@@ -15684,9 +15651,6 @@ System default
 System graphics settings
 == システムのグラフィックス設定
 
-System media controls
-== システムメディアコントロール
-
 System message
 == システムメッセージ
 
@@ -15712,7 +15676,7 @@ Taper trail width
 == テーパートレイル幅
 
 Target group
-== Target group
+== 対象グループ
 
 Target language code (e.g. zh, en, ja, zh-TW)
 == 翻訳先言語コード（例：zh、en、ja、zh-TW）
@@ -15883,10 +15847,10 @@ Tee collision
 == Tee の衝突
 
 Tee collision circle
-== Tee collision circle
+== Tee の衝突円
 
 Tee collision color
-== Tee collision color
+== Tee 衝突判定の色
 
 Tee color
 == Tee の色
@@ -16251,6 +16215,9 @@ There's an unsaved map in the editor, you might want to save it.
 These effects are cosmetic and can cost a little performance on weaker GPUs.
 == これらの効果は見た目だけのもので、非力な GPU では少し性能を消費します。
 
+These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered.
+== これらのオプションは独立しています。使う機能だけを有効にすると、チャットとスコアボードがすっきりします。
+
 These options only change prediction on your client; what other players see is not affected.
 == これらのオプションは自分のクライアントの予測だけを変え、他のプレイヤーに見えるものには影響しません。
 
@@ -16273,7 +16240,7 @@ This connection cannot change names while connected. Reconnect with the saved na
 == この接続では接続中に名前を変更できません。保存された名前で再接続してください。
 
 This friend has no player name. Switch to By clan to add them.
-== This friend has no player name. Switch to By clan to add them.
+== このフレンドにはプレイヤー名がありません。「クラン順」に切り替えて追加してください。
 
 This ID is not connected
 == この ID は接続されていません
@@ -16297,7 +16264,7 @@ This person has disabled receiving whispers
 == このプレイヤーはささやきの受信を無効にしています
 
 This player has no clan. Switch to By player to add them.
-== This player has no clan. Switch to By player to add them.
+== このプレイヤーにはクランがありません。「プレイヤー順」に切り替えて追加してください。
 
 This pose file does not record a map. Choose the map used for rendering.
 == このポーズファイルにはマップが記録されていません。レンダリングに使うマップを選択してください。
@@ -16361,9 +16328,6 @@ Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its m
 
 Tick "Enable 3D background particles", pick a "Particle type", then set "Particle count", "Particle speed" and "Particle color".
 == 3D 背景パーティクルを有効にするをオンにし、パーティクルの種類を選んでから、パーティクル数、パーティクル速度、パーティクルの色を設定します。
-
-Tick "Enable system media control", then "Show song info in top-left corner"; the Previous, Play/Pause and Next buttons drive the track.
-== システムメディアコントロールを有効にするをオンにし、次に左上に曲情報を表示をオンにします。前へ、再生/一時停止、次へのボタンで曲を操作できます。
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 音声を有効にするをオンにし、詳細オプションで入力デバイスと出力デバイスを選びます。話すと自動でミュート解除を使えばミュートキーが空きます。
@@ -16713,9 +16677,6 @@ Too many translation tasks
 Toolbox page
 == ツールボックスページ
 
-Tooltip background color
-== ツールチップの背景色
-
 Tooltip bounce animation
 == ツールチップの弾むアニメーション
 
@@ -16724,9 +16685,6 @@ Tooltip font size
 
 Tooltip preview
 == ツールチップのプレビュー
-
-Tooltip text color
-== ツールチップの文字色
 
 Tooltips
 == ツールチップ
@@ -16809,9 +16767,6 @@ Translate outgoing messages to
 Translate received messages to
 == 受信メッセージの翻訳先
 
-Translate UI
-== UI を翻訳
-
 Translate:
 == 翻訳：
 
@@ -16830,29 +16785,11 @@ Translated text size
 Translating to %s...
 == %s に翻訳中...
 
-Translation button active color
-== 翻訳ボタンオン時の色
-
-Translation button cancel color
-== 翻訳ボタンオフ時の色
-
 Translation canceled because the sender changed
 == 送信者が変更されたため、翻訳をキャンセルしました
 
-Translation color alpha migration completed flag
-== 翻訳カラーのアルファ移行完了フラグ
-
 Translation diagnostics
 == 翻訳の診断
-
-Translation menu background color
-== 翻訳メニュー背景色
-
-Translation menu normal color
-== 翻訳メニュー通常時の色
-
-Translation menu selected color
-== 翻訳メニュー選択時の色
 
 Translation model was not found. Check the model name.
 == 翻訳モデルが見つかりません。モデル名を確認してください。
@@ -16969,7 +16906,7 @@ Turn on "Enable camera drift" or "Enable dynamic FOV", then tune "Drift intensit
 == カメラドリフトか動的FOVをオンにすると、強度と滑らかさのスライダーが現れます。アスペクト比プリセットで画面の形を固定し、カスタムを選べば比率を自分で入力できます。
 
 Turn on "Enable collision hitboxes", choose what to draw, then pick which players to show under "Show hitboxes for".
-== Turn on "Enable collision hitboxes", choose what to draw, then pick which players to show under "Show hitboxes for".
+== 「ヒットボックスを有効化」をオンにし、表示したい項目を選んでから、「表示対象」で対象プレイヤーを選びます。
 
 Turn on "Enable controller", choose the device, pick "Relative" or "Absolute" under "Ingame controller mode", then tick the axes you want under "Aim bind".
 == コントローラーを有効にして機器を選び、ゲーム内コントローラーモードで相対か絶対を選び、エイムバインドで使う軸にチェックを入れます。
@@ -17139,9 +17076,6 @@ UI motion level
 UI mouse sens.
 == UI マウス感度
 
-UI rounded corner segments (even numbers recommended)
-== UI 角丸セグメント数（偶数を推奨）
-
 UI scale
 == UI スケール
 
@@ -17203,7 +17137,7 @@ Unable to save the watermarked screenshot
 == ウォーターマーク付きのスクリーンショットを保存できません
 
 Unassigned entries fall back to this built-in group. It cannot be edited or deleted.
-== Unassigned entries fall back to this built-in group. It cannot be edited or deleted.
+== 未割り当ての項目はこの組み込みグループに分類されます。編集や削除はできません。
 
 Unavailable
 == 利用不可
@@ -17427,6 +17361,9 @@ Updated this phrase.
 Updates
 == 更新回数
 
+Updates per second while the window is inactive; 0 = unlimited
+== ウィンドウが非アクティブのときの 1 秒あたりの更新回数。0 = 無制限
+
 Updating preview…
 == プレビュー更新中…
 
@@ -17598,8 +17535,8 @@ Use procedural ring pipeline
 Use public word filter
 == 共有NGワードを使用
 
-Use qm_pref <0|1> [20-400] (milliseconds)
-== 使い方：qm_pref <0|1> [20-400]（ミリ秒）
+Use qm_perf <0|1>
+== 使い方：qm_perf <0|1>
 
 Use server defaults
 == サーバーの既定値を使用
@@ -18121,7 +18058,7 @@ When other players' ghosts are visible, draw the solid tee at the server positio
 == 他のプレイヤーのゴーストを表示している間、ティー本体をサーバー位置に、ゴーストを予測位置に描きます。
 
 When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
-== When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
+== レース中は「フリーズ弾とレーザー」をオンのままにして、「ハンマーとフックの範囲」と「発射物、爆発、通常レーザー」をオフにすると、迫ってくるフリーズの危険がより見やすくなります。
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient のレインボー Tee が有効な場合、この機能は効果がありません。
@@ -18883,7 +18820,7 @@ Menu
 
 [Collision hitbox]
 All players
-== All players
+== すべてのプレイヤー
 
 [Config help]
 %s (default: "%s", max length: %d)
@@ -18956,62 +18893,6 @@ Hook
 [Direct touch input]
 Relative aim
 == 相対照準
-
-[Editor]
-Could not generate the quad art image.
-== Could not generate the quad art image.
-
-[Editor]
-Drawing tools require the active physics layers.
-== Drawing tools require the active physics layers.
-
-[Editor]
-Failed to write sound to file '%s'.
-== Failed to write sound to file '%s'.
-
-[Editor]
-No image selected.
-== No image selected.
-
-[Editor]
-No sound selected.
-== No sound selected.
-
-[Editor]
-Saving failed: Could not prepare or queue the map.
-== Saving failed: Could not prepare or queue the map.
-
-[Editor]
-Saving failed: Could not write map file '%s'.
-== Saving failed: Could not write map file '%s'.
-
-[Editor]
-Sync interrupted: the map was loaded, but the editor could not refresh it
-== Sync interrupted: the map was loaded, but the editor could not refresh it
-
-[Editor]
-The drawing is too large. Split it into smaller strokes.
-== The drawing is too large. Split it into smaller strokes.
-
-[Editor]
-The drawing preview is too large to display.
-== The drawing preview is too large to display.
-
-[Editor]
-The file path is too long.
-== The file path is too long.
-
-[Editor]
-The game and physics layers must have matching dimensions before they can be extended.
-== The game and physics layers must have matching dimensions before they can be extended.
-
-[Editor]
-The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
-== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
-
-[Editor]
-The requested tile layer dimensions are too large.
-== The requested tile layer dimensions are too large.
 
 [Friend auto follow]
 Follow this friend across servers

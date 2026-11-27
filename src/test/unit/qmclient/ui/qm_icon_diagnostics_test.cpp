@@ -1,3 +1,5 @@
+#include <engine/textrender.h>
+
 #include <game/client/qm_icon_prewarm.h>
 
 #include <gtest/gtest.h>
@@ -99,4 +101,44 @@ TEST(QmIconRasterPixelSize, SignedOverflowKeepsExistingPixelBounds)
 		SCOPED_TRACE(Size);
 		EXPECT_EQ(QmIconRasterPixelSize(Size, 2.0f), Expected);
 	}
+}
+
+TEST(QmIconPrewarm, PeekDoesNotConsumeUntilAdvance)
+{
+	// 后台队列满时调用方要能停在当前图标重试：Peek 必须幂等，
+	// 只有 Advance 才推进游标。
+	CQmIconPrewarmPlan Plan;
+	ASSERT_TRUE(Plan.Configure(2.0f, 1));
+	int PeekCodepoint, PeekSize, Codepoint, Size;
+	ASSERT_TRUE(Plan.Peek(PeekCodepoint, PeekSize));
+	ASSERT_TRUE(Plan.Peek(Codepoint, Size));
+	EXPECT_EQ(Codepoint, PeekCodepoint);
+	EXPECT_EQ(Size, PeekSize);
+	EXPECT_FALSE(Plan.Complete());
+	Plan.Advance();
+	ASSERT_TRUE(Plan.Peek(Codepoint, Size));
+	EXPECT_NE(std::make_pair(Codepoint, Size), std::make_pair(PeekCodepoint, PeekSize));
+}
+
+TEST(QmIconPrewarm, PeekFailsAfterCompletion)
+{
+	CQmIconPrewarmPlan Plan;
+	ASSERT_TRUE(Plan.Configure(1.0f, 1));
+	int Codepoint, Size;
+	while(Plan.Next(Codepoint, Size))
+	{
+	}
+	EXPECT_TRUE(Plan.Complete());
+	EXPECT_FALSE(Plan.Peek(Codepoint, Size));
+	EXPECT_FALSE(Plan.Next(Codepoint, Size));
+}
+
+TEST(QmGlyphQueueResult, OnlyQueueFullKeepsCursor)
+{
+	// 队列满可以等下一轮；RETRY/UNSUPPORTED 必须推进游标，
+	// 否则单个失败字形会让后续所有图标字号永远不再预热。
+	EXPECT_TRUE(QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult::QUEUED_OR_READY));
+	EXPECT_TRUE(QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult::UNSUPPORTED));
+	EXPECT_TRUE(QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult::RETRY));
+	EXPECT_FALSE(QmGlyphQueueResultShouldAdvance(EQmGlyphQueueResult::REJECTED));
 }

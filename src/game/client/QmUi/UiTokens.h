@@ -461,7 +461,32 @@ namespace ui_token::control
 	// 控件上下内边距：由「行高 - 正文字号」的一半得出，保证文字垂直居中。
 	constexpr float PadY(const float LineHeight, const float BodySize) { return std::max(0.0f, (LineHeight - BodySize) * 0.5f); }
 	// 图标与相邻文字的间距（0.33 字号，最小 XS）。
-	constexpr float IconTextGap(const float BodySize) { return std::max(spacing::XS, BodySize * 0.33f); }
+	inline constexpr float IconTextGap(const float BodySize) { return std::max(spacing::XS, BodySize * 0.33f); }
+	// 标签渲染器按「最大宽度」断行，实测自然宽度原值不安全：绘制时的逐字推进
+	// 可能比测量多出零点几个像素，于是按钮标签会在空格处折成两行并溢出按钮。
+	// 给自然宽度留 1px 并向上取整，保证单行标签不会卡在等宽边界上。
+	inline constexpr float TEXT_WIDTH_SLACK = 1.0f;
+	inline float ResolveTextMaxWidth(const float TextWidth)
+	{
+		return std::ceil(std::max(0.0f, TextWidth) + TEXT_WIDTH_SLACK);
+	}
+	// 「图标 + 文字」的横向布局：整组居中，文字按自然宽度排版；
+	// 行宽真的不够时文字矩形收到可用宽度，调用方配合单行省略号，避免折行撑破按钮。
+	struct SIconTextRowLayout
+	{
+		CUIRect m_Icon;
+		CUIRect m_Text;
+	};
+	inline SIconTextRowLayout ResolveIconTextRow(const CUIRect &Row, const float TextWidth, const float IconSide, const float Gap)
+	{
+		const float ResolvedIconSide = std::clamp(IconSide, 0.0f, std::max(0.0f, Row.w));
+		const float ResolvedGap = std::clamp(Gap, 0.0f, std::max(0.0f, Row.w - ResolvedIconSide));
+		const float Available = std::max(0.0f, Row.w - ResolvedIconSide - ResolvedGap);
+		const float LabelWidth = Available <= 0.0f ? 0.0f : std::clamp(TextWidth, std::min(1.0f, Available), Available);
+		const float GroupWidth = ResolvedIconSide + ResolvedGap + LabelWidth;
+		const float StartX = Row.x + (Row.w - GroupWidth) * 0.5f;
+		return {{StartX, Row.y, ResolvedIconSide, Row.h}, {StartX + ResolvedIconSide + ResolvedGap, Row.y, LabelWidth, Row.h}};
+	}
 	// 左侧标签与右侧控件之间的最小间距（0.5 字号，最小 SM）。
 	constexpr float LabelControlGap(const float BodySize) { return std::max(spacing::SM, BodySize * 0.5f); }
 	// 字形 → 盒子（与 QmIconFontSize 互逆）。
@@ -706,6 +731,197 @@ namespace ui_token::list
 		return RowsHeight(Rows, RowHeight, RowSpacing) + 2.0f * std::max(0.0f, Padding);
 	}
 } // namespace ui_token::list
+
+// TClient 专属页面（字体/档案/配置/战争列表/状态栏/视觉/绑轮盘）的排版与动效事实。
+// 这些数值只服务 TClient 页，不进入通用设置页基调；页面内不再出现裸浮点。
+// 数值与迁移前逐一对应，不改公式，只把「这一个数是什么」写成名字。
+namespace ui_token::tclient
+{
+	// 百分比换算：进度文本与百分比格式共用。
+	inline constexpr float PERCENT = 100.0f;
+	// 通用几何倍数：语义上确实是「一半 / 成对」的位置才用。
+	inline constexpr float HALF = 0.5f;
+	inline constexpr float DOUBLE = 2.0f;
+	// 未指定 / 无值的哨兵，用于可选尺寸参数。
+	inline constexpr float NONE = -1.0f;
+
+	// —— 字体页 ——
+	namespace font
+	{
+		// 顶部工具条：筛选框最大宽度与占宽比例。
+		inline constexpr float FILTER_MAX_WIDTH = 150.0f;
+		inline constexpr float FILTER_WIDTH_RATIO = 0.20f;
+		inline constexpr float COUNT_WIDTH_RATIO = 0.18f;
+		// 字体卡片：固定高度、4 列网格、最小/最大卡宽、卡片内边距。
+		inline constexpr float CARD_HEIGHT = 108.0f;
+		inline constexpr float CARD_COLUMNS = 4.0f;
+		inline constexpr float CARD_GAP_SPANS = 3.0f;
+		inline constexpr float CARD_MIN_WIDTH = 150.0f;
+		inline constexpr float CARD_MAX_WIDTH = 320.0f;
+		inline constexpr float CARD_MARGIN = 6.0f;
+		// 滚轮一格 = 两张卡片的高度。
+		inline constexpr float SCROLL_UNIT_CARDS = 2.0f;
+		// 字体子集行高度与标签透明度。
+		inline constexpr float SUBSETS_HEIGHT = 11.0f;
+		inline constexpr float SUBSET_LABEL_ALPHA = 0.55f;
+		// 字体预览：底板压暗、内容区高度（有/无提示行）、三行示例的纵向位置。
+		inline constexpr ColorRGBA PREVIEW_SHADE{0.0f, 0.0f, 0.0f, 0.30f};
+		inline constexpr float PREVIEW_MARGIN = 5.0f;
+		inline constexpr float PREVIEW_HINT_HEIGHT = 55.0f;
+		inline constexpr float PREVIEW_HEIGHT = 41.0f;
+		inline constexpr float PREVIEW_LINE_1_Y = 16.0f;
+		inline constexpr float PREVIEW_LINE_2_Y = 30.0f;
+		inline constexpr float PREVIEW_LINE_3_Y = 44.0f;
+		inline constexpr float PREVIEW_PENDING_ALPHA = 0.45f;
+		// 右侧状态列宽度与文字透明度、错误色。
+		inline constexpr float STATUS_COLUMN_WIDTH = 64.0f;
+		inline constexpr float STATUS_TEXT_ALPHA = 0.6f;
+		inline constexpr float STATUS_DONE_ALPHA = 0.8f;
+		// 字形测试板：三行字形 + 两段行距 + 额外高度与内边距。
+		inline constexpr float GLYPH_ROW_COUNT = 3.0f;
+		inline constexpr float GLYPH_ROW_GAP_COUNT = 2.0f;
+		inline constexpr float GLYPH_BOX_EXTRA = 6.0f;
+		inline constexpr float GLYPH_BOX_PADDING = 2.0f;
+		inline constexpr float GLYPH_SECOND_ROW = 2.0f;
+		// 字体选择的应用节流：拖动中最小应用间隔与停手判定。
+		inline constexpr float APPLY_INTERVAL_SEC = 0.10f;
+		inline constexpr float SETTLE_DELAY_SEC = 0.15f;
+		inline constexpr float LAST_APPLY_SENTINEL_SEC = -10.0f;
+	} // namespace ui_token::tclient::font
+
+	// —— 档案（Profiles）页 ——
+	namespace profiles
+	{
+		// 预览尺寸：Tee 与色块随按钮/行高成倍放大。
+		inline constexpr float PREVIEW_TEE_SCALE = 2.0f;
+		inline constexpr float PREVIEW_COLOR_SCALE = 2.0f;
+		// 占位十字：高度/宽度比例、线宽、圆角、图标尺寸。
+		inline constexpr float CROSS_HEIGHT_RATIO = 0.4f;
+		inline constexpr float CROSS_WIDTH_RATIO = 0.5f;
+		inline constexpr float CROSS_THICKNESS = 2.0f;
+		inline constexpr float CROSS_RADIUS = 1.0f;
+		inline constexpr ColorRGBA CROSS_COLOR{0.65f, 0.65f, 0.65f, 0.8f};
+		inline constexpr float CROSS_ICON_SIZE = 20.0f;
+		// Tee 预览向上偏移：帽檐容易越界，按 1/10 身高抬一点。
+		inline constexpr float TEE_OFFSET_DIVISOR = 10.0f;
+		// 色块圆角、国旗宽度倍数、三行预览的分行。
+		inline constexpr float COLOR_SWATCH_RADIUS = 2.0f;
+		inline constexpr float FLAG_WIDTH_SCALE = 2.0f;
+		inline constexpr float PREVIEW_ROW_DIVISOR = 3.0f;
+		inline constexpr float PREVIEW_ROW_SPAN = 3.0f;
+		inline constexpr float PREVIEW_RADIUS = 4.0f;
+		inline constexpr ColorRGBA OWN_PREVIEW_COLOR{1.0f, 1.0f, 1.0f, 0.035f};
+		inline constexpr ColorRGBA DUMMY_PREVIEW_COLOR{0.25f, 0.55f, 0.85f, 0.08f};
+		inline constexpr float PREVIEW_WIDTH_SCALE = 2.5f;
+		// 单行内联布局：按钮跨度、预览占宽比例、行内两段间距。
+		inline constexpr float INLINE_BUTTON_SPAN = 2.0f;
+		inline constexpr float INLINE_PREVIEW_WIDTH_RATIO = 0.55f;
+		inline constexpr float INLINE_ROW_GAP_COUNT = 2.0f;
+		// 卡片高度：展开/收起各按行高与行距的组合。
+		inline constexpr float EXPANDED_ROWS = 8.0f;
+		inline constexpr float EXPANDED_GAPS = 3.0f;
+		inline constexpr float COLLAPSED_ROWS = 4.0f;
+		// 「档案」按钮与列表：最小宽度/高度由标题宽与行高推导。
+		inline constexpr float PROFILES_BUTTON_MIN_SPAN = 4.0f;
+		inline constexpr float PROFILES_BUTTON_MAX_RATIO = 1.25f;
+		inline constexpr float LIST_MIN_WIDTH_ROWS = 6.0f;
+		inline constexpr float LABEL_BUTTON_SPAN = 2.0f;
+		inline constexpr float LIST_MIN_HEIGHT_ROWS = 3.0f;
+		inline constexpr float LIST_BUTTON_ROWS = 3.0f;
+		inline constexpr float LIST_LINE_SPANS = 2.0f;
+	} // namespace ui_token::tclient::profiles
+
+	// —— 配置（Configs）页 ——
+	namespace configs
+	{
+		inline constexpr ColorRGBA MODIFIED_BG{1.0f, 0.8f, 0.0f, 0.15f};
+		inline constexpr float NAME_WIDTH_RATIO = 0.46f;
+		inline constexpr float NAME_MIN_WIDTH = 170.0f;
+		inline constexpr float NAME_MAX_WIDTH = 320.0f;
+		inline constexpr float RESET_MAX_WIDTH = 100.0f;
+		inline constexpr float RESET_WIDTH_RATIO = 0.25f;
+		inline constexpr float INPUT_WIDTH = 60.0f;
+		inline constexpr float COLOR_PICKER_EXTRA_WIDTH = 60.0f;
+		// 行内「标签 + 按钮」与标签缩进按行高/行距的倍数。
+		inline constexpr float INLINE_BUTTON_SPAN = 2.0f;
+		inline constexpr float LABEL_INDENT_SPANS = 2.0f;
+		inline constexpr float PREVIEW_MIN_ROWS = 2.0f;
+		inline constexpr float PREVIEW_WIDTH_RATIO = 0.52f;
+	} // namespace ui_token::tclient::configs
+
+	// —— 战争列表（War list）页 ——
+	namespace warlist
+	{
+		inline constexpr float ACTION_BUTTON_WIDTH = 20.0f;
+		inline constexpr float ACTION_BUTTON_HEIGHT = 20.0f;
+		inline constexpr float WAR_TYPE_WIDTH_RATIO = 0.32f;
+		inline constexpr float WAR_TYPE_TINT_ALPHA = 0.16f;
+		inline constexpr float SWATCH_INSET_RATIO = 0.25f;
+		inline constexpr float ICON_SIDE_SPAN = 4.0f;
+		inline constexpr float BUTTON_GAP_SPANS = 3.0f;
+		inline constexpr float TEE_PREVIEW_WIDTH = 25.0f;
+		inline constexpr float NAME_ACTIVE_ALPHA = 0.75f;
+		inline constexpr float NAME_HOVER_ALPHA = 0.33f;
+		inline constexpr float DELETE_MARGIN = 2.0f;
+		inline constexpr float BUTTON_SPAN = 2.0f;
+		inline constexpr float LABEL_BUTTON_SPAN = 2.0f;
+		inline constexpr float TWO_COLUMN_SPAN = 2.0f;
+		inline constexpr float TEE_RENDER_OFFSET_X = -1.0f;
+		inline constexpr float TEE_RENDER_OFFSET_Y = 2.5f;
+		// 文本计划 hash 把字号折进身份：16 = 1/16 像素的量化刻度。
+		inline constexpr float PLAN_TEXT_SIZE_SCALE = 16.0f;
+		// 行内列宽占比：左标签、候选名、动作按钮组、组名/条目计数、组标签、备注。
+		inline constexpr float LABEL_COLUMN_WIDTH_RATIO = 0.36f;
+		inline constexpr float CANDIDATE_NAME_WIDTH_RATIO = 0.62f;
+		inline constexpr float ACTION_CLUSTER_WIDTH_RATIO = 0.65f;
+		inline constexpr float ENTRY_COUNT_WIDTH_RATIO = 0.66f;
+		inline constexpr float GROUP_TAG_WIDTH_RATIO = 0.28f;
+		inline constexpr float REASON_WIDTH_RATIO = 0.65f;
+		// 双列最小宽度按行内图标按钮高度折算：4 个按钮位。
+		inline constexpr float INLINE_ROW_ICON_SPANS = 4.0f;
+	} // namespace ui_token::tclient::warlist
+
+	// —— 状态栏（Status bar）页 ——
+	namespace statusbar
+	{
+		inline constexpr float PREVIEW_ROW_GAP_COUNT = 2.0f;
+		inline constexpr float PREVIEW_MARGIN = 10.0f;
+		inline constexpr float WIDE_LAYOUT_MIN_WIDTH = 360.0f;
+		inline constexpr float SCHEME_LABEL_MAX_RATIO = 0.28f;
+		inline constexpr float SCHEME_LABEL_MIN_ROWS = 5.0f;
+		inline constexpr float APPLY_MAX_RATIO = 0.30f;
+		inline constexpr float APPLY_MIN_ROWS = 2.5f;
+		inline constexpr float APPLY_MIN_RATIO = 0.18f;
+		// 整列条目按钮的「撑满」高度（覆盖式背景层用）。
+		inline constexpr float FULL_HEIGHT = 10000.0f;
+		// 条目交换动画：时长与 ease-out 指数曲线。
+		inline constexpr float ITEM_SWAP_SEC = 0.15f;
+		inline constexpr float ITEM_SWAP_BASE = 2.0f;
+		inline constexpr float ITEM_SWAP_STEEPNESS = 5.0f;
+	} // namespace ui_token::tclient::statusbar
+
+	// —— 视觉（Visual）页 ——
+	namespace visual
+	{
+		inline constexpr float TYPE_ICON_SIZE = 18.0f;
+		inline constexpr float FADE_COMPLETE_EPSILON = 0.999f;
+	} // namespace ui_token::tclient::visual
+
+	// —— 绑定轮盘（Bind wheel）页 ——
+	namespace bindwheel
+	{
+		inline constexpr float TEXT_ROW_HEIGHT_RATIO = 1.5f;
+	} // namespace ui_token::tclient::bindwheel
+
+	// —— TClient 容器公共排版 ——
+	namespace page
+	{
+		// 文本包围盒到下一行的基线余量（0.25 字号）。
+		inline constexpr float TEXT_BASELINE_DESCENT_RATIO = 0.25f;
+		// 卡片内容四周的统一留白。
+		inline constexpr float MARGIN = 10.0f;
+	} // namespace ui_token::tclient::page
+} // namespace ui_token::tclient
 
 // 绑定菜单（轮盘 / 计分板式面板）的游戏内叠层几何。面板固定在屏幕正中，
 // 并以最大高度约束条目数；轮盘卡片为
@@ -1392,6 +1608,9 @@ namespace ui_token::vote_hud
 	inline constexpr float BUTTON_TEXT_INSET = 3.0f;
 	// 与计分板主面板同一档圆角。
 	inline constexpr float RADIUS = radius::CARD;
+	// 紧凑面板只有 35 高，沿用 14 会读成胶囊；按同一「圆角 / 面板高 ≈ 23%」
+	// 比例取 BASE，和完整面板的视觉圆角一致。
+	inline constexpr float MINI_RADIUS = radius::BASE;
 } // namespace ui_token::vote_hud
 
 // 输入法（IME）候选面板：跟随系统输入法浮在光标下方的小面板。
@@ -1541,16 +1760,25 @@ namespace ui_token::motion
 	inline constexpr SUiAnimTransition HOVER_FADE{.m_DurationSec = 0.12f, .m_Easing = EEasing::EASE_OUT_QUART};
 	// 按下缩放：比悬停更短，按下要「立刻」有反馈。
 	inline constexpr SUiAnimTransition PRESS_SCALE{.m_DurationSec = 0.08f, .m_Easing = EEasing::EASE_OUT_QUART};
-	// 模态弹窗入场：淡入 + 缩放同时进行，弹簧带一点回弹（ζ 由 m_Spring 决定）。
+	// 模态弹窗的淡入轨道：只负责透明度，走渲染帧（已按 1/20 s 截断）。
+	// 弹簧带一点回弹（ζ 由 m_Spring 决定），缩放从同一条轨道取参数。
+	// 开合/生命周期另由 MODAL_PRESENCE 走逻辑步，两条轨道互不影响。
 	inline constexpr SUiAnimTransition MODAL_FADE_SCALE{
 		.m_DurationSec = 0.20f,
 		.m_Easing = EEasing::EASE_OUT_QUART,
 		.m_Spring = {1.0f, 400.0f, 40.0f, 0.001f, 0.01f},
 	};
+	// 模态弹窗开合状态：在场/退场窗口按 UI 逻辑步推进（120 Hz），
+	// 长帧只影响视觉淡入，不会让开合判定跳步。
+	inline constexpr SUiAnimTransition MODAL_PRESENCE{
+		.m_DurationSec = 0.20f,
+		.m_Easing = EEasing::EASE_OUT_QUART,
+		.m_Clock = EUiAnimClock::LOGIC,
+	};
 	// 页面切换横向滑入：整页位移，比局部反馈长一档才看得出方向。
-	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART};
+	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART, .m_Clock = EUiAnimClock::LOGIC};
 	// 页签内容切换：只淡入内容区，不位移整页。
-	inline constexpr SUiAnimTransition TAB_SWITCH{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART};
+	inline constexpr SUiAnimTransition TAB_SWITCH{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART, .m_Clock = EUiAnimClock::LOGIC};
 	// 导航滑块出现／消失：比普通悬停反馈长一档，配合由小到大的缩放才读得出「长出来」，
 	// 0.12 秒的纯淡入在整页切换的同一帧里几乎看不见。
 	inline constexpr SUiAnimTransition NAVIGATION_APPEAR{.m_DurationSec = 0.26f, .m_Easing = EEasing::EASE_OUT_QUART};

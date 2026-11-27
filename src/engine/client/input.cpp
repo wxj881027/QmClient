@@ -680,6 +680,17 @@ void CInput::HandleTextEditingEvent(const char *pText, int Start, int Length)
 	}
 	else
 	{
+		// 切中英文会直接取消组合：没有提交事件，候选也已消失。
+		// 这时把已经打出来的组合串写回输入框，否则草稿会凭空消失。
+		// 搜狗等在翻页/高亮候选时也会发空串，但候选还在，那种情况不能提交。
+		if(!m_CompositionString.empty() && GetCandidateCount() == 0)
+		{
+			AddTextEvent(m_CompositionString.c_str());
+			m_CompositionString = "";
+			m_CompositionCursor = 0;
+			m_ImeCandidates.EndComposition();
+			return;
+		}
 		// 搜狗等 IME 在页边界/高亮第 5 个候选时可能短暂发送空 TEXTEDITING；
 		// 仅清组合串，保留候选列表，避免弹窗隐现闪烁
 		if(!QmImeEmptyTextEditingShouldClearCandidates())

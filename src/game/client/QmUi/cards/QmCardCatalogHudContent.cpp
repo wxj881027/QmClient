@@ -32,8 +32,6 @@
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/components/qmclient/translate/translate_backend.h>
-#include <game/client/components/qmclient/translate/translate_ui_common.h>
-#include <game/client/components/qmclient/translate/translate_ui_settings.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
@@ -120,6 +118,10 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 	};
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandUseOriginalStyle, "Use original style", Localize("Use original style"), &g_Config.m_QmHudIslandUseOriginalStyle);
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandShowTeam, "Show team", Localize("Show team"), &g_Config.m_QmHudIslandShowTeam);
+	// 来源开关决定是否读取系统媒体会话（Windows SMTC / Linux MPRIS，含网易云、
+	// Spotify、LX Music 等来源）；显示开关只控制 HUD 是否绘制歌曲信息。两者语义不同。
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSmtcEnable, "Enable system media control", Localize("Enable system media control"), &g_Config.m_QmSmtcEnable);
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSmtcShowHud, "Show system media info on HUD", Localize("Show system media info on HUD"), &g_Config.m_QmSmtcShowHud);
 
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
@@ -373,46 +375,6 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 			RenderQmHudLabel("qmclient-lyrics-lxmusic-status", &Row, aStatus, ui_token::font::BODY);
 		}
 		Flow.Space(LineSpacing);
-	}
-}
-
-void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
-{
-	CSettingsContentLayoutFlow Flow(Content);
-	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
-	const auto DeclaredCheckbox = [&](CUIRect &, float Height, float Spacing, const void *pId, const char *pTextId, const char *pText, int *pValue) {
-		CUIRect Row;
-		const bool Changed = Flow.Control(pTextId, Height, Row, Spacing) && DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, pId, pTextId, pText, *pValue, &Row);
-		if(Changed)
-			*pValue ^= 1;
-		return Changed;
-	};
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSmtcEnable, "Enable system media control", Localize("Enable system media control"), &g_Config.m_QmSmtcEnable);
-	if(!g_Config.m_QmSmtcEnable)
-		return;
-
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSmtcShowHud, "Show song info in top-left corner", Localize("Show song info in top-left corner"), &g_Config.m_QmSmtcShowHud);
-	// Hook 开关与歌词开关已迁出为独立的 qm:lyrics 卡（内容函数仍是 RenderQmHudLyricsContent，
-	// 由卡片目录的 Hud 分类模块负责调用）。此处不再渲染，否则歌词与来源开关会在两处各出现一次。
-	CUIRect MediaButtons, PrevButton, PlayButton, NextButton;
-	if(Flow.Control("hud-media-actions", LineHeight, MediaButtons, ui_token::settings::RowGap(LineSpacing)))
-	{
-		static ui_widget::SSettingsActionGroupState s_MediaActionWidths;
-		const char *apActionLabels[] = {Localize("Previous"), Localize("Play/Pause"), Localize("Next")};
-		const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_MediaActionWidths, MediaButtons, apActionLabels, 3, CurrentSettingsContentMetrics());
-		PrevButton = Actions.m_aButtons[0];
-		PlayButton = Actions.m_aButtons[1];
-		NextButton = Actions.m_aButtons[2];
-
-		static CButtonContainer s_SmtcPrev;
-		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcPrev, "qmclient-smtc-previous", Localize("Previous"), 0, &PrevButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
-			GameClient()->m_SystemMediaControls.Previous();
-		static CButtonContainer s_SmtcPlayPause;
-		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcPlayPause, "qmclient-smtc-play-pause", Localize("Play/Pause"), 0, &PlayButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
-			GameClient()->m_SystemMediaControls.PlayPause();
-		static CButtonContainer s_SmtcNext;
-		if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_SmtcNext, "qmclient-smtc-next", Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE))
-			GameClient()->m_SystemMediaControls.Next();
 	}
 }
 

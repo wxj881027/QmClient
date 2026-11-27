@@ -59,9 +59,10 @@ TEST(QmPerfDiagnostics, SensitiveConfigIsDetectedByAnyKeywordPart)
 
 	// 非敏感配置不得被误判（否则日志会失去诊断价值）。
 	const char *apPlain[] = {
+		"qm_perf_debug",
+		"qm_ui_corner_curve",
 		"qm_monitoring_hud_opacity",
 		"cl_show_perf",
-		"qm_rect_corner_segments",
 		"tc_hook_coll_alpha",
 	};
 	for(const char *pName : apPlain)

@@ -37,7 +37,7 @@ def scenario_demo_browser_pre_epoch_date(env: ProcessEnvironment) -> None:
 	client = env.start_client(
 		[
 			"stdout_output_level 2",
-			"qm_pref 1 50",
+			"qm_perf 1",
 			"qm_steam_auto_launch 0",
 			"qm_websocket_url disabled",
 			"cl_show_welcome 0",

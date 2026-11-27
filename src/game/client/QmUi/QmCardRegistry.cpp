@@ -144,10 +144,9 @@ namespace qm_card_registry
 			{"qm:spectator_mode", "visual", false, Localizable("Spectate mode"), "观战模式 guanzhan moshi spectator freeview 自由视角 ziyou shijiao cinematic camera smooth 平滑 pinghua demo replay 回放 huifang", "Smooth the mouse-driven camera in live and demo free spectating"},
 			{"qm:water_hammer", "visual", false, "?!Stuck keys!?", "水域 shuiyu 死亡 death 冻结 freeze 卡锤 kachui 锤子 chuizi hammer 卡钩 kagou 钩索 gousuo hook 按键 anjian 图标 tubiao 颜色 yanse held preinput teammate 同队 tongdui 高亮 gaoliang 变色 bianse visual", "Highlight held hammer and hook inputs while frozen"},
 			{"qm:weapon_animation", "visual", false, "Weapon animation", "武器动画 wuqi donghua weapon animation 切换武器动画 qiehuan wuqi donghua weapon switch animation 装填动画 zhuangtian donghua reload animation 概率 gailv probability 滑入 huaru 旋转 xuanzhuan visual", "Play a slide-in rotation animation when switching weapons"},
-			{"qm:entity_overlay", "ddnet", false, "Entity layer adjustments", "实体层调整 shiti ceng tiaozheng 实体层颜色 yanse 实体层叠加 diejia entity overlay 文本实体 wenben shiti 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng ddnet", "Adjust opacity of entity layers"},
-			{"qm:collision_hitbox", "visual", false, "Collision hitbox", "碰撞箱模式 pengzhuangxiang moshi 碰撞体积可视化 pengzhuang tiji keshihua collision hitbox hitbox mode 显示碰撞 武器交互 透明度 visual", "Show hazard borders, character check points and weapon ranges"},
+			{"qm:entity_overlay", "ddnet", false, "Entity layer adjustments", "实体层调整 shiti ceng tiaozheng 实体层颜色 yanse 实体层叠加 diejia entity overlay 文本实体 wenben shiti 死亡透明度 siwang 冻结透明度 dongjie 冻结颜色 dongjie yanse freeze color tint 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng ddnet", "Adjust opacity of entity layers"},
+			{"qm:collision_hitbox", "visual", false, "Collision hitbox", "碰撞箱模式 pengzhuangxiang moshi 碰撞体积可视化 pengzhuang tiji keshihua collision hitbox hitbox mode 显示碰撞 武器交互 危险边界 hazard border 角色检查点 character checkpoints 武器范围 weapon ranges 透明度 visual", "Show hazard borders, character check points and weapon ranges"},
 			{"qm:streamer", "visual", false, "Streamer mode", "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 敏感词 minganci 屏蔽词 pingbici 反规避 fangui bi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi visual 直播隐藏路人", "Protect names and skins while streaming"},
-			{"qm:translate_ui", "function", false, "Translate UI", "fanyi ui 颜色 yanse color 按钮 anniu button 菜单 caidan menu rgba 自定义 zidingyi custom function", "Customize translate button and menu colors"},
 			{"qm:gores_actor", "function", false, "Gores actor", "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv function", "Auto chat when dying in water"},
 			{"qm:gores", "function", false, "Gores", "gores kog king of gores 锤枪切换 chuichang qiehuan 自动切枪 zidong qieqiang 自动切锤 zidong qiechui gun hammer prevweapon fire 开火后切锤 kaihuo qiechui 拿到其他武器停用 快速输入 kuaisu shuru fast input 快速输入其他玩家 移动方块 yidongfangkuai 移动水 yidongshui 预测 yuce axiom quad prediction function", "Gores auto weapon switch"},
 			{"qm:solo_split", "function", false, "Solo split", "单刷 danshua 单刷模式 danshua moshi 分队 fendui 分身 fenshen dummy 队伍 duiwu team 独立 duli 各自进队 gezi jindui 组队 zudui 自动锁队 zidong suodui lock 锁队 一键 yijian 单人 danren 刷图 shuatu solo 同步 tongbu 开局 kaiju function", "Split main and dummy into different teams for solo-run sync"},
@@ -174,10 +173,9 @@ namespace qm_card_registry
 			{"qm:hud_notifications", "hud", false, "HUD notifications", "通知栏 tongzhi lan notification toast echo 系统提示 xitong tishi 黑名单 heimingdan 右侧 youce 动画 donghua 背景 beijing 文字 wenzi hud", "Show server prompts and Echo messages as popups"},
 			{"qm:voice", "hud", false, "Voice", "语音 yuyin voice chat 麦克风 maikefeng mic 静音 jingyin 音量 yinliang 语音激活 vad 阈值 yuzhi 释放延迟 shifang yanchi 服务器 fuwuqi token 叠加层 diejiaceng 按住说话 ptt push to talk 全图收听 quantu 衰减 shuijian 距离 juli 半径 banjing 测试 ceshi 本地 bendi 回环 huihuan 设备 shebei 输入 shuru 左右声道定位 左右 zuoyou 声道 shengdao 立体声 stereo 高级 gaoji advanced hud 语音没有声音怎么办", "Voice chat settings and diagnostics"},
 			{"qm:dummy_miniview", "hud", false, "Dummy mini view", "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao 离开视角 offscreen 自动显示 zidong xianshi hud", "Show a small view of the dummy"},
-			{"qm:dynamic_island", "hud", false, "Dynamic island", "灵动岛 lld lingdongdao dynamic island hud 顶部 dingbu 背景 beijing 颜色 yanse 透明度 touming 黑底 heidi 原版 yuanban 默认 moren classic old style 始终显示歌名歌手 shizhong xianshi geming geshou song title artist always show qm_hud_island_always_show_track_details 结算卡 通关结算 个人最佳 排名 完成进度 总分 qm_finish_summary", "Configure HUD island appearance"},
+			{"qm:dynamic_island", "hud", false, "Dynamic island", "灵动岛 lld lingdongdao dynamic island hud 顶部 dingbu 背景 beijing 颜色 yanse 透明度 touming 黑底 heidi 原版 yuanban 默认 moren classic old style 始终显示歌名歌手 shizhong xianshi geming geshou song title artist always show qm_hud_island_always_show_track_details 系统媒体控制 xitong meiti kongzhi smtc media controls 歌曲信息 gequ xinxi 结算卡 通关结算 个人最佳 排名 完成进度 总分 qm_finish_summary", "Configure HUD island appearance"},
 			// 歌词来源、显示与聊天发送开关共用独立歌词卡片。
-			{"qm:lyrics", "hud", false, "Lyrics", "歌词 geci lyrics 哼歌 hengge humming qm_humming 唱歌 changge singing qm_singing qm_sing 双击歌词 shuangji geci 来源 laiyuan source 网易云 wangyi netease 汽水 qishui soda spotify 显示 xianshi 翻译 fanyi 单语 danyu 双语 shuangyu 原文 yuanwen 译文 yiwen 分离 fenli 附岛 fudao qm_lyrics_language qm_lyrics_separate_island amll 社区 shequ 备用 beiyong 缓存 huancun community cache qqmusic hud 灵动岛歌词", "Configure the lyrics display"},
-			{"qm:system_media_controls", "ddnet", false, "System media controls", "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige hud", "Expose playback controls to the operating system"},
+			{"qm:lyrics", "hud", false, "Lyrics", "歌词 geci lyrics 哼歌 hengge humming qm_humming 唱歌 changge singing qm_singing qm_sing 双击歌词 shuangji geci 来源 laiyuan source 网易云 wangyi netease 汽水 qishui soda spotify 显示 xianshi 翻译 fanyi 单语 danyu 双语 shuangyu 原文 yuanwen 译文 yiwen 分离 fenli 附岛 fudao qm_lyrics_language qm_lyrics_separate_island qm_lyrics_community amll 社区 shequ 备用 beiyong 缓存 huancun community cache qqmusic hud 灵动岛歌词", "Configure the lyrics display"},
 			{"qm:background_3d", "hud", false, "3D background", "3d背景 3d beijing background particles 粒子 lizi 方块 fangkuai cube 爱心 aixin heart 球体 qiuti sphere 金字塔 jinzita pyramid 钻石 zuanshi diamond 圆环 yuanhuan ring 星形 xingxing star 月牙 yueya crescent 混合 hunhe mixed 数量 shuliang 速度 sudu 尺寸 chicun 深度 shendu 透明度 touming 颜色 yanse 随机 suiji 自定义 zidingyi 辉光 huiguang 拖尾 tuowei trail 脉冲 maichong pulse 闪烁 shanshuo twinkle 推动 tuidong 碰撞 pengzhuang 淡入 danru 淡出 danchu hud", "Configure background 3D particle effects"},
 			{"qm:gores_drown_board", "hud", false, "Gores drown board", "Gores Kog 落水 luoshui 冻结 dongjie 死亡 siwang 排行 paixing 榜单 bangdan 队伍 duiwu Tee 透明度 toumingdu 人数 renshu hud", "Configure the Gores team drown board"},
 			{"qm:nameplate_text", "hud", false, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text", "appearance-name-plate", "deck:appearance-name-plate-text"}, // 旧模块入口继续定位到外观页的文字卡片。
@@ -1070,6 +1068,41 @@ namespace qm_card_registry
 			if(pPlacement == nullptr)
 				continue;
 			Model.MoveToTab(pStableId, pPlacement->m_pDefaultTab, pPlacement->m_Column, static_cast<int>(Model.ColumnIndices(pPlacement->m_pDefaultTab, pPlacement->m_Column).size()));
+			Changed = true;
+		}
+		return Changed;
+	}
+
+	bool RepairLegacyEntityOverlayTab(qm_card_order::CModel &Model)
+	{
+		const char *pStableId = "qm:entity_overlay";
+		const int Index = Model.FindByStableId(pStableId);
+		if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, "visual") != 0)
+			return false;
+		const qm_card_order::SEntry *pPlacement = FindDefaultPlacement(pStableId);
+		if(pPlacement == nullptr)
+			return false;
+		// 追加到目标列末尾，保留用户在 DDNet 页已有的卡片顺序；重复加载不再改动。
+		Model.MoveToTab(pStableId, pPlacement->m_pDefaultTab, pPlacement->m_Column, static_cast<int>(Model.ColumnIndices(pPlacement->m_pDefaultTab, pPlacement->m_Column).size()));
+		return true;
+	}
+
+	bool RepairMisplacedCardTabs(qm_card_order::CModel &Model)
+	{
+		bool Changed = false;
+		for(const qm_card_order::SEntry &Default : ComputedDefaultEntries())
+		{
+			if(Default.m_pStableId == nullptr || Default.m_pDefaultTab == nullptr)
+				continue;
+			const int Index = Model.FindByStableId(Default.m_pStableId);
+			if(Index < 0)
+				continue;
+			const char *pTab = Model.Entry(Index).m_pDefaultTab;
+			if(pTab != nullptr && str_comp(pTab, Default.m_pDefaultTab) == 0)
+				continue;
+			// 追加到默认列末尾：恢复可见性，同时不打断目标页已有卡片的顺序。
+			Model.MoveToTab(Default.m_pStableId, Default.m_pDefaultTab, Default.m_Column,
+				static_cast<int>(Model.ColumnIndices(Default.m_pDefaultTab, Default.m_Column).size()));
 			Changed = true;
 		}
 		return Changed;

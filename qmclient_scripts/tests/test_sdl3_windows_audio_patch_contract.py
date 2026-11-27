@@ -39,7 +39,9 @@ class Sdl3WindowsAudioPatchContractTest(unittest.TestCase):
 		patched = self.source_file.read_bytes()
 		self.assertEqual(patched.count(INCLUDE), 1)
 		self.assertIn(b"/* fixture prefix */", patched)
-		self.assertTrue(patched.endswith(b"/* fixture suffix */\n"))
+		# CMake 的 file(WRITE) 在 Windows 上按文本模式落盘，\n 会被写成 \r\n；
+		# 这里只验证补丁没有吞掉尾部源码，不断言宿主换行风格。
+		self.assertTrue(patched.replace(b"\r\n", b"\n").endswith(b"/* fixture suffix */\n"))
 		self.assertEqual(self.header.read_bytes(), IMPLEMENTATION.read_bytes())
 
 	def test_reapplying_patch_refreshes_cached_implementation(self) -> None:

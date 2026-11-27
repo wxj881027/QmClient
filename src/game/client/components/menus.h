@@ -160,14 +160,8 @@ struct SQmGradientGeometryState;
 class CMenus;
 class CMenusSettingsControls;
 
-namespace NTranslateUiSettings
-{
-	void RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
-}
-
 class CMenus : public CComponent
 {
-	friend void NTranslateUiSettings::RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
 	friend class CMenusSettingsControls;
 	friend class CQmScreenshotEditor;
 	static ColorRGBA ms_GuiColor;
@@ -260,7 +254,7 @@ private:
 	void InitSettingsTabLabelCache();
 	void UpdateSettingsTabLabels();
 	void PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth = -1.0f);
-	void PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete);
+	void PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete, const struct SSettingsContentMetrics *pMetrics = nullptr);
 	void SplitSettingsScrollbarRects(const CUIRect &Rect, unsigned Flags, CUIRect *pLabelRect, CUIRect *pValueRect, CUIRect *pScrollBarRect) const;
 	int DoButton_CheckBox_Common_WithLabelElement(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, CUIElement *pLabelElement, bool ProcessInput = true, float LabelFontSize = -1.0f, bool MarkedControl = false, const void *pConfigValue = nullptr);
 	int DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
@@ -285,6 +279,7 @@ private:
 
 	bool m_SkinListScrollToSelected = false;
 	int64_t m_TeeEntranceStartTime = 0;
+	int m_TeeSettingsSubTab = 0;
 	std::optional<std::chrono::nanoseconds> m_SkinList7LastRefreshTime;
 	std::optional<std::chrono::nanoseconds> m_SkinPartsList7LastRefreshTime;
 	std::unordered_map<const void *, std::unique_ptr<ui_widget::SNumericFieldState>> m_vpSettingsNumericFieldStates;
@@ -2630,6 +2625,8 @@ public:
 	// 收起动画期间仍绘制菜单，但输入已经交回游戏；绑定释放不能被当成菜单占用输入。
 	bool IsClosing() const { return m_MenuClosing; }
 	bool IsSettingsPageActive() const;
+	// 预建游标还剩多少条（0 表示计划内所有条目都已消费过）。
+	int SettingsTextPlanCursorRemaining() const;
 	std::array<int, 9> TooltipContext() const
 	{
 		return {m_MenuActive, m_MenuPage, m_GamePage, m_Popup, g_Config.m_UiSettingsPage,
@@ -2958,7 +2955,7 @@ public:
 		float m_MaxWidth = -1.0f;
 	};
 	CUIElement &MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const SMenuTextStyleKey &StyleKey);
-	void CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps, const SMenuTextStyleKey &StyleKey);
+	void CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps, const SMenuTextStyleKey &StyleKey, const char *pSourceTag = nullptr);
 	SMenuTextStyleKey BuildMenuTextStyleKey(const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps) const;
 	SMenuTextStyleKey SettingsMenuTextPlanStyleKey(const SMenuTextPlanItem &Item) const;
 	SMenuTextStyleKey BuildSettingsShellTitleTextStyle(const CUIRect &Rect, CUIRect *pOutLabel = nullptr) const;
@@ -3007,13 +3004,36 @@ public:
 	void BuildSettingsMenuTextGlyphDemand();
 	void SyncMenuTextPoolIdentity(uint64_t CurrentFrame);
 	int CountMissingSettingsMenuTextPlanItems() const;
-	bool SettingsMenuTextPrebuildReady(const char *pOperationOverride) const;
+	int CountMissingSettingsMenuTextPoolItems();
+	int CountMissingVisibleSettingsMenuTextPoolItems();
+	void LogSettingsStartupVisibleGaps();
+	int SampleMissingSettingsMenuTextPoolItems(bool Force);
+	uint64_t SettingsMenuTextPlanLayoutSignature() const;
+	struct SSettingsTextGlyphPrewarmStats
+	{
+		int m_Batches = 0;
+		int m_NewlyQueued = 0;
+		int m_RemainingBatches = 0;
+		bool m_Complete = false;
+	};
+	SSettingsTextGlyphPrewarmStats PrewarmSettingsTextGlyphs(int MaxBatches, int MaxNewGlyphs);
+	bool SettingsMenuTextPrebuildReady(const char *pOperationOverride);
 	void PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride = nullptr, const char *pOperationOverride = nullptr);
+	// 可见页优先：OnUpdate 内只补当前 page/tab 缺失的容器，保证随后 Render
+	// 不再现场创建文字容器。最多消费 Budget 个容器。
+	void PrebuildVisibleSettingsMenuTextPool(int Budget);
 	int PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride = nullptr);
+	int PrebuildSettingsTextPoolDuringStartup(int Budget);
 	void PrebuildIngameEscTextPoolBeforeOpen(int Budget);
 	void PrewarmSettingsTextPlanBeforeFirstFrame();
 	void LogSettingsAdaptiveBudget(const char *pSource, const SSettingsAdaptiveBudgetInput &Input, const SSettingsAdaptiveBudgetOutput &Output) const;
 	void RecordQmTextPrewarmSample(int64_t StartNs, double BudgetMs, int Built);
+	// 页面/页签切换后，记录从切换到所有可见标签都命中当前代际文本池的耗时。
+	// 背景趟、纯测量趟和预建趟不参与，避免把不可见工作算进首屏文字延迟。
+	void BeginSettingsTextVisibleLatencyProbe(const char *pSource, int64_t StartNs = 0);
+	void DeactivateSettingsTextVisibleLatencyProbe();
+	void LogSettingsTextVisibleLatency();
+	bool MenuTextCoverageActive() const { return m_MenuTextPoolVisibleGuard && !m_MenuTextCoverageSuppressed; }
 	void PrewarmSettingsTextPoolForLoading(int Budget)
 	{
 		// 加载画面允许阻塞；不能套用游戏内“只吃显示器刷新周期剩余时间”的后台预算，
@@ -3102,7 +3122,13 @@ private:
 	{
 		int m_Built = 0;
 		int m_Reused = 0;
+		// m_Remaining 是最近一次采样到的真实池缺失，不是计划消费游标。
 		int m_Remaining = 0;
+		int m_PoolMissing = -1;
+		int m_CursorRemaining = 0;
+		int m_CollectionRemaining = 0;
+		int m_GrantedTokens = 0;
+		const char *m_pSkipReason = "none";
 		int m_Budget = 0;
 	};
 	struct SSettingsMenuTextPlanCollectionStats
@@ -3153,6 +3179,28 @@ private:
 	public:
 		explicit CScopedMenuTextVisibleGuard(CMenus *pMenus);
 		~CScopedMenuTextVisibleGuard();
+	};
+
+	class CScopedMenuTextCoverageSuppression
+	{
+		CMenus *m_pMenus = nullptr;
+		bool m_Previous = false;
+
+	public:
+		explicit CScopedMenuTextCoverageSuppression(CMenus *pMenus);
+		~CScopedMenuTextCoverageSuppression();
+	};
+
+	// 预建趟借用 RenderOnly 抑制绘制，但它必须写入真实文本池并构建容器。
+	// 该作用域让 MenuTextElement 区分“布局测量”和“文本池预建”。
+	class CScopedMenuTextPoolPrebuild
+	{
+		CMenus *m_pMenus = nullptr;
+		bool m_Previous = false;
+
+	public:
+		explicit CScopedMenuTextPoolPrebuild(CMenus *pMenus);
+		~CScopedMenuTextPoolPrebuild();
 	};
 
 	struct SSettingsRuntimeMetadata
@@ -3253,10 +3301,14 @@ private:
 	std::unordered_map<std::string, SMenuTextPoolEntry, SMenuTextKeyHash, SMenuTextKeyEqual> m_MenuTextPool;
 	int64_t m_MenuTextLastTrimTime = 0;
 	bool m_MenuTextBlockingPrewarm = false;
+	bool m_MenuTextStartupPrewarm = false;
 	uint64_t m_MenuTextBackgroundBudgetFrame = 0;
 	int64_t m_MenuTextBackgroundBudgetDeadline = 0;
 	int64_t m_QmTextPrewarmWindowStartNs = 0;
 	int m_QmTextPrewarmWindowFrames = 0;
+	int m_QmTextPrewarmWindowAttempts = 0;
+	int m_QmTextPrewarmWindowSkippedNotIdle = 0;
+	int m_QmTextPrewarmWindowSkippedNoHeadroom = 0;
 	double m_QmTextPrewarmWindowBudgetMs = 0.0;
 	double m_QmTextPrewarmWindowUsedMs = 0.0;
 	int m_QmTextPrewarmWindowBuilt = 0;
@@ -3278,6 +3330,9 @@ private:
 	SMenuTextPlanItem m_MenuTextPlanPendingItem;
 	uint64_t m_MenuTextCoverageFrame = 0;
 	bool m_MenuTextPoolVisibleGuard = false;
+	// 预热/校验趟读取真实池元素，但不能把自己算成可见候选或刷新 LRU。
+	bool m_MenuTextCoverageSuppressed = false;
+	bool m_MenuTextPoolPrebuildActive = false;
 	int m_MenuTextStableCandidatesThisFrame = 0;
 	int m_MenuTextStableHitsThisFrame = 0;
 	int m_MenuTextStablePoolHitsThisFrame = 0;
@@ -3286,7 +3341,10 @@ private:
 	int m_MenuTextStableFallbackImmediateThisFrame = 0;
 	int m_MenuTextStableReusedThisFrame = 0;
 	int m_MenuTextStableTextNewThisFrame = 0;
+	int m_MenuTextStableTextNewKeyThisFrame = 0;
+	int m_MenuTextStableTextRebuildThisFrame = 0;
 	int m_MenuTextStableTextReusedThisFrame = 0;
+	std::unordered_set<CUIElement *> m_MenuTextInsertedElementsThisFrame;
 	EMenuTextScope m_MenuTextStableScopeThisFrame = MENU_TEXT_SCOPE_SETTINGS;
 	int m_MenuTextStablePageThisFrame = -1;
 	int m_MenuTextStableTabThisFrame = -1;
@@ -3295,6 +3353,18 @@ private:
 	int m_MenuTextStableStalesThisFrame = 0;
 	int m_MenuTextStablePlannedThisFrame = 0;
 	int m_MenuTextStableUnplannedThisFrame = 0;
+	bool m_SettingsTextVisibleLatencyActive = false;
+	int64_t m_SettingsTextVisibleLatencyStartNs = 0;
+	uint64_t m_SettingsTextVisibleLatencyStartFrame = 0;
+	int m_SettingsTextVisibleLatencyPage = -1;
+	int m_SettingsTextVisibleLatencyTab = -1;
+	int m_SettingsTextVisibleLatencyFrames = 0;
+	int64_t m_SettingsTextVisibleLatencyFirstVisibleNs = 0;
+	int m_SettingsTextVisibleLatencyVisibleFrames = 0;
+	int m_SettingsTextVisibleLatencyFirstFrameNew = -1;
+	const char *m_SettingsTextVisibleLatencySource = "page_switch";
+	int m_LastSettingsUiScale = -1;
+	int m_LastSettingsHiDpiMilli = -1;
 	SSettingsTextPerfStats *m_pActiveSettingsTextPerfStats = nullptr;
 	std::vector<SMenuTextPlanItem> m_vSettingsMenuTextPrebuildPlan;
 	SSettingsTextPlanProgressView SettingsTextPlanProgress();
@@ -3327,6 +3397,9 @@ private:
 	std::array<int, 3> m_SettingsMenuTextVisiblePlanContext{{-1, -1, -1}};
 	SSettingsMenuTextPrebuildStats m_SettingsMenuTextLastPrebuildStats;
 	SSettingsMenuTextPlanCollectionStats m_SettingsMenuTextLastCollectionStats;
+	int m_SettingsMenuTextPoolMissingSample = -1;
+	int64_t m_SettingsMenuTextPoolMissingSampleTime = 0;
+	uint64_t m_SettingsMenuTextPlanLayoutSignature = 0;
 	std::string m_SettingsCardFocusStableId;
 	qm_card_order::CModel m_SettingsCardOrderModel;
 	bool m_SettingsCardOrderLoaded = false;
@@ -3462,7 +3535,6 @@ private:
 	void RenderQmVisualLabel(const char *pTextId, CUIRect *pRect, const char *pText, float FontSize, int TextAlign = TEXTALIGN_ML, const SLabelProperties &LabelProps = {});
 	void RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, float LineSpacing);
 	void RenderQmWordFilterFileContent(CUIRect &Content, bool Streamer, float LineHeight, float LineSpacing, float BodySize);
-	void RenderQmVisualTranslateUiContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing);
 	void RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ContentGap, bool PrewarmOnly);
@@ -3514,7 +3586,6 @@ private:
 	void RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly);
 	void RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight, float LineSpacing, bool OriginalStyle);
-	void RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 	void RenderQmHudNotificationsBasicContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);

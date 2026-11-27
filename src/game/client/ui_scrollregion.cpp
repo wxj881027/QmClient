@@ -11,6 +11,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
@@ -121,7 +122,7 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 			m_DisplayOffset = TargetOffset;
 		else if(!Ui()->RenderOnly())
 		{
-			const float Dt = maximum(0.0f, Client()->RenderFrameTime());
+			const float Dt = QmUiRenderDeltaSeconds(Client()->RenderFrameTime());
 			m_DisplayOffset += (TargetOffset - m_DisplayOffset) * (1.0f - std::exp(-Dt * 16.0f));
 			if(std::abs(TargetOffset - m_DisplayOffset) <= Ui()->PixelSize() * 0.25f)
 				m_DisplayOffset = TargetOffset;
@@ -627,7 +628,7 @@ void CScrollRegion::UpdateHotScrollRegion()
 
 void CScrollRegion::AdvanceAnimation()
 {
-	m_ScrollState.Advance(Client()->RenderFrameTime(), ScrollMetrics(), ScrollConfig());
+	m_ScrollState.Advance(QmUiRenderDeltaSeconds(Client()->RenderFrameTime()), ScrollMetrics(), ScrollConfig());
 }
 
 void CScrollRegion::MaintainNoScrollSliderActive()

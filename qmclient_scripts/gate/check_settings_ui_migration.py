@@ -18,7 +18,7 @@ PAGE_STABLE_IDS = {
 	# 图像页「视觉效果」子页签：卡片外观、界面形状与主题、图标、动效四张卡同属外观类。
 	"graphics-visual": ("deck:graphics-card-effects", "deck:graphics-theme", "deck:graphics-icons", "deck:graphics-interaction"),
 	"sound": ("deck:sound-toggle", "deck:sound-volume", "deck:sound-audio-pack"),
-	"ddnet": ("deck:ddnet-demo", "deck:ddnet-gameplay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:system_media_controls", "qm:entity_overlay"),
+	"ddnet": ("deck:ddnet-demo", "deck:ddnet-gameplay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:entity_overlay"),
 	# DDNet 页内的「网络补偿」子页签：客户端预测卡 + 从 TClient 页整卡迁来的三张预测/延迟补偿卡。
 	"ddnet-prediction": ("deck:ddnet-prediction", "tclient:input", "tclient:anti-latency-tools", "tclient:improved-anti-ping"),
 	"appearance": (
@@ -63,7 +63,6 @@ PAGE_STABLE_IDS = {
 		"qm:background_3d",
 	),
 	"qmclient_function": (
-		"qm:translate_ui",
 		"qm:gores_actor",
 		"qm:gores",
 		"qm:emoticons",

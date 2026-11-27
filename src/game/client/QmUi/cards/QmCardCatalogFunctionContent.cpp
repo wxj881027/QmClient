@@ -33,7 +33,6 @@
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/components/qmclient/translate/translate_backend.h>
 #include <game/client/components/qmclient/translate/translate_ui_common.h>
-#include <game/client/components/qmclient/translate/translate_ui_settings.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
@@ -437,6 +436,9 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{{&g_Config.m_QmChatCommandCompletion, "Show command completion in chat", Localize("Show command completion in chat")},
 			{&g_Config.m_QmChatEmojiCompletion, "Chat emoji completion", Localize("Chat emoji completion")}},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
+		{{&g_Config.m_QmAutoAcceptTeamInvite, "Auto-accept team invites", Localize("Auto-accept team invites")}},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{

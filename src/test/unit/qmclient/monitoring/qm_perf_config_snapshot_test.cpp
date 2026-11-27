@@ -16,10 +16,12 @@ namespace
 		int m_FailPart = -1;
 		int m_FailEmitAt = -1;
 		int m_EmitAttempts = 0;
+		int m_ReadCount = 0;
 		std::vector<std::string> m_vFields;
 
 		SQmPerfConfigValue ReadValue(const SConfigVariable &Variable) override
 		{
+			++m_ReadCount;
 			if(m_pFailReadName && str_comp(Variable.m_pScriptName, m_pFailReadName) == 0)
 				throw std::bad_alloc();
 			return CQmPerfDiagnosticOperations::ReadValue(Variable);
@@ -149,6 +151,18 @@ TEST_F(QmPerfConfigSnapshot, FailedChangeEmissionDoesNotAdvanceBaseline)
 	EXPECT_NE(m_Operations.m_vFields[0].find("\"revision\":3"), std::string::npos);
 	EXPECT_TRUE(m_Snapshot.Update(nullptr));
 	EXPECT_EQ(m_Operations.m_vFields.size(), 1u);
+}
+
+TEST_F(QmPerfConfigSnapshot, UnchangedValuesAreSkippedBeforeFormatting)
+{
+	ASSERT_TRUE(m_Snapshot.Start(&m_Manager, nullptr));
+	m_Operations.Clear();
+	m_Operations.m_ReadCount = 0;
+	EXPECT_TRUE(m_Snapshot.Update(nullptr));
+	EXPECT_EQ(m_Operations.m_ReadCount, 0);
+	m_First = 5;
+	EXPECT_TRUE(m_Snapshot.Update(nullptr));
+	EXPECT_EQ(m_Operations.m_ReadCount, 1);
 }
 
 TEST_F(QmPerfConfigSnapshot, UserChangeBeforeRetryLogsLatestValue)

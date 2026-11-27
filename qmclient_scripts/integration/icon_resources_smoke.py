@@ -146,7 +146,7 @@ def scenario(source: Path, workspace: Path, name: str, hostile: bool, proxy: str
 		"stdout_output_level 1",
 		"cl_save_settings 0",
 		"qm_steam_auto_launch 0",
-		"qm_pref 1 50",
+		"qm_perf 1",
 		"cl_languagefile languages/simplified_chinese.txt",
 		"tc_custom_font DejaVu Sans",
 		"qm_ui_icon_weight 0",

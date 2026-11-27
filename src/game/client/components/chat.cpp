@@ -376,7 +376,6 @@ CChat::CLine::CLine()
 	m_BodyTextContainerIndex.Reset();
 	m_TextYOffset = 0.0f;
 	m_ContentWidth = 0.0f;
-	m_CutOffProgress = 0.0f;
 	CChat::ResetPresentationState(m_Presentation);
 	m_DiagnosticPresentationState = -1;
 	m_DiagnosticCollapsedSkipLogged = false;
@@ -419,7 +418,6 @@ void CChat::CLine::Reset(CChat &This)
 	m_Layout = {};
 	m_TextYOffset = 0.0f;
 	m_ContentWidth = 0.0f;
-	m_CutOffProgress = 0.0f;
 	CChat::ResetPresentationState(m_Presentation);
 	m_DiagnosticPresentationState = -1;
 	m_DiagnosticCollapsedSkipLogged = false;
@@ -499,13 +497,6 @@ CChat::CChat()
 
 	m_EmojiCompletionListLength = 0;
 	m_aEmojiCompletionColon[0] = '\0';
-}
-
-float CChat::CalculateCutOffOffsetX(float Progress)
-{
-	if(!g_Config.m_QmChatAnimSlideOut)
-		return 0.0f;
-	return -24.0f * std::clamp(Progress, 0.0f, 1.0f);
 }
 
 void CChat::RegisterCommand(const char *pName, const char *pParams, const char *pHelpText)
@@ -662,7 +653,6 @@ void CChat::RebuildChat()
 		Line.m_Layout = {};
 		Line.m_ChatEmojiRect = {};
 		Line.m_ContentWidth = 0.0f;
-		Line.m_CutOffProgress = 0.0f;
 		Line.m_Presentation.m_RenderYInitialized = false;
 	}
 }
@@ -2743,7 +2733,6 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		PreviousLine.m_Layout = {};
 		PreviousLine.m_ChatEmojiRect = {};
 		PreviousLine.m_ContentWidth = 0.0f;
-		PreviousLine.m_CutOffProgress = 0.0f;
 		BeginLinePresentation(PreviousLine.m_Presentation, PreviousLine.m_Time, true);
 
 		CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
@@ -3614,23 +3603,23 @@ void CChat::OnRender()
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
 	const bool FocusHideSystemPromptMessages = Focus.m_HideSystemPromptMessages;
 	const bool FocusHideEcho = Focus.m_HideEchoMessages;
+	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
 	const bool HasForceVisibleLine = std::any_of(std::begin(m_aLines), std::end(m_aLines), [](const CLine &Line) { return Line.m_Initialized && Line.m_ForceVisible; });
-	if(!ShouldRenderAnyFocusFilteredChat(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, HasForceVisibleLine))
+	// HUD 编辑器要给聊天元素一份稳定的占位内容：专注模式把所有行都过滤掉时，
+	// 不能连元素一起提前返回，否则选框里永远空白。
+	if(!HudEditorPreview && !ShouldRenderAnyFocusFilteredChat(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, HasForceVisibleLine))
 	{
 		m_CommandHud.Hide();
 		return;
 	}
 
-	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
 	const bool InputActive = m_Mode != MODE_NONE;
 	const bool ShowLargeArea = ShouldShowLargeArea(m_Show, InputActive, g_Config.m_ClShowChat);
 	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	const int64_t Now = time();
 	// 动画与滚动物理必须共用渲染帧的真实步长。time() 只有毫秒精度，
 	// 60 Hz 下会在 15/16/17 ms 之间跳，弹簧每帧推进不均匀，滚动看起来一顿一顿。
-	float DeltaSeconds = std::clamp(Client()->RenderFrameTime(), 0.0f, CHAT_PRESENTATION_MAX_DELTA_SECONDS);
-	const float ChatFadeDurationSeconds = g_Config.m_QmChatAnimFadeDurationMs / 1000.0f;
-	(void)ChatFadeDurationSeconds;
+	float DeltaSeconds = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 	if(HudEditorPreview)
 		DeltaSeconds = 0.0f;
 	else
@@ -3641,6 +3630,11 @@ void CChat::OnRender()
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 	const bool ChatScrollbarOnRight = g_Config.m_QmChatScrollbarRight != 0;
 	const CUIRect ChatRect = {0.0f, 50.0f, std::min(Width, std::max(190.0f, g_Config.m_ClChatWidth + 32.0f)), 250.0f};
+	// 聊天是固定区域元素：选框、拖动和位置锚定都按整块区域算。
+	// 若按当帧内容包围盒上报，消息一多一少整块就会被重新锚定到保存位置，
+	// 实机里最后一条消息永远贴着那个点，改行内留白也看不出变化。
+	const float ChatElementBottom = 300.0f - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
+	CUIRect ChatElementRect{ChatRect.x, CHAT_HEIGHT_MIN, ChatRect.w, maximum(0.0f, ChatElementBottom - CHAT_HEIGHT_MIN)};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Chat, ChatRect);
 	float MapX0, MapY0, MapX1, MapY1;
 	Graphics()->GetScreen(&MapX0, &MapY0, &MapX1, &MapY1);
@@ -3648,6 +3642,9 @@ void CChat::OnRender()
 	UpdatePointerState();
 
 	float x = HistoryStartX();
+	// 元素宽度按这一帧真正画出来的最右边界收缩：Canvas 的蓝框要和聊天内容同宽，
+	// 不能一直顶着配置上限，否则右边会留出一大块空白，元素也挪不到屏幕右侧。
+	float ChatContentRight = x;
 	CQmChatVisibleBounds VisibleBounds(ChatRect);
 	auto ExtendBounds = [&](float X, float Y, float W, float H) {
 		VisibleBounds.Extend({X, Y, W, H});
@@ -3682,9 +3679,12 @@ void CChat::OnRender()
 		y -= PreviewBoundingBox.m_H + 4.0f;
 	}
 
-	if(InputActive)
+	// HUD 编辑器里也画输入行外壳（翻译按钮 + 「全体:」前缀），
+	// 这样预览的底边和真正打开聊天框时的最低一行一致；但不激活输入框。
+	if(InputActive || HudEditorPreview)
 	{
 		const SQmChatInputLayout InputLayout = QmChatResolveInputLayout(x, y, InputLineWidth, ScaledFontSize, InputPrefixWidth);
+		ChatContentRight = maximum(ChatContentRight, InputLayout.m_TextStartX + InputPrefixWidth);
 
 		// render chat input
 		CTextCursor InputCursor;
@@ -3813,30 +3813,37 @@ void CChat::OnRender()
 		float ScrollOffset = m_Input.GetScrollOffset();
 		float ScrollOffsetChange = m_Input.GetScrollOffsetChange();
 
-		m_Input.Activate(EInputPriority::CHAT); // Ensure that the input is active
 		// 输入内容与前缀标签（「全体」/「队伍」/「聊天」，见上方 pInputModeLabel 的 TextEx）
 		// 共用 InputContentRect.y 作为首行起点。防裁切只需把 InputClippingRect 向上扩
 		// InputClipPaddingTop，不能在文本这里再加一次，否则输入内容会比前缀低一个 padding。
 		const CUIRect InputCursorRect = {InputContentRect.x, InputContentRect.y - ScrollOffset, 0.0f, 0.0f};
-		const bool WasChanged = m_Input.WasChanged();
-		const bool WasCursorChanged = m_Input.WasCursorChanged();
-		const bool Changed = WasChanged || WasCursorChanged;
-		const STextBoundingBox BoundingBox = m_Input.Render(&InputCursorRect, InputCursor.m_FontSize, TEXTALIGN_TL, Changed, MessageMaxWidth, 0.0f);
+		STextBoundingBox BoundingBox{};
+		if(InputActive)
+		{
+			m_Input.Activate(EInputPriority::CHAT); // Ensure that the input is active
+			const bool WasChanged = m_Input.WasChanged();
+			const bool WasCursorChanged = m_Input.WasCursorChanged();
+			const bool Changed = WasChanged || WasCursorChanged;
+			BoundingBox = m_Input.Render(&InputCursorRect, InputCursor.m_FontSize, TEXTALIGN_TL, Changed, MessageMaxWidth, 0.0f);
+		}
 
 		Graphics()->ClipDisable();
 
-		// Scroll up or down to keep the caret inside the content rect.
-		// 光标与文本同基准（首行起点即 InputContentRect.y），无需再扣除顶部 padding。
-		const float CaretPositionY = m_Input.GetCaretPosition().y - ScrollOffsetChange;
-		if(CaretPositionY < InputContentRect.y)
-			ScrollOffsetChange -= InputContentRect.y - CaretPositionY;
-		else if(CaretPositionY + InputCursor.m_FontSize > InputContentRect.y + InputContentRect.h)
-			ScrollOffsetChange += CaretPositionY + InputCursor.m_FontSize - (InputContentRect.y + InputContentRect.h);
+		if(InputActive)
+		{
+			// Scroll up or down to keep the caret inside the content rect.
+			// 光标与文本同基准（首行起点即 InputContentRect.y），无需再扣除顶部 padding。
+			const float CaretPositionY = m_Input.GetCaretPosition().y - ScrollOffsetChange;
+			if(CaretPositionY < InputContentRect.y)
+				ScrollOffsetChange -= InputContentRect.y - CaretPositionY;
+			else if(CaretPositionY + InputCursor.m_FontSize > InputContentRect.y + InputContentRect.h)
+				ScrollOffsetChange += CaretPositionY + InputCursor.m_FontSize - (InputContentRect.y + InputContentRect.h);
 
-		Ui()->DoSmoothScrollLogic(&ScrollOffset, &ScrollOffsetChange, InputContentRect.h, BoundingBox.m_H);
+			Ui()->DoSmoothScrollLogic(&ScrollOffset, &ScrollOffsetChange, InputContentRect.h, BoundingBox.m_H);
 
-		m_Input.SetScrollOffset(ScrollOffset);
-		m_Input.SetScrollOffsetChange(ScrollOffsetChange);
+			m_Input.SetScrollOffset(ScrollOffset);
+			m_Input.SetScrollOffsetChange(ScrollOffsetChange);
+		}
 
 		// 补全提示也属于正文区域，不能跨过独立的翻译按钮操作区。
 		Graphics()->ClipEnable(InputPixelClip.m_X, InputPixelClip.m_Y, InputPixelClip.m_W, InputPixelClip.m_H);
@@ -3938,14 +3945,17 @@ void CChat::OnRender()
 #endif
 	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
 	const bool DisplayChat = qm_demo_display::Resolve(g_Config, DemoPlayback, VideoRendering).m_Chat;
-	if(!ShouldRenderHistory(DisplayChat, InputActive, DemoPlayback, VideoRendering))
+	// 编辑器预览同样不能被“当前这一局隐藏聊天/录像不录聊天”挡掉，否则选框里没有占位。
+	if(!HudEditorPreview && !ShouldRenderHistory(DisplayChat, InputActive, DemoPlayback, VideoRendering))
 	{
 		QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos(), &GameClient()->m_QmChatEmoji);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 
-	y -= ScaledFontSize;
+	// 历史底边始终给输入行留出一整行（没输入时这一格是空的），
+	// 最后一条消息因此停在「全体」上方，不会贴到输入行或状态栏。
+	y = QmChatHistoryBottom(y, ScaledFontSize);
 
 	const float HeightLimit = ShowLargeArea ? CHAT_HEIGHT_MIN : CHAT_HEIGHT_FULL;
 	const ColorRGBA ConfigBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
@@ -4206,6 +4216,9 @@ void CChat::OnRender()
 		CLine &Line = m_aLines[LineIndex];
 		if(!Line.m_Initialized)
 			break;
+		// HUD 编辑器只画固定预览内容，不把这一局的实时聊天快照搬进来。
+		if(HudEditorPreview)
+			continue;
 		if(SkipChatHistoryLine(Focus, Line.m_ClientId, Line.m_ForceVisible, Line.m_ServerMessageClass, LinesToSkip))
 			continue;
 		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
@@ -4226,7 +4239,6 @@ void CChat::OnRender()
 		// Don't abort the full render pass on a single malformed line.
 		if(!LineHeightValid)
 		{
-			Line.m_CutOffProgress = 0.0f;
 			continue;
 		}
 
@@ -4239,9 +4251,13 @@ void CChat::OnRender()
 			Line.m_Presentation.m_RenderY = SmoothPresentationY(Line.m_Presentation.m_RenderY, Line.m_Presentation.m_TargetY, DeltaSeconds);
 
 		const float RenderY = Line.m_Presentation.m_RenderY + Line.m_Presentation.m_RenderOffsetY;
-		Line.m_CutOffProgress = 0.0f;
+		// 硬性下边界：滚动弹簧过冲时行会被推过历史区底边，
+		// 文本容器不受裁剪约束就会压到输入行/状态栏上。超出就整行不画，
+		// 最后一条消息因此始终停在“全体”上方，和 HUD 编辑器预览一致。
+		if(RenderY + LineHeight + ExtraLineSpacing > HistoryBottom + 0.5f)
+			continue;
 		const float AnimAlpha = ClampPresentationProgress(Line.m_Presentation.m_RenderAlpha);
-		const float AnimOffsetX = Line.m_Presentation.m_RenderOffsetX + CalculateCutOffOffsetX(Line.m_CutOffProgress);
+		const float AnimOffsetX = Line.m_Presentation.m_RenderOffsetX;
 		const float AnimOffsetY = (RenderY + RealMsgPaddingY / 2.0f) - Line.m_TextYOffset;
 
 		if(AnimAlpha <= 0.001f)
@@ -4253,6 +4269,7 @@ void CChat::OnRender()
 
 		const float RenderScale = maximum(0.0f, Line.m_Presentation.m_RenderScale);
 		const float RenderedContentWidth = Line.m_ContentWidth * RenderScale;
+		ChatContentRight = maximum(ChatContentRight, x + AnimOffsetX + RenderedContentWidth);
 		const CUIRect RenderedTextRect = {x + AnimOffsetX, RenderY, RenderedContentWidth, LineHeight * RenderScale};
 		const bool MouseInsideLine = HistoryClipRect.Inside(MousePos) && IsChatLineHit(RenderedTextRect, MousePos);
 		if(CopyClickReleased && MouseInsideLine)
@@ -4410,44 +4427,100 @@ void CChat::OnRender()
 
 		static const SPreviewLine s_aPreviewLines[] = {
 			{"Server", "Welcome to QmClient", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
-			{"Teammate", "Ready?", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
-			{"Friend", "Let's go!", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Friend", "yo", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "ready?", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "one sec", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "Vote passed: /restart", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "go", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "gl hf", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "Map changed to QmClient", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "left side is clear", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "nice", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Spammer", "Hey, I'm spamming here!", ColorRGBA(1.0f, 0.72f, 0.72f, 0.92f)},
+			{"Server", "DYL finished in 01:23.456", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "gg", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "that was close", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "again?", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "Vote started: /map Kobra 2", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "f3", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "wait for me", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "DYL entered and joined the game", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "welcome", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "hi DYL", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "This line is long on purpose so the preview shows a message that wraps at the full chat width", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "lol", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "ok", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Server", "Vote passed: /map Kobra 2", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "loading...", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "take the top route", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Server", "Map changed to Kobra 2", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "go go go", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "nice one", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Server", "DYL finished in 00:58.120", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "new pb?", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "almost", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Server", "Vote passed: /restart", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
 		};
 
-		float PreviewY = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f)) - ScaledFontSize;
-		PreviewY -= RowHeight * (float)std::size(s_aPreviewLines);
-
-		for(const SPreviewLine &Line : s_aPreviewLines)
+		// 从历史和输入行的交界处往上铺，填满展开后的聊天区，
+		// 底边位置与真正聊天时最后一条消息一致；内容仍是固定样例，不取实时快照。
+		// 与真实历史同一条底边：给输入行留一整行，预览最后一条消息停在「全体」上方。
+		const float PreviewBottom = QmChatHistoryBottom(300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f)), ScaledFontSize);
+		// 行距与真实历史用同一条推进量：预览逐行上移 RowHeight + ExtraLineSpacing，
+		// 最后一行底部同样停在输入行上沿，改行距时编辑器不会和实机错位。
+		// 正文可用宽度与真实消息同一条换算，长句在这里也必须换行，
+		// 不能画成一条冲出聊天气泡和蓝框的长线。
+		const float PreviewTextMaxWidth = maximum(1.0f, ChatRect.w - x - RealMsgPaddingX * 2.0f - (g_Config.m_ClChatOld ? 0.0f : MessageTeeSize() + 2.0f));
+		float PreviewCursorY = PreviewBottom;
+		for(int PreviewIndex = 0; PreviewIndex < (int)std::size(s_aPreviewLines) && PreviewCursorY > CHAT_HEIGHT_MIN; ++PreviewIndex)
 		{
+			// 数组按时间正序排列，底部（最新）从最后一条往前取，预览读起来才像一段真实聊天，
+			// 而不是从第一句开始循环。
+			const SPreviewLine &Line = s_aPreviewLines[(int)std::size(s_aPreviewLines) - 1 - PreviewIndex % (int)std::size(s_aPreviewLines)];
 			char aPreviewText[256];
 			str_format(aPreviewText, sizeof(aPreviewText), "%s: %s", Line.m_pPrefix, Line.m_pMessage);
-			const float TextWidth = TextRender()->TextWidth(FontSize(), aPreviewText, -1, -1.0f);
-			const float PreviewWidth = minimum(ChatRect.w - x, TextWidth + RealMsgPaddingX * 1.5f + (g_Config.m_ClChatOld ? 0.0f : MessageTeeSize() + 2.0f));
+			const STextBoundingBox TextBox = TextRender()->TextBoundingBox(FontSize(), aPreviewText, -1, PreviewTextMaxWidth);
+			const float LineHeight = maximum(RowHeight, TextBox.m_H + RealMsgPaddingY);
+			const float PreviewY = PreviewCursorY - LineHeight;
+			if(PreviewY < CHAT_HEIGHT_MIN)
+				break;
+			const float PreviewWidth = minimum(ChatRect.w - x, TextBox.m_W + RealMsgPaddingX * 1.5f + (g_Config.m_ClChatOld ? 0.0f : MessageTeeSize() + 2.0f));
+			ChatContentRight = maximum(ChatContentRight, x + PreviewWidth);
 
 			if(!g_Config.m_ClChatOld)
 			{
-				// 预览行都是单行，与真实单行气泡同一条半径派生，预览看起来才和实机一致。
-				const float PreviewRounding = ui_token::chat::BubbleRadius(true, RowHeight, RowHeight);
+				// 气泡按实际行高取单行/多行半径，和实机的换行消息一致。
+				const float PreviewRounding = ui_token::chat::BubbleRadius(ui_token::chat::BubbleIsSingleLine(LineHeight, RowHeight), LineHeight, RowHeight);
 				if(BackgroundBaseColor.a > 0.0f)
-					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, RowHeight}, 1.0f, IGraphics::CORNER_ALL, PreviewRounding);
+					Ui()->RenderGaussianBlur({x, PreviewY, PreviewWidth, LineHeight}, 1.0f, IGraphics::CORNER_ALL, PreviewRounding);
 				SRoundedSurfaceParams PreviewSurface;
 				PreviewSurface.m_Radius = PreviewRounding;
 				PreviewSurface.m_Corners = IGraphics::CORNER_ALL;
 				PreviewSurface.m_PixelSize = ChatPixelSize;
-				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, RowHeight}, BackgroundBaseColor, ui_token::color::COLOR_TRANSPARENT, PreviewSurface);
+				DrawRoundedSurface(Ui(), CUIRect{x, PreviewY, PreviewWidth, LineHeight}, BackgroundBaseColor, ui_token::color::COLOR_TRANSPARENT, PreviewSurface);
 			}
 
 			TextRender()->TextColor(Line.m_TextColor);
-			TextRender()->Text(x + (g_Config.m_ClChatOld ? 0.0f : RealMsgPaddingX), PreviewY + RealMsgPaddingY * 0.5f, FontSize(), aPreviewText, -1.0f);
+			TextRender()->Text(x + (g_Config.m_ClChatOld ? 0.0f : RealMsgPaddingX), PreviewY + RealMsgPaddingY * 0.5f, FontSize(), aPreviewText, PreviewTextMaxWidth);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
-			ExtendBounds(x, PreviewY, PreviewWidth, RowHeight);
-			PreviewY += RowHeight;
+			ExtendBounds(x, PreviewY, PreviewWidth, LineHeight);
+			PreviewCursorY = PreviewY - ExtraLineSpacing;
 		}
+
+		// 实机只有在输入框打开、历史超过视口时才画滚动条；编辑器要预览的就是那个状态，
+		// 所以给一份固定几何（内容高度按视口两倍，停在最新一条），左右跟随配置。
+		const float PreviewHistoryHeight = maximum(0.0f, PreviewBottom - CHAT_HEIGHT_MIN);
+		const SQmChatScrollbarFrame PreviewScrollbar = QmResolveChatScrollbarFrame(ChatRect, CHAT_HEIGHT_MIN, PreviewHistoryHeight, PreviewHistoryHeight * 2.0f, 1.0f, ChatScrollbarOnRight);
+		if(PreviewScrollbar.m_Visible)
+			QmDrawChatScrollbar(Ui(), PreviewScrollbar.m_Rail, PreviewScrollbar.m_Thumb, false);
 	}
 	Graphics()->ClipDisable();
 
-	if(VisibleBounds.Valid())
-		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, VisibleBounds.Rect());
+	// 编辑器选框与实机共用同一块占位：上沿是展开时的裁剪线
+	// （CHAT_HEIGHT_MIN 在这里是屏幕坐标，不是高度），下沿停在状态栏上边，
+	// 右沿贴着这一帧最宽的一条消息，蓝框不再比内容宽出一大截。
+	ChatElementRect.w = std::clamp(ChatContentRight - ChatRect.x, 1.0f, ChatRect.w);
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, ChatElementRect);
 
 	// 与输入法候选栏相同，浮层覆盖聊天记录，不参与记录布局。
 	QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos(), &GameClient()->m_QmChatEmoji);
@@ -4783,9 +4856,7 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 	ButtonState.m_Hovered = Hovered;
 	ButtonState.m_Pressed = Pressed;
 	ButtonState.m_Selected = IsOpen;
-	const ColorRGBA ButtonSurface = IsEnabled ?
-						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled, true)) :
-						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled, true));
+	const ColorRGBA ButtonSurface = IsEnabled ? Theme.m_Selected : ResolveConfiguredControlSurface();
 	const SUiSecondaryButtonStyle ButtonStyle = ResolveUiButtonStyle(EUiButtonRole::ICON, ButtonSurface, Theme.m_Surface, Theme, ButtonState);
 	DrawRoundedSurface(Ui(), Circle, ButtonStyle.m_Fill, ButtonStyle.m_Border, ui_token::radius::PILL, BorderWidth);
 
@@ -4836,8 +4907,6 @@ bool CChat::TranslateVisibleChatLines()
 		if(!ShowLargeArea && Line.m_Presentation.m_LayoutVisibility <= 0.001f && Line.m_Presentation.m_RenderAlpha <= 0.001f)
 			continue;
 		if(Line.m_Layout.HeightFor(ShowLargeArea) < 0.0f)
-			continue;
-		if(Line.m_CutOffProgress >= 1.0f)
 			continue;
 		if(!QmChatEmojiShouldTranslate(Line.m_ChatEmoji))
 			continue;

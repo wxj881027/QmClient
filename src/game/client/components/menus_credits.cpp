@@ -475,6 +475,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 	FriendLinks.m_RenderMeasured = [this, Metrics, LineHeight, LineSpacing, ReadOnly](CUIRect &Content) {
 		static CButtonContainer s_DdnetWorkshopButton, s_DdnetWebsiteButton, s_QmClientWebsiteButton;
 		static CButtonContainer s_ShengyanButton, s_TeeDataButton, s_DdStatsButton, s_AxiomButton, s_DdnetArchiveShareButton;
+		static CButtonContainer s_DdnetSandboxButton;
 		// 站点图标纹理：首次渲染时各加载一次，失败则回退到 EQmIcon 字形。
 		enum
 		{
@@ -543,6 +544,12 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 				Client()->ViewLink("https://axiom.teeworlds.cn/");
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetArchiveShareButton, "credits-links-ddnet-archive-share", Localize("DDNet Archive Share"), 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("http://p.ddrace.cn/");
+		}
+		if(Flow.Control("friend-link-actions-4", LineHeight, Row, LineSpacing))
+		{
+			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
+			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetSandboxButton, "credits-links-ddnet-sandbox", "DDNet Sandbox", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::HOUSE, FONT_ICON_HOUSE) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
+				Client()->ViewLink("https://www.kexusama.cn/");
 		}
 	};
 	qm_settings_content::UseDeclaredContent(FriendLinks, Ui(), TextRender());

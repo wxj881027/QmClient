@@ -289,6 +289,30 @@ japanese = "適用"
             ),
             "qmclient",
         )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("src/game/client/components/qmclient/word_filter_list.cpp")
+            ),
+            "word_filter",
+        )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("src/game/client/components/qmclient/public_word_filter.cpp")
+            ),
+            "word_filter",
+        )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("src/game/client/QmUi/QmWikiEditor.cpp")
+            ),
+            "wiki_ui",
+        )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("src/game/client/QmUi/QmWikiStore.cpp")
+            ),
+            "wiki_ui",
+        )
 
     def test_all_config_help_has_simplified_chinese_translation(self):
         config_paths = tuple(
@@ -318,7 +342,7 @@ japanese = "適用"
         self.assertIn("BuildLocalizedConfigHelpText", console_source)
         self.assertIn("ConfigManager()->PossibleConfigVariables", console_source)
         self.assertIn("pVar->m_pHelpLocalizeKey", console_source)
-        self.assertIn('Localize(pCommandHelp)', console_source)
+        self.assertIn("Localize(pVar->m_pHelpLocalizeKey)", console_source)
         self.assertIn(
             'Localize("%s (default: %d, min: %d, max: %d)", "Config help")',
             console_source,
@@ -795,36 +819,24 @@ spanish = "Aplicar"
             report.warnings,
         )
 
-    def test_translation_quality_report_warns_for_long_translation(self):
+    def test_translation_quality_does_not_limit_translation_length(self):
         store = {
             "menus": {
                 ("Short label", ""): {
                     "spanish": "Esta traducción es deliberadamente demasiado larga para una etiqueta corta",
                 }
-            }
-        }
-
-        report = i18n_store.translation_quality_report(store)
-
-        self.assertEqual(report.errors, [])
-        self.assertTrue(
-            any("length risk" in item for item in report.warnings),
-            report.warnings,
-        )
-
-    def test_translation_quality_ignores_cross_script_length_ratio(self):
-        store = {
+            },
             "qmclient": {
                 ("中文设置项", ""): {
                     "german": "Eine deutlich längere deutsche Übersetzung für die Einstellung",
                 }
-            }
+            },
         }
 
         report = i18n_store.translation_quality_report(store)
 
         self.assertEqual(report.errors, [])
-        self.assertFalse(any("length risk" in item for item in report.warnings))
+        self.assertEqual(report.warnings, [])
 
     def test_pending_translation_is_one_explicit_warning(self):
         store = {
@@ -841,7 +853,6 @@ spanish = "Aplicar"
         self.assertEqual(len(report.warnings), 1)
         self.assertIn("pending translation placeholder", report.warnings[0])
         self.assertNotIn("placeholder mismatch", report.warnings[0])
-        self.assertNotIn("length risk", report.warnings[0])
 
     def test_validate_module_calls_store_integrity_errors(self):
         validate_path = (

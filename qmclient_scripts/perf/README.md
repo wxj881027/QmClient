@@ -2,7 +2,7 @@
 
 本目录保留真实客户端帧耗时、卡顿归因、配置变化和采样偏差的 HTML/JSON 分析能力。代码性能质量优先使用 Google Benchmark，工作流见 [性能验证参考](../../.agents/skills/qmclient-verification-gate/references/performance.md)；常规代码验收不要求生成 HTML，CPU 微基准也不能代替这些运行场景数据。
 
-在控制台输入 `qm_perf_debug 1`，或在「设置 → QmClient → HUD → 调试模式」开启唯一总开关。关闭使用 `qm_perf_debug 0`，游戏内立即生效；每次开启创建新的日志和会话 ID。
+在控制台输入 `qm_perf 1` 开启，`qm_perf 0` 关闭，`qm_perf` 查询当前状态。开关写入 `qm_perf_auto_record`，下次启动自动开始记录；每次开启创建新的日志和会话 ID。
 
 ## 自动采集
 
@@ -15,8 +15,9 @@
 - 设置文本缺失日志每个会话、覆盖帧和分类组合只保留一个样本，单覆盖帧最多 64 个组合。`frame` 保留客户端帧号，菜单内部计数单独记为 `coverage_frame`；旧日志的文本事件可能用内部计数覆盖 `frame`，不能直接与整帧样本对齐。
 - 主线程、渲染阶段明细使用 300 FPS 对应的帧预算自动筛选；普通明细每秒最多 1000 条，超出数量写入日志。完整帧统计、FPS 窗口和卡顿汇总不受此限制。
 - 卡顿目标保持 300 FPS。连续低帧合并为同一区间，恢复稳定一秒后结束；持续低帧每 10 秒写出分段。有效限帧低于 300 FPS 时，达到限帧周期 1.5 倍才采集组件明细，稳定区间只写摘要（`detail_mode=summary`）。异常区间的 `component_sample` 只统计达到明细阈值的帧，功能开关取这些帧里最慢的一帧。无有效限帧时仍按原 300 FPS 预算采集。
+- 卡顿窗口最多保留前 128 个启用的布尔型功能项；组件明细只记录 max >= 0.05ms 的项。两次日志写入会让下一帧重新超预算，必须限制单次窗口的落盘量。
 - 图标诊断按窗口汇总；关闭采集、退出或重启时，先写完剩余帧、卡顿窗口、配置和会话结束标记，再关闭文件。
-- `qm_perf_logfile`、`qm_perf_stutter_diagnostics`、`qm_perf_debug_threshold_ms` 已移除，使用 `qm_perf_debug` 即可。
+- `qm_perf_logfile`、`qm_perf_stutter_diagnostics`、`qm_perf_debug_threshold_ms` 已移除，使用 `qm_perf` 即可；明细阈值固定为默认值，不再作为命令参数。
 
 ## 当前配置
 

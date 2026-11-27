@@ -632,7 +632,7 @@ namespace
 			"qm:mini_features",
 			Localizable("Convenience options for chat, the scoreboard and tune zones."),
 			Localizable("Switch on only the ones you recognize; chat completion affects the chat input, and \"Show Qm badge\" adds the Qm marker next to names on the scoreboard."),
-			Localizable("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"),
+			Localizable("These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered."),
 		},
 		{
 			"qm:pie_menu",
@@ -689,12 +689,6 @@ namespace
 			Localizable("It only changes what you see: your own name, chat and skin are still sent to the server and stay visible to others."),
 		},
 		{
-			"qm:system_media_controls",
-			Localizable("Links the music playing on your system with the system media controls, and can show its title in the top-left HUD."),
-			Localizable("Tick \"Enable system media control\", then \"Show song info in top-left corner\"; the Previous, Play/Pause and Next buttons drive the track."),
-			Localizable("Nothing appears until a media app is playing; use the buttons to check which app the system reports."),
-		},
-		{
 			"qm:tooltip",
 			Localizable("The look of the help bubbles that appear when you hover over buttons, settings and bind rows."),
 			Localizable("Adjust the tooltip font size and bounce animation here. The background follows the popup layer color."),
@@ -705,12 +699,6 @@ namespace
 			Localizable("Shows a translated copy of received chat lines and can translate your own messages before they are sent."),
 			Localizable("Turn on \"Auto translate received messages\", pick a \"Translation service\", set \"Translate received messages to\", then press \"Test translation\"."),
 			Localizable("Each service needs its own API key and network access; run \"Test translation\" after changing keys."),
-		},
-		{
-			"qm:translate_ui",
-			Localizable("Colors of the translate button in the chat input and of the language menu that button opens."),
-			Localizable("Set \"Button - Disabled\" and \"Button - Enabled\" for the button, then \"Menu background\" and the two menu option rows for the popup."),
-			Localizable("\"Button - Enabled\" only shows while automatic outgoing translation is on; \"Reset translation colors\" undoes your changes."),
 		},
 		{
 			"qm:voice",

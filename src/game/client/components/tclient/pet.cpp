@@ -27,7 +27,7 @@ void CPet::OnRender()
 	}
 	m_FollowedClientId = PlayerId;
 	const auto &Player = GameClient()->m_aClients[PlayerId];
-	const float Delta = Client()->RenderFrameTime();
+	const float Delta = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 	const float Now = (float)Client()->GameTick(g_Config.m_ClDummy) / (float)Client()->GameTickSpeed();
 
 	const float Scale = (float)g_Config.m_QmPetSize / 100.0f;

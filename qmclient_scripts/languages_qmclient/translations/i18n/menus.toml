@@ -837,22 +837,6 @@ simplified_chinese = "聊天框、表情选择、计分板和观战选择的展�
 traditional_chinese = "聊天框、表情選擇、計分板和觀戰選擇的展示動畫"
 
 [[message]]
-key = "Animate country flags"
-[message.translations]
-simplified_chinese = "国旗入场动画"
-traditional_chinese = "國旗入場動畫"
-japanese = "国旗をアニメーション"
-korean = "국기 애니메이션"
-russian = "Анимация флагов стран"
-german = "Länderflaggen animieren"
-spanish = "Animar las banderas de países"
-french = "Animer les drapeaux des pays"
-brazilian_portuguese = "Animar as bandeiras dos países"
-portuguese = "Animar as bandeiras dos países"
-turkish = "Ülke bayraklarını canlandır"
-polish = "Animuj flagi krajów"
-
-[[message]]
 key = "Animate settings card expand and collapse height changes"
 [message.translations]
 simplified_chinese = "展开或折叠设置卡片时播放高度过渡动画"
@@ -1445,22 +1429,6 @@ brazilian_portuguese = "Clique para selecionar e clique duas vezes para colorir.
 portuguese = "Clique para selecionar e faça duplo clique para colorir. Arraste para substituir uma peça. Clique com o botão direito para repor."
 turkish = "Seçmek için tıklayın, renklendirmek için çift tıklayın. Parçayı değiştirmek için sürükleyin, sıfırlamak için sağ tıklayın."
 polish = "Kliknij, aby wybrać. Kliknij dwukrotnie, aby zabarwić. Przeciągnij, aby zastąpić część. Prawy przycisk myszy przywraca ustawienia."
-
-[[message]]
-key = "Export failed. Could not compose %d edited slot(s)."
-[message.translations]
-simplified_chinese = "导出失败。有 %d 个已编辑的部件无法合成。"
-traditional_chinese = "匯出失敗。有 %d 個已編輯的部件無法合成。"
-japanese = "書き出しに失敗しました。編集したパーツ %d 個を合成できませんでした。"
-korean = "내보내기에 실패했습니다. 편집한 부품 %d개를 합성할 수 없습니다."
-russian = "Не удалось экспортировать: не удалось собрать изменённые детали (%d)."
-german = "Export fehlgeschlagen. %d bearbeitete Teile konnten nicht zusammengesetzt werden."
-spanish = "No se pudo exportar. No se pudieron componer %d piezas editadas."
-french = "Échec de l’exportation. Impossible de composer %d pièces modifiées."
-brazilian_portuguese = "Falha ao exportar. Não foi possível compor %d peças editadas."
-portuguese = "A exportação falhou. Não foi possível compor %d peças editadas."
-turkish = "Dışa aktarma başarısız. Düzenlenen %d parça birleştirilemedi."
-polish = "Eksport nie powiódł się. Nie udało się połączyć zmodyfikowanych części (%d)."
 
 [[message]]
 key = "Replace same-size parts in the target family."
@@ -7719,6 +7687,22 @@ turkish = "Dışa aktar"
 polish = "Eksportuj"
 
 [[message]]
+key = "Export failed. Could not compose %d edited slot(s)."
+[message.translations]
+simplified_chinese = "导出失败：无法合成 %d 个已编辑槽位。"
+traditional_chinese = "匯出失敗：無法合成 %d 個已編輯的插槽。"
+japanese = "エクスポートに失敗しました。編集済みスロット %d 個を合成できませんでした。"
+korean = "내보내기 실패: 편집한 슬롯 %d개를 합성할 수 없습니다."
+russian = "Не удалось экспортировать. Не удалось объединить изменённые слоты: %d."
+german = "Export fehlgeschlagen. %d bearbeitete Slots konnten nicht zusammengesetzt werden."
+spanish = "Error al exportar. No se pudieron componer %d ranuras editadas."
+french = "Échec de l’exportation. Impossible de composer %d emplacements modifiés."
+brazilian_portuguese = "Falha ao exportar. Não foi possível compor %d slots editados."
+portuguese = "Falha ao exportar. Não foi possível compor %d ranhuras editadas."
+turkish = "Dışa aktarma başarısız. Düzenlenen %d yuva birleştirilemedi."
+polish = "Eksport nie powiódł się. Nie można złożyć %d edytowanych slotów."
+
+[[message]]
 key = "Export name contains invalid characters."
 [message.translations]
 simplified_chinese = "导出名称包含无效字符。"
@@ -13513,7 +13497,7 @@ polish = "Po osiągnięciu limitu stare pliki są usuwane, więc skopiuj dema, k
 [[message]]
 key = "Old single-segment hook collision line"
 [message.translations]
-simplified_chinese = "旧版单段钩索碰撞线"
+simplified_chinese = "旧版单段钩子辅助线"
 traditional_chinese = "舊版單段鉤索碰撞線"
 japanese = "旧式の単一セグメントフック衝突線"
 korean = "이전 단일 구간 갈고리 충돌선"

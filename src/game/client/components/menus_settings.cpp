@@ -229,6 +229,12 @@ namespace
 	{
 		return g_Localization.Languages().size() <= QM_LANGUAGE_ROW_CACHE_CAPACITY;
 	}
+	// 内置英语在索引里没有文件名；空 TextId 无法进入文本计划，会每帧报
+	// missing_descriptor。给默认语言一个稳定 id，其余语言仍用文件名。
+	const char *LanguageRowTextId(const CLanguage &Language)
+	{
+		return Language.m_Filename.empty() ? "language-default" : Language.m_Filename.c_str();
+	}
 
 	const char *SettingsPageName(const int Page)
 	{
@@ -605,24 +611,23 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	TabBar.w = std::min(TabBar.w, 280.0f * Metrics.m_UiScale);
 	CUIRect aTabs[2];
 	TabBar.VSplitMid(&aTabs[0], &aTabs[1]);
-	static int s_SubTab = 0;
 	static CButtonContainer s_aTabs[2];
 	const char *apLabels[] = {Localize("Tee"), Localize("Profiles")};
-	s_SubTab = ui_widget::CapsuleTabBar(TabBarUiContext(), MakeUiScopeHash("settings_tee_sub_tabs_capsule"), aTabs, std::size(aTabs), s_SubTab, SettingsCapsuleTabBarStyle());
+	m_TeeSettingsSubTab = ui_widget::CapsuleTabBar(TabBarUiContext(), MakeUiScopeHash("settings_tee_sub_tabs_capsule"), aTabs, std::size(aTabs), m_TeeSettingsSubTab, SettingsCapsuleTabBarStyle());
 	for(int Tab = 0; Tab < 2; ++Tab)
 	{
-		DoButton_MenuTab(&s_aTabs[Tab], apLabels[Tab], s_SubTab == Tab, &aTabs[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+		DoButton_MenuTab(&s_aTabs[Tab], apLabels[Tab], m_TeeSettingsSubTab == Tab, &aTabs[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
 	}
 	if(!m_MenuTextPlanCollecting && !Ui()->MeasurementOnly())
 	{
-		const uint64_t DisplayKey = (static_cast<uint64_t>(SETTINGS_TEE) << 32) | static_cast<uint64_t>(s_SubTab + 1);
+		const uint64_t DisplayKey = (static_cast<uint64_t>(SETTINGS_TEE) << 32) | static_cast<uint64_t>(m_TeeSettingsSubTab + 1);
 		if(m_SettingsCardDeckDisplayState.EnterView(DisplayKey))
 		{
 			m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
 			m_TeeEntranceStartTime = time_get();
 		}
 	}
-	if(s_SubTab == 1)
+	if(m_TeeSettingsSubTab == 1)
 	{
 		CommitSettingsTeeSkinEdits();
 		RenderSettingsTClientProfiles(MainView);
@@ -711,7 +716,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 	RenderSettingsCatalogPage(MainView, "sound");
 }
 
-void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
+void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete, const SSettingsContentMetrics *pMetrics)
 {
 	if(!UseLanguagePageCache())
 	{
@@ -719,10 +724,17 @@ void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 		gs_LanguagePageCacheComplete = false;
 		return;
 	}
+	const bool CollectingPlan = m_MenuTextPlanCollecting;
+	// 这里既包含全语言预建，也包含仅查容器的校验趟；两者都不能把自己算成
+	// 可见候选，否则语言页会把 20 多条不可见标签混进 candidates/pool_hit。
+	const CScopedMenuTextCoverageSuppression CoverageSuppression(this);
 
 	CUIRect List;
 	LayoutLanguagePageBaseRects(MainViewWidth, List);
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainViewWidth);
+	// 调用方（常规页语言卡片 / 语言页）已经把它的度量传进来时必须以它为准：
+	// 行内退、行高、字号都取自同一份 metrics，预热容器和可见绘制的行宽才会
+	// 落在同一个缓存键与同一个尺寸上，否则首帧仍会逐行重建。
+	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainViewWidth);
 	const SLanguageListRowLayout RowLayout = ResolveLanguageListRowLayout(Metrics);
 
 	const float LabelWidth = LanguageListLabelWidth(List, Metrics);
@@ -736,7 +748,7 @@ void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 	{
 		for(size_t i = 0; i < g_Localization.Languages().size(); ++i)
 		{
-			CUIElement &LabelElement = SettingsTextElement(SETTINGS_LANGUAGE, -1, g_Localization.Languages()[i].m_Filename.c_str());
+			CUIElement &LabelElement = SettingsTextElement(SETTINGS_LANGUAGE, -1, LanguageRowTextId(g_Localization.Languages()[i]));
 			if(!LabelElement.Rect(0)->m_UITextContainer.Valid())
 			{
 				LabelCacheInvalid = true;
@@ -744,7 +756,8 @@ void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 			}
 		}
 	}
-	if(!LanguageChanged &&
+	if(!CollectingPlan &&
+		!LanguageChanged &&
 		!LabelCacheInvalid &&
 		!LabelWidthChanged &&
 		!FontSizeChanged &&
@@ -765,17 +778,20 @@ void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 		CUIRect Label;
 		CUIRect RowContent = LanguageListRowContentRect(ItemRect, RowLayout);
 		RowContent.VSplitLeft(RowLayout.m_FlagWidth, nullptr, &Label);
-		CUIElement &LabelElement = SettingsTextElement(SETTINGS_LANGUAGE, -1, Language.m_Filename.c_str());
+		CUIElement &LabelElement = SettingsTextElement(SETTINGS_LANGUAGE, -1, LanguageRowTextId(Language));
 		CUIElement::SUIElementRect &RectEl = *LabelElement.Rect(0);
 		const bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();
 		const bool TextChanged = RectEl.m_Text != Language.m_Name.c_str();
 		const bool SizeChanged = RectEl.m_Width != Label.w || RectEl.m_Height != Label.h;
 		const bool NeedsTextContainer = !RectEl.m_UITextContainer.Valid() || ColorChanged || TextChanged || SizeChanged;
-		if(!ForceComplete && NeedsTextContainer && !SettingsWarmupConsumeBudget(m_SettingsFrameBudget, ESettingsWarmupCost::TEXT_CONTAINER))
+		if(!CollectingPlan && !ForceComplete && NeedsTextContainer && !SettingsWarmupConsumeBudget(m_SettingsFrameBudget, ESettingsWarmupCost::TEXT_CONTAINER))
 			return;
 		DoSettingsLabelStreamed(LabelElement, &Label, Language.m_Name.c_str(), Metrics.m_BodySize, TEXTALIGN_ML, {}, -1, nullptr, false);
 	}
 
+	// 计划收集只负责产出 descriptor/矩形；缓存完成标记留给真实可见趟。
+	if(CollectingPlan)
+		return;
 	gs_LanguageLabelWidth = LabelWidth;
 	gs_LanguageLabelFontSize = Metrics.m_BodySize;
 	str_copy(gs_aLanguageCacheLanguageFile, g_Config.m_ClLanguagefile);
@@ -820,6 +836,11 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	static bool s_ScrollToInitialSelection = true;
 	const bool UseCache = UseLanguagePageCache();
 	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
+	// 计划收集/测高不能推进真实滚动区，也不能消费“首次滚动到当前语言”。
+	// 否则预热跑过一遍后，玩家第一次打开语言列表时选中项不在视野里。
+	const bool MeasurementPass = Ui()->MeasurementOnly();
+	static CScrollRegion s_MeasurementLanguageScrollRegion;
+	CScrollRegion &LanguageScrollRegion = MeasurementPass ? s_MeasurementLanguageScrollRegion : gs_LanguageScrollRegion;
 	const CLanguage *pActivatedLanguage = nullptr;
 	bool FoundSelectedLanguage = false;
 
@@ -868,7 +889,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	// 轨道两端按容器圆角内缩：细轨端头不会从容器圆角外侧探出来。行区已经按容器内边距
 	// 内缩过一档，这里扣掉内边距，两者不叠加（与 CListBox 的轨道内缩同一条公式）。
 	ScrollParams.m_ScrollbarTrackInset = maximum(0.0f, ContainerRadius - RowLayout.m_ContainerPadding);
-	SSettingsScrollRegionFrame ScrollFrame = BeginSettingsScrollRegion(gs_LanguageScrollRegion, &ScrollView, ScrollParams, s_PrevLanguageScrollY);
+	SSettingsScrollRegionFrame ScrollFrame = BeginSettingsScrollRegion(LanguageScrollRegion, &ScrollView, ScrollParams, s_PrevLanguageScrollY);
 	ScrollOffset = ScrollFrame.m_BeginOffset;
 
 	// 行宽按「恒定预留滚动条列」算：细轨 + 外边距 + 行与轨道之间的缝
@@ -901,7 +922,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	const bool EntryEnabled = g_Config.m_QmUiMotionLevel > 0;
 	const float EntryElapsed = s_EntryAnimation.Resolve(EntryNow, EntryFreq, EntryEnabled, g_Config.m_QmUiMotionLevel,
 		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
-	const bool ScrollAnimating = gs_LanguageScrollRegion.Animating();
+	const bool ScrollAnimating = LanguageScrollRegion.Animating();
 	const bool SnapFeedback = g_Config.m_QmUiMotionLevel == 0 || ScrollAnimating || s_ScrollFeedbackSnap;
 	s_ScrollFeedbackSnap = ScrollAnimating;
 	const bool UpdateFeedback = !Ui()->AnimationsBlocked();
@@ -919,7 +940,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		const bool Selected = !FoundSelectedLanguage && str_comp(Language.m_Filename.c_str(), g_Config.m_ClLanguagefile) == 0;
 		if(Selected)
 			FoundSelectedLanguage = true;
-		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, s_ScrollToInitialSelection && Selected, Selected);
+		const bool Visible = LanguageScrollRegion.AddRect(ItemRect, s_ScrollToInitialSelection && Selected, Selected);
 		if(!Visible)
 			continue;
 		++VisibleLanguages;
@@ -954,7 +975,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		CapsuleRect.x += CapsuleInsetX;
 		CapsuleRect.w = maximum(0.0f, CapsuleRect.w - 2.0f * CapsuleInsetX);
 		const float RowRadius = ui_token::list::RowRadius(RowLayout.m_RowHeight);
-		if(HoverAlpha > 0.001f && !gs_LanguageScrollRegion.Animating())
+		if(HoverAlpha > 0.001f && !LanguageScrollRegion.Animating())
 			DrawRoundedSurface(Ui(), CapsuleRect, RowFeedback.WithMultipliedAlpha(HoverAlpha), ColorRGBA(), RowRadius);
 		if(SelectedAlpha > 0.001f)
 			DrawRoundedSurface(Ui(), CapsuleRect, RowFeedback.WithMultipliedAlpha(SelectedAlpha), ColorRGBA(), RowRadius);
@@ -968,7 +989,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		GameClient()->m_CountryFlags.Render(Language.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->ControlAlphaScale()), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
 		if(UseCache)
 		{
-			CUIElement &LabelElement = SettingsTextElement(SETTINGS_LANGUAGE, -1, Language.m_Filename.c_str());
+			CUIElement &LabelElement = SettingsTextElement(SETTINGS_LANGUAGE, -1, LanguageRowTextId(Language));
 			if(LabelElement.Rect(0)->m_UITextContainer.Valid())
 				++CacheHits;
 			else
@@ -980,15 +1001,17 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	}
 	s_SelectedFeedback.EndFrame();
 	s_HoverFeedback.EndFrame();
-	s_ScrollToInitialSelection = false;
+	if(!MeasurementPass)
+		s_ScrollToInitialSelection = false;
 	CUIRect ScrollRegion;
 	ScrollRegion.x = MainView.x;
 	ScrollRegion.y = Content.y;
 	ScrollRegion.w = MainView.w;
 	ScrollRegion.h = 0.0f;
-	FinishSettingsScrollRegion(gs_LanguageScrollRegion, ScrollFrame, &ScrollRegion, SETTINGS_LANGUAGE);
-	s_PrevLanguageScrollY = ScrollFrame.m_FinalOffsetY;
-	const bool LanguageScrollActive = QmMenuUiScrollPerfActive(gs_LanguageScrollRegion.WheelConsumedThisFrame(), gs_LanguageScrollRegion.Active(), gs_LanguageScrollRegion.Animating());
+	FinishSettingsScrollRegion(LanguageScrollRegion, ScrollFrame, MeasurementPass ? nullptr : &ScrollRegion, MeasurementPass ? -1 : SETTINGS_LANGUAGE, !MeasurementPass);
+	if(!MeasurementPass)
+		s_PrevLanguageScrollY = ScrollFrame.m_FinalOffsetY;
+	const bool LanguageScrollActive = !MeasurementPass && QmMenuUiScrollPerfActive(LanguageScrollRegion.WheelConsumedThisFrame(), LanguageScrollRegion.Active(), LanguageScrollRegion.Animating());
 	if(LanguageScrollActive)
 	{
 		StartSettingsPerfScrollWindow("language_list_scroll", SettingsPerfContextName(), "settings:language", "none");
@@ -1020,6 +1043,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 	const bool Interactive = !CollectingMenuTextPlan && !Ui()->RenderOnly();
 	const bool SettingsPerfEnabled = PerfDebugEnabled() && !CollectingMenuTextPlan;
 	const int64_t SettingsRenderStartTime = PerfDebugStartTime();
+	const int64_t SettingsFrameStartNs = time_get_nanoseconds().count();
 	// This handles cases where old config files have an invalid page index
 	if(!CollectingMenuTextPlan)
 	{
@@ -1041,6 +1065,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 	};
 	static SAssetsEditorExitRequest s_AssetsEditorExitRequest;
 	const auto SelectSettingsPage = [this](int Page) {
+		const int PreviousPage = g_Config.m_UiSettingsPage;
 		if(Page != SETTINGS_ASSETS && (m_AssetsEditorState.m_Open || m_AssetsEditorState.m_Initialized))
 		{
 			if(m_AssetsEditorState.m_Open)
@@ -1054,6 +1079,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 			}
 		}
 		g_Config.m_UiSettingsPage = Page;
+		if(Page != PreviousPage)
+			BeginSettingsTextVisibleLatencyProbe("page_click");
 	};
 	if(Interactive)
 	{
@@ -1283,7 +1310,16 @@ void CMenus::RenderSettings(CUIRect MainView)
 		const int PreviousTextContextTab = m_SettingsTextContextTab;
 		const int PreviousTextContextSubtab = m_SettingsTextContextSubtab;
 		m_SettingsTextContextPage = g_Config.m_UiSettingsPage;
-		m_SettingsTextContextTab = g_Config.m_UiSettingsPage == SETTINGS_TCLIENT ? m_TClientSettingsTab : (g_Config.m_UiSettingsPage == SETTINGS_QMCLIENT ? m_QmClientSettingsTab : -1);
+		if(g_Config.m_UiSettingsPage == SETTINGS_TCLIENT)
+			m_SettingsTextContextTab = m_TClientSettingsTab;
+		else if(g_Config.m_UiSettingsPage == SETTINGS_QMCLIENT)
+			m_SettingsTextContextTab = m_QmClientSettingsTab;
+		else if(g_Config.m_UiSettingsPage == SETTINGS_CONTROLS)
+			m_SettingsTextContextTab = static_cast<int>(m_MenusSettingsControls.m_Tab);
+		else if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
+			m_SettingsTextContextTab = m_TeeSettingsSubTab * 2 + (m_Dummy ? 1 : 0);
+		else
+			m_SettingsTextContextTab = -1;
 		m_SettingsTextContextSubtab = m_SettingsTextContextTab;
 		int NumSections = 0;
 		int NumSectionsVisible = 0;
@@ -1534,6 +1570,15 @@ void CMenus::RenderSettings(CUIRect MainView)
 				RestartClient();
 		}
 		s_AssetsEditorExitRequest = {};
+	}
+	if(!CollectingMenuTextPlan)
+	{
+		// 子页签、主题页签等切换发生在内容渲染内部；在帧尾用最终上下文补探针，
+		// 起点回填到本帧开头，避免把发生切换的这一帧漏出首屏延迟统计。
+		const std::array<int, 3> VisibleContext = SettingsTextPlanVisibleContext(false);
+		if(VisibleContext[1] != m_SettingsTextVisibleLatencyPage ||
+			VisibleContext[2] != m_SettingsTextVisibleLatencyTab)
+			BeginSettingsTextVisibleLatencyProbe("tab_switch", SettingsFrameStartNs);
 	}
 }
 

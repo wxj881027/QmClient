@@ -8,7 +8,6 @@
 "Absolute" aims at a fixed point and hides the speed setting, so pick "Relative" if you want to tune it.
 "Active disconnect" leaves the server without closing the client, so bind it only for deliberate use.
 "Advanced options" adds category filters and colors; join, version, rules and help texts still stay in chat.
-"Button - Enabled" only shows while automatic outgoing translation is on; "Reset translation colors" undoes your changes.
 "Copy all" only copies the filtered rows, so clear the search first if you want your whole list.
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
 "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
@@ -261,6 +260,7 @@ Adjust status bar position and text style
 Adjust system console verbosity (-3=None, -2=Errors only, -1=Warning, 0=Info, 1=Debug, 2=Trace)
 Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
+Adjust the tooltip font size and bounce animation here. The background follows the popup layer color.
 Adjust trails rendered behind Tees
 Adjust verbosity in external console (-3 = none, -2 = errors only, -1 = warnings, 0 = info, 1 = debug, 2 = trace).
 Adjusts DDRace-specific HUD parts such as team state, freeze bars and race time.
@@ -334,7 +334,6 @@ And pick one randomly
 Angle
 Angle:
 Angular gradient
-Animate country flags
 Animated title style id
 Animates the weapon in your hand when you switch or reload, plus an optional hammer rotation mode.
 Animation
@@ -471,6 +470,7 @@ Auto unspec both tees when either is hammered awake
 Auto unspec on unfreeze
 Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 Auto weapon switch
+Auto-accept team invites
 Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 Auto-connect dummy
@@ -518,6 +518,7 @@ Automatically fall back to the default asset when a custom asset sprite is fully
 Automatically launch Steam when the client is started externally, so Steam can track your playtime
 Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
+Automatically record performance diagnostics on startup
 Automatically record replays
 Automatically reply to muted players
 Automatically reply while the window is unfocused
@@ -573,6 +574,9 @@ Background 3D particle type: 1=Cube, 2=Heart, 3=Mix, 4=Sphere, 5=Pyramid, 6=Diam
 Background color
 Background Draw
 Background draw
+Background frame rate
+Background frame rate limit
+Background frame rate: 0=follow display refresh rate, 1=custom cl_refresh_rate_inactive, 2=unlimited
 Background image in menu
 Background music volume
 Background opacity
@@ -681,8 +685,6 @@ Buffer memory
 Build the status text shown above Tees
 Built-in
 Built-in cfg is empty - nothing was installed
-Button - Disabled
-Button - Enabled
 Button browser
 Button position is outside of the screen.
 Buttons
@@ -796,7 +798,6 @@ Chat completion text color
 Chat emoji completion
 Chat export cancelled
 Chat export failed
-Chat fade smooth time (milliseconds)
 Chat font size
 Chat gradient angle in degrees
 Chat gradient horizontal position percentage
@@ -968,7 +969,6 @@ Colors a halo around each tee by its race team, so teammates and opponents are e
 Colors and opacity of the popup list that suggests chat commands and emoticons while you type in chat.
 Colors for chat command and emoji completion
 Colors of the hook collision line, in case of a possible collision with:
-Colors of the translate button in the chat input and of the language menu that button opens.
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 Colors too close to the map background are hard to read while moving.
 Comic dialogue
@@ -1258,7 +1258,6 @@ Customize interface appearance and previews
 Customize laser shape and effects
 Customize QmClient visuals and effects
 Customize the position jump hint
-Customize translate button and menu colors
 Customize vote display and interaction
 Custom…
 Cut interval
@@ -1716,7 +1715,6 @@ Enable background 3D particle flicker
 Enable background 3D particle glow
 Enable background 3D particle pulse scaling
 Enable background 3D particle trail
-Enable bounce-in entrance animation when country flags finish loading
 Enable camera drift
 Enable camera drift effect, slightly drags camera based on speed
 Enable camera path
@@ -1769,7 +1767,6 @@ Enable keyboard shortcuts in replay player
 Enable keyword reply
 Enable Kugou Music hook integration
 Enable Kugou Music lyrics
-Enable left swipe offset on chat fade
 Enable LLM thinking mode (may increase response time)
 Enable LX Music lyric integration
 Enable LX Music lyrics
@@ -1970,7 +1967,6 @@ Exported
 Exported %d chat messages
 Exported to %s
 Exporting chat images: %d
-Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 External links open in the browser.
 External sites are not controlled by the client.
@@ -2108,6 +2104,7 @@ Folder
 Folder Link
 Follow
 Follow a player across servers for this session
+Follow display
 Follow graphics setting
 Follow main island width
 Follow option color
@@ -2164,8 +2161,10 @@ Freeze laser outline color
 Freeze opacity
 Freeze projectiles and lasers
 Freeze stars
+Freeze tile color
 Freeze tile outline color
 Freeze tile outline width
+Freeze/deep freeze tile entity tint color
 Frequently asked questions
 Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
@@ -2388,7 +2387,6 @@ Hide names
 Hide ninja
 Hide non-friend names/clans and show client ID
 Hide other players' ghosts when frozen
-Hide own chat bubble (only when authenticated in remote console)
 Hide player messages
 Hide player messages in Zen mode
 Hide player name plates in Zen Mode
@@ -2710,7 +2708,6 @@ Keep messages short so they fit in one chat line.
 Keep square inside game window
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
 Keep the feeling of the maximum cursor distance independent of resolution
-Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 Keep unsent message on chat close
 Keep vote window open after voting
@@ -2852,7 +2849,6 @@ Link style
 Linked
 Links and gestures
 Links open in the system browser.
-Links the music playing on your system with the system media controls, and can show its title in the top-left HUD.
 Links to related project and community websites.
 List all commands that are available in practice mode
 List all commands which are accessible for given access level
@@ -3102,7 +3098,6 @@ Medium
 Mention
 Mention option color
 Menu accent panel opacity
-Menu background
 Menu button hover
 Menu camera rotation radius
 Menu camera rotation time in seconds
@@ -3111,8 +3106,6 @@ Menu main panel background color
 Menu main panel opacity
 Menu music
 Menu opacity (0-100)
-Menu option - normal
-Menu option - selected
 Menu panel color
 Menu panel opacity
 Menu type
@@ -3450,7 +3443,6 @@ Not open, check output device
 Not requested
 Note
 Note:
-Nothing appears until a media app is playing; use the buttons to check which app the system reports.
 Nothing hookable
 Nothing is exported until every check passes.
 Nothing to redo
@@ -3691,7 +3683,6 @@ Pet skin
 Pet Skin:
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 Phrase
-Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 Pick a color preset or a custom color, then choose regular or bold weight.
 Pick a country for each player.
 Pick a family; if it offers several weights, choose one that stays readable at small sizes.
@@ -4339,7 +4330,7 @@ Reset stats on server join (0=persistent, 1=reset on join)
 Reset stats when joining a server
 Reset to defaults
 Reset tooltip appearance
-Reset translation colors
+Reset tooltip appearance to restore the default font size and bounce animation.
 Reset tuning after each map change
 Reset variant
 Reset weapons when passing start tile
@@ -4643,7 +4634,6 @@ Server votes
 Server-dependent
 Server-side ghost opacity during fast practice (%)
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
-Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit the cursor with "Minimum cursor distance" and "Maximum cursor distance".
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
@@ -4987,7 +4977,6 @@ Show skin date and author
 Show skin name on name plate to find missing skins
 Show skin names in nameplate
 Show skin release date and author
-Show song info in top-left corner
 Show spectate option
 Show spectator cursor
 Show speedometer when changing
@@ -5410,7 +5399,6 @@ Syncing remote stats
 System
 System default
 System graphics settings
-System media controls
 System message
 System message color
 System message text gradient color
@@ -5607,6 +5595,7 @@ There's a %s second wait time between kick votes for each player please wait %s 
 There's an unsaved change in the touch controls editor, you might want to save it.
 There's an unsaved map in the editor, you might want to save it.
 These effects are cosmetic and can cost a little performance on weaker GPUs.
+These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered.
 These options only change prediction on your client; what other players see is not affected.
 Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
 Thinking mode requires a reasoning model
@@ -5647,7 +5636,6 @@ Those nodes are already linked
 Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split key" to toggle, or use the enter and leave keys.
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 Tick "Enable 3D background particles", pick a "Particle type", then set "Particle count", "Particle speed" and "Particle color".
-Tick "Enable system media control", then "Show song info in top-left corner"; the Previous, Play/Pause and Next buttons drive the track.
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 Tick "Position jump hint", then move it with "Horizontal position" and "Vertical position" in percent and pick a readable "Font size".
@@ -5769,11 +5757,9 @@ Too many configuration files.
 Too many nested binds
 Too many translation tasks
 Toolbox page
-Tooltip background color
 Tooltip bounce animation
 Tooltip font size
 Tooltip preview
-Tooltip text color
 Tooltips
 Top left
 Top right
@@ -5801,21 +5787,14 @@ Translate only when needed
 Translate only when not in target language
 Translate outgoing messages to
 Translate received messages to
-Translate UI
 Translate:
 Translated chat text size as a percentage of the original text (50-100)
 Translated message could not be queued; original was not sent
 Translated text hidden due to streamer mode
 Translated text size
 Translating to %s...
-Translation button active color
-Translation button cancel color
 Translation canceled because the sender changed
-Translation color alpha migration completed flag
 Translation diagnostics
-Translation menu background color
-Translation menu normal color
-Translation menu selected color
 Translation model was not found. Check the model name.
 Translation only
 Translation service
@@ -5911,7 +5890,6 @@ UI icon custom color
 UI icon style
 UI motion level
 UI mouse sens.
-UI rounded corner segments (even numbers recommended)
 UI scale
 UI server address
 UI size percentage
@@ -6012,6 +5990,7 @@ Update sources are temporarily unavailable
 Updated this configuration.
 Updated this phrase.
 Updates
+Updates per second while the window is inactive; 0 = unlimited
 Updating preview…
 Updating public word list...
 Upload .map files. Server and admin passwords: s.
@@ -6070,7 +6049,7 @@ Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
 Use procedural ring pipeline
 Use public word filter
-Use qm_pref <0|1> [20-400] (milliseconds)
+Use qm_perf <0|1>
 Use server defaults
 Use skin color for frozen feet
 Use skin color for frozen Tee's feet

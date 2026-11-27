@@ -98,9 +98,6 @@ namespace qm_card_catalog
 		case EQmModuleId::DynamicIsland:
 			Add(Id, "qm:dynamic_island", "Dynamic Island", "HUD island appearance settings", [pMenus, LineHeight, LineSpacing](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudDynamicIslandContent(pMenus, Content, LineHeight, LineSpacing, g_Config.m_QmHudIslandUseOriginalStyle != 0); });
 			return true;
-		case EQmModuleId::SystemMediaControls:
-			Add(Id, "qm:system_media_controls", "SMTC", "System media control", [pMenus, LineHeight, BodySize, LineSpacing, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudSystemMediaControlsContent(pMenus, Content, LineHeight, BodySize, LineSpacing, ReadOnly); });
-			return true;
 		case EQmModuleId::Lyrics:
 			Add(Id, "qm:lyrics", "Lyrics", "Lyrics sources and display", [pMenus, LineHeight, LineSpacing, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudLyricsContent(pMenus, Content, LineHeight, LineSpacing, ReadOnly); });
 			return true;

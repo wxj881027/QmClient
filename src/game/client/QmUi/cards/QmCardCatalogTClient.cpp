@@ -36,9 +36,9 @@ namespace qm_tclient_cards
 					Render(Content);
 				}
 				auto *pText = pRegions->m_pText;
-				Region.m_pLayout = Region.m_Cache.Resolve(vRows, Width, pText ? pText->GlyphAtlasRevision() : 0, [pText](const char *pValue, float TextWidth, float FontSize) { return pText ? pText->TextBoundingBox(FontSize, pValue, -1, std::max(1.0f, TextWidth)).m_H + FontSize * 0.25f : FontSize; }, [pText](const SSettingsContentRowDeclaration &Row, float TextWidth) {
+				Region.m_pLayout = Region.m_Cache.Resolve(vRows, Width, pText ? pText->GlyphAtlasRevision() : 0, [pText](const char *pValue, float TextWidth, float FontSize) { return pText ? pText->TextBoundingBox(FontSize, pValue, -1, std::max(1.0f, TextWidth)).m_H + FontSize * ui_token::tclient::page::TEXT_BASELINE_DESCENT_RATIO : FontSize; }, [pText](const SSettingsContentRowDeclaration &Row, float TextWidth) {
 						const char *pValue = Row.m_Text.empty() ? " " : Row.m_Text.c_str();
-						return pText ? pText->TextBoundingBox(Row.m_FontSize, pValue, -1, std::max(1.0f, TextWidth - 2.0f * Row.m_TextPadding), Row.m_TextLineSpacing).m_H + 2.0f * Row.m_TextPadding : Row.m_MinimumHeight; });
+						return pText ? pText->TextBoundingBox(Row.m_FontSize, pValue, -1, std::max(1.0f, TextWidth - ui_token::tclient::DOUBLE * Row.m_TextPadding), Row.m_TextLineSpacing).m_H + ui_token::tclient::DOUBLE * Row.m_TextPadding : Row.m_MinimumHeight; });
 			}
 		}
 		else if(pRect && Region.m_pLayout)

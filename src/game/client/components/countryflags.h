@@ -147,7 +147,8 @@ public:
 		}
 
 		// Render 与行为测试共用的生命周期入口；时钟由调用方提供。
-		SCountryFlagEntryVisual ResolveEntryAnimation(EQmCountryFlagRenderPass Pass, bool Enabled, int MotionLevel, int64_t CustomStartTime, int64_t Now, int64_t Frequency) const
+		// 入场动画不单独设开关，只跟随全局动态效果档位。
+		SCountryFlagEntryVisual ResolveEntryAnimation(EQmCountryFlagRenderPass Pass, int MotionLevel, int64_t CustomStartTime, int64_t Now, int64_t Frequency) const
 		{
 			SCountryFlagEntryVisual Visual;
 			if(Pass == EQmCountryFlagRenderPass::MEASUREMENT)
@@ -156,9 +157,9 @@ public:
 			Frequency = std::max<int64_t>(1, Frequency);
 			const bool Reappeared = m_LastRenderTimestamp <= 0 || Now - m_LastRenderTimestamp >= (int64_t)(COUNTRY_FLAG_ANIM_REAPPEAR_GAP * Frequency);
 			m_LastRenderTimestamp = Now;
-			if(!Enabled || MotionLevel <= 0)
+			if(MotionLevel <= 0)
 			{
-				// 禁用时仍维持可见性，重新启用不能恢复已取消的动画。
+				// 动态效果关闭时仍维持可见性，重新开启不能恢复已取消的动画。
 				m_AnimStartTimestamp = 0;
 				return Visual;
 			}

@@ -233,7 +233,6 @@ private:
 		float m_QmTitleBobPadding = 0.0f;
 		// 当前消息实际占用的水平宽度，用于鼠标命中和选中高亮。
 		float m_ContentWidth;
-		float m_CutOffProgress;
 		SPresentationState m_Presentation;
 		int m_DiagnosticPresentationState;
 		bool m_DiagnosticCollapsedSkipLogged;
@@ -555,7 +554,6 @@ public:
 	{
 		return length(Release - Press) <= 5.0f;
 	}
-	static float CalculateCutOffOffsetX(float Progress);
 	static bool AppendBlockWordToList(char *pList, size_t ListSize, const char *pWord)
 	{
 		if(pList == nullptr || pWord == nullptr || pWord[0] == '\0' || ListSize == 0)

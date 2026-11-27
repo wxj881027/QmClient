@@ -245,7 +245,9 @@ int CControls::SnapInput(int *pData)
 	// update player state
 	if(GameClient()->m_Chat.IsActive())
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_CHATTING;
-	else if(GameClient()->m_Menus.IsActive() || GameClient()->ReplaySessionStatus().ViewMode() || GameClient()->m_BindWheel.IsActive())
+	// 收起动画期间输入已经交回游戏，IN_MENU 标志也必须立刻撤掉：
+	// 否则服务器会把这几百毫秒的按键当成菜单内操作丢掉，表现就是“关掉 ESC 后操作被吞”。
+	else if((GameClient()->m_Menus.IsActive() && !GameClient()->m_Menus.IsClosing()) || GameClient()->ReplaySessionStatus().ViewMode() || GameClient()->m_BindWheel.IsActive())
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_IN_MENU;
 	else
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_PLAYING;
@@ -273,9 +275,6 @@ int CControls::SnapInput(int *pData)
 	}
 
 	// TClient
-	if(g_Config.m_QmHideChatBubbles && Client()->RconAuthed())
-		for(auto &InputData : m_aInputData)
-			InputData.m_PlayerFlags &= ~PLAYERFLAG_CHATTING;
 	if(g_Config.m_QmSayNoPop)
 		for(auto &InputData : m_aInputData)
 			InputData.m_PlayerFlags &= ~PLAYERFLAG_CHATTING;

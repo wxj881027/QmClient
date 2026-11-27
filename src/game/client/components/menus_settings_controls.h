@@ -75,6 +75,7 @@ public:
 	void SetTab(ETab Tab) { m_Tab = Tab; }
 
 private:
+	friend class CMenus;
 	friend struct qm_card_catalog::QmCardRenderHook;
 	SSettingsContentMetrics m_CardMetrics{};
 	ETab m_Tab = ETab::CONTROLS;

@@ -109,7 +109,7 @@ TEST(QmNewUiMenuGameplayScoreboardContract, ScoreboardBackgroundsUseInterfaceOpa
 	EXPECT_EQ(Source.find("m_QmScoreboardOpacity"), std::string::npos);
 	// 队伍底色跟的是内容透明度（ContentAlpha），不是行底色用的 ItemAlpha。
 	EXPECT_NE(Source.find("ScoreboardDecorationColor(GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ContentAlpha))"), std::string::npos);
-	EXPECT_NE(Source.find("Row.Draw(ScoreboardDecorationColor(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(ItemAlpha * 1.45f))"), std::string::npos);
+	EXPECT_NE(Source.find("Row.Draw(ScoreboardDecorationColor(Ui()->QmControlTheme().m_Selected.WithMultipliedAlpha(ItemAlpha))"), std::string::npos);
 	EXPECT_NE(Source.find("Row.Draw(ScoreboardDecorationColor(ColorRGBA(0.7f, 0.7f, 0.7f, 0.7f * ItemAlpha))"), std::string::npos);
 }
 

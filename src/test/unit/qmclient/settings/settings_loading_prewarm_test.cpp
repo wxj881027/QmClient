@@ -1,10 +1,13 @@
 #include <base/str.h>
 
+#include <game/client/QmUi/QmSearchHeader.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsTextPlanUnits.h>
 #include <game/client/components/settings_resource_jobs.h>
 
 #include <gtest/gtest.h>
+
+#include <vector>
 
 TEST(SettingsLoadingPrewarm, AdvanceRequiresNoProgressToFinish)
 {
@@ -161,6 +164,18 @@ TEST(SettingsLoadingPrewarm, BasePageSubtabsArePlannedOnceAndVisibleTabLeads)
 	EXPECT_EQ(aDdnetTabs, (std::array<int, 2>{1, 1}));
 }
 
+TEST(SettingsLoadingPrewarm, ControlPageCollectsEveryTabAndSkipsVisibleDuplicate)
+{
+	const int Pages[] = {50};
+	const SSettingsMenuTextPlanSubtabGroup Groups[] = {{50, 4}};
+	const auto Units = QmSettingsTextPlanUnits(false, 50, 2, false, 10, 20, 0, 0, 1, 1, -1, 30, 1, Pages, Groups);
+	std::array<int, 4> aControlTabs{};
+	for(const auto &Unit : Units)
+		if(Unit.m_Kind == MENU_TEXT_PLAN_UNIT_BASE_PAGE_TAB && Unit.m_Page == 50 && Unit.m_Tab >= 0 && Unit.m_Tab < (int)aControlTabs.size())
+			++aControlTabs[Unit.m_Tab];
+	EXPECT_EQ(aControlTabs, (std::array<int, 4>{1, 1, 0, 1}));
+}
+
 TEST(SettingsLoadingPrewarm, CurrentBasePageIsCollectedOnlyOnce)
 {
 	const int Pages[] = {1, 2, 3};
@@ -173,6 +188,60 @@ TEST(SettingsLoadingPrewarm, CurrentBasePageIsCollectedOnlyOnce)
 	ASSERT_GE(Units.size(), 2u);
 	EXPECT_EQ(Units[Units.size() - 2].m_Page, 2);
 	EXPECT_EQ(Units.back().m_Kind, MENU_TEXT_PLAN_UNIT_INGAME_ESC);
+}
+
+TEST(SettingsLoadingPrewarm, TeePagePlansAllOrthogonalCombinations)
+{
+	const int Pages[] = {5, 6};
+	const auto Units = QmSettingsTextPlanUnits(false, 6, -1, false, 10, 20, 0, 0, 1, 1, -1, 30, 1, Pages, {}, 5, 2, 2);
+	int TeeCombinations = 0;
+	for(const auto &Unit : Units)
+	{
+		if(Unit.m_Kind != MENU_TEXT_PLAN_UNIT_TEE_COMBINATION)
+			continue;
+		EXPECT_EQ(Unit.m_Page, 5);
+		EXPECT_GE(Unit.m_Tab, 0);
+		EXPECT_LT(Unit.m_Tab, 2);
+		EXPECT_GE(Unit.m_Subtab, 0);
+		EXPECT_LT(Unit.m_Subtab, 2);
+		++TeeCombinations;
+	}
+	EXPECT_EQ(TeeCombinations, 4);
+}
+
+TEST(SettingsLoadingPrewarm, VisibleTeeCombinationIsNotCollectedTwice)
+{
+	const int Pages[] = {5};
+	const auto Units = QmSettingsTextPlanUnits(false, 5, 3, false, 10, 20, 0, 0, 1, 1, -1, 30, 1, Pages, {}, 5, 2, 2);
+	ASSERT_FALSE(Units.empty());
+	EXPECT_EQ(Units.front().m_Kind, MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS);
+	EXPECT_EQ(Units.front().m_Tab, 3);
+	int TeeCombinations = 0;
+	for(const auto &Unit : Units)
+	{
+		if(Unit.m_Kind != MENU_TEXT_PLAN_UNIT_TEE_COMBINATION)
+			continue;
+		EXPECT_FALSE(Unit.m_Tab == 1 && Unit.m_Subtab == 1);
+		++TeeCombinations;
+	}
+	EXPECT_EQ(TeeCombinations, 3);
+}
+
+TEST(SettingsLoadingPrewarm, LayoutSignatureChangesWithScreenScaleAndDpi)
+{
+	const uint64_t Baseline = QmSettingsTextPlanLayoutSignature(3840, 2160, 100, 1000);
+	EXPECT_EQ(QmSettingsTextPlanLayoutSignature(3840, 2160, 100, 1000), Baseline);
+	EXPECT_NE(QmSettingsTextPlanLayoutSignature(1920, 2160, 100, 1000), Baseline);
+	EXPECT_NE(QmSettingsTextPlanLayoutSignature(3840, 1080, 100, 1000), Baseline);
+	EXPECT_NE(QmSettingsTextPlanLayoutSignature(3840, 2160, 125, 1000), Baseline);
+	EXPECT_NE(QmSettingsTextPlanLayoutSignature(3840, 2160, 100, 1500), Baseline);
+}
+
+TEST(SettingsLoadingPrewarm, AppendedIngameEscUnitDoesNotOverrideSettingsVisibleContext)
+{
+	EXPECT_TRUE(QmSettingsTextPlanUnitProvidesVisibleContext(MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS, MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS));
+	EXPECT_FALSE(QmSettingsTextPlanUnitProvidesVisibleContext(MENU_TEXT_PLAN_UNIT_INGAME_ESC, MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS));
+	EXPECT_TRUE(QmSettingsTextPlanUnitProvidesVisibleContext(MENU_TEXT_PLAN_UNIT_INGAME_ESC, MENU_TEXT_PLAN_UNIT_INGAME_ESC));
 }
 
 TEST(SettingsLoadingPrewarm, VisiblePlanMatcherRequiresMatchingTab)
@@ -214,6 +283,45 @@ TEST(SettingsLoadingPrewarm, GlyphDemandTableCountsFrequencyAndPrioritizesVisibl
 	EXPECT_EQ(Table.PrewarmBatches().size(), 4u);
 	EXPECT_EQ(Table.PrewarmBatches()[0].m_GlyphCount, 2u);
 	EXPECT_EQ(Table.PrewarmBatches()[0].m_PixelSize, 32);
+}
+
+TEST(SettingsLoadingPrewarm, SearchHeaderPrewarmEnumeratesEveryRandomTextCandidate)
+{
+	struct SInput
+	{
+		const char *m_pText;
+		int m_PixelSize;
+		uint8_t m_Priority;
+	};
+	std::vector<SInput> vInputs;
+	qm_search_header::ForEachGlyphPrewarmText(
+		[&vInputs](const char *pText, int PixelSize, uint8_t Priority) {
+			vInputs.push_back({pText, PixelSize, Priority});
+		},
+		18, 20, 1);
+	ASSERT_EQ(vInputs.size(), qm_search_header::NUM_SPLASHES + qm_search_header::NUM_SEARCH_PLACEHOLDERS);
+	for(int Index = 0; Index < qm_search_header::NUM_SPLASHES; ++Index)
+	{
+		EXPECT_STREQ(vInputs[Index].m_pText, qm_search_header::SPLASHES[Index]);
+		EXPECT_EQ(vInputs[Index].m_PixelSize, 18);
+		EXPECT_EQ(vInputs[Index].m_Priority, 1);
+	}
+	for(int Index = 0; Index < qm_search_header::NUM_SEARCH_PLACEHOLDERS; ++Index)
+	{
+		const SInput &Input = vInputs[qm_search_header::NUM_SPLASHES + Index];
+		EXPECT_STREQ(Input.m_pText, qm_search_header::SEARCH_PLACEHOLDERS[Index]);
+		EXPECT_EQ(Input.m_PixelSize, 20);
+		EXPECT_EQ(Input.m_Priority, 1);
+	}
+	vInputs.clear();
+	qm_search_header::ForEachGlyphPrewarmText(
+		[&vInputs](const char *pText, int PixelSize, uint8_t Priority) {
+			vInputs.push_back({pText, PixelSize, Priority});
+		},
+		0, 20, 2);
+	ASSERT_EQ(vInputs.size(), qm_search_header::NUM_SEARCH_PLACEHOLDERS);
+	for(const SInput &Input : vInputs)
+		EXPECT_EQ(Input.m_Priority, 2);
 }
 
 TEST(SettingsLoadingPrewarm, GlyphDemandBatchesKeepPixelSizesTogether)

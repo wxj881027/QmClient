@@ -7,6 +7,16 @@
 static_assert(ui_token::vote_hud::RADIUS == ui_token::radius::CARD,
 	"vote panel must share the scoreboard card radius");
 
+TEST(QmVotingHud, CompactPanelKeepsCardCornerRatio)
+{
+	// 紧凑面板只有 35 高，直接沿用整卡的 14 会读成胶囊；
+	// 小面板按同一「圆角 / 面板高」比例取档，视觉圆角才和完整投票一致。
+	const float FullRatio = ui_token::vote_hud::RADIUS / ui_token::vote_hud::PANEL_HEIGHT;
+	const float MiniRatio = ui_token::vote_hud::MINI_RADIUS / ui_token::vote_hud::MINI_PANEL_HEIGHT;
+	EXPECT_NEAR(MiniRatio, FullRatio, 0.03f);
+	EXPECT_LT(ui_token::vote_hud::MINI_RADIUS, ui_token::vote_hud::RADIUS);
+}
+
 TEST(QmVotingHud, ScoreboardOwnsVotePresentationWhileOpen)
 {
 	EXPECT_EQ(QmVoteHudMode(true, 0, false, false, false, false), EVoteHudMode::FULL);

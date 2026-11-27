@@ -65,8 +65,12 @@ def wait_for_event(client: Process, directory: Path, predicate: Callable[[dict],
 	raise RuntimeError(f"client did not log {description} before timeout or exit")
 
 
-def run_sample(binary: Path, directory: Path, mode: int, test_storage: bool) -> dict:
+def run_sample(binary: Path, directory: Path, mode: int, test_storage: bool, data_dir: Path) -> dict:
 	directory.mkdir()
+	if test_storage:
+		# 隔离存储只改存档根目录；字体仍必须从构建目录的 data 读取。
+		# 缺少这条路径时中文字体目录为空，所有文字消失，预热永久停住。
+		(directory / "storage.cfg").write_text(f"add_path .\nadd_path {data_dir.as_posix()}\n", encoding="utf-8")
 	config = [
 		"gfx_fullscreen 0",
 		"gfx_backend Vulkan",
@@ -88,7 +92,7 @@ def run_sample(binary: Path, directory: Path, mode: int, test_storage: bool) -> 
 		"qm_steam_auto_launch 0",
 		"qm_websocket_url disabled",
 		"snd_enable 0",
-		"qm_pref 1 50",
+		"qm_perf 1",
 		"qm_settings_prewarm 0",
 		"qm_settings_prewarm_migrated 1",
 		f"qm_text_raster_mode {mode}",
@@ -235,7 +239,7 @@ def main() -> int:
 			directory = output / f"rep{repetition + 1}-mode{mode}"
 			trial = {"repetition": repetition + 1, "mode": mode, "directory": str(directory)}
 			try:
-				trial.update(run_sample(staged_binary, directory, mode, test_storage))
+				trial.update(run_sample(staged_binary, directory, mode, test_storage, build / "data"))
 				current_font = (trial["batch"]["family"], trial["batch"]["style"])
 				if font is not None and current_font != font:
 					raise ValueError(f"resolved font changed across trials: {font} -> {current_font}")

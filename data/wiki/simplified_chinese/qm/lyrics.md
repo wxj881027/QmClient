@@ -23,4 +23,3 @@
 ## 相关
 
 - [灵动岛](qm:dynamic_island)
-- [系统媒体控制](qm:system_media_controls)

@@ -23,14 +23,35 @@
 #include <game/client/components/qmclient/map_image_decode_job.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
+#include <game/client/ui.h>
 #include <game/layers.h>
 #include <game/localization.h>
 #include <game/map/map_render_items.h>
+#include <game/map/qm_entity_overlay_tint.h>
 #include <game/mapitems.h>
 
 static bool ImageDataSizeValid(const CImageInfo &Image, size_t &DataSize)
 {
 	return Image.DataSize(DataSize) && DataSize != 0;
+}
+
+static void ApplyEntityOverlayTintToTile(CImageInfo &Image, size_t OffsetX, size_t OffsetY, size_t Width, size_t Height, const ColorRGBA &Tint)
+{
+	if(Tint.r >= 0.999f && Tint.g >= 0.999f && Tint.b >= 0.999f && Tint.a >= 0.999f)
+		return;
+
+	for(size_t y = 0; y < Height; ++y)
+	{
+		for(size_t x = 0; x < Width; ++x)
+		{
+			const size_t PixelX = OffsetX + x;
+			const size_t PixelY = OffsetY + y;
+			const ColorRGBA Source = Image.PixelColor(PixelX, PixelY);
+			if(Source.a <= 0.0f)
+				continue;
+			Image.SetPixelColor(PixelX, PixelY, QmTintEntityOverlayPixel(Source, Tint));
+		}
+	}
 }
 
 namespace
@@ -241,6 +262,9 @@ void CMapImages::OnInit()
 	const auto Selection = ResolveEntitiesAssetSelection(g_Config.m_ClAssetsEntities, g_Config.m_QmBlankAssetFallback != 0);
 	str_copy(m_aEntitiesPath, Selection.m_Path.c_str());
 	m_EntitiesIsBlank = Selection.m_IsBlank;
+	m_QmEntityOverlayFreezeColor = g_Config.m_QmEntityOverlayFreezeColor;
+	m_QmEntityOverlayPendingFreezeColor = m_QmEntityOverlayFreezeColor;
+	m_QmEntityOverlayFreezeColorChangedAt = 0;
 
 	Console()->Chain("cl_text_entities_size", ConchainClTextEntitiesSize, this);
 
@@ -627,12 +651,14 @@ public:
 		int ModType,
 		bool Masked,
 		int LayerType,
-		EKind Kind) :
+		EKind Kind,
+		const ColorRGBA &FreezeTint) :
 		m_pSource(std::move(pSource)),
 		m_ModType(ModType),
 		m_Masked(Masked),
 		m_LayerType(LayerType),
-		m_Kind(Kind)
+		m_Kind(Kind),
+		m_FreezeTint(FreezeTint)
 	{
 		Abortable(true);
 	}
@@ -703,6 +729,8 @@ public:
 				const size_t OffsetX = static_cast<size_t>(SourceTileIndex % 16) * CopyWidth;
 				const size_t OffsetY = static_cast<size_t>(SourceTileIndex / 16) * CopyHeight;
 				m_Build.CopyRectFrom(Source, OffsetX, OffsetY, CopyWidth, CopyHeight, OffsetX, OffsetY);
+				if(QmIsFreezeEntityOverlayTile(TileIndex))
+					ApplyEntityOverlayTintToTile(m_Build, OffsetX, OffsetY, CopyWidth, CopyHeight, m_FreezeTint);
 			}
 		}
 		m_Success = true;
@@ -725,6 +753,7 @@ private:
 	bool m_Masked;
 	int m_LayerType;
 	EKind m_Kind;
+	ColorRGBA m_FreezeTint;
 	bool m_Success = false;
 };
 
@@ -799,6 +828,8 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 			// The tune tile is recolored per tune zone below, so start from grayscale.
 			ConvertToGrayscaleRect(ImgInfo, TuneTileX, TuneTileY, CopyWidth, CopyHeight);
 
+			const ColorRGBA FreezeTint = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmEntityOverlayFreezeColor));
+
 			// build game layer
 			for(int LayerType = 0; LayerType < MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT; ++LayerType)
 			{
@@ -820,6 +851,8 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 						const size_t OffsetX = (size_t)(TileIndex % 16) * CopyWidth;
 						const size_t OffsetY = (size_t)(TileIndex / 16) * CopyHeight;
 						BuildImageInfo.CopyRectFrom(ImgInfo, OffsetX, OffsetY, CopyWidth, CopyHeight, OffsetX, OffsetY);
+						if(QmIsFreezeEntityOverlayTile(i))
+							ApplyEntityOverlayTintToTile(BuildImageInfo, OffsetX, OffsetY, CopyWidth, CopyHeight, FreezeTint);
 					}
 				}
 
@@ -946,6 +979,7 @@ void CMapImages::PrewarmEntitiesForGameInfo(const CGameInfo &GameInfo)
 		str_copy(m_aQmEntityPrewarmPath, aPath, sizeof(m_aQmEntityPrewarmPath));
 		m_QmEntityPrewarmModType = ModType;
 		m_QmEntityPrewarmMasked = Masked;
+		m_QmEntityPrewarmFreezeTint = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmEntityOverlayFreezeColor));
 		m_QmEntityPrewarmNextStep = 0;
 		m_QmEntityPrewarmTextureLoadFlag = 0;
 		m_QmEntityPrewarmCopyWidth = 0;
@@ -1122,7 +1156,7 @@ bool CMapImages::AdvanceEntitiesPrewarmStep()
 			const int LayerType = m_QmEntityPrewarmNextStep;
 			auto pJob = std::make_shared<CQmEntityPrewarmBuildJob>(
 				m_pQmEntityPrewarmSource, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked,
-				LayerType, CQmEntityPrewarmBuildJob::EKind::LAYER);
+				LayerType, CQmEntityPrewarmBuildJob::EKind::LAYER, m_QmEntityPrewarmFreezeTint);
 			if(!Engine()->TryAddJob(pJob))
 				throw std::runtime_error("entity texture build queue unavailable");
 			m_pQmEntityPrewarmBuildJob = std::move(pJob);
@@ -1133,7 +1167,7 @@ bool CMapImages::AdvanceEntitiesPrewarmStep()
 		{
 			auto pJob = std::make_shared<CQmEntityPrewarmBuildJob>(
 				m_pQmEntityPrewarmSource, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked,
-				-1, CQmEntityPrewarmBuildJob::EKind::TUNE_COLOR);
+				-1, CQmEntityPrewarmBuildJob::EKind::TUNE_COLOR, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 			if(!Engine()->TryAddJob(pJob))
 				throw std::runtime_error("tune color build queue unavailable");
 			m_pQmEntityPrewarmBuildJob = std::move(pJob);
@@ -1287,6 +1321,25 @@ void CMapImages::ReloadEntitiesTextures()
 void CMapImages::OnRender()
 {
 	HookPreviewPollJob();
+
+	const unsigned FreezeColor = g_Config.m_QmEntityOverlayFreezeColor;
+	if(FreezeColor != m_QmEntityOverlayFreezeColor)
+	{
+		if(FreezeColor != m_QmEntityOverlayPendingFreezeColor)
+		{
+			m_QmEntityOverlayPendingFreezeColor = FreezeColor;
+			m_QmEntityOverlayFreezeColorChangedAt = time_get();
+		}
+		// 取色器拖动时每帧都会写配置；等鼠标松开再重建一次图集。
+		const bool TimedOut = m_QmEntityOverlayFreezeColorChangedAt > 0 && time_get() - m_QmEntityOverlayFreezeColorChangedAt > time_freq();
+		if((Ui() == nullptr || !Ui()->MouseButton(0)) || TimedOut)
+		{
+			m_QmEntityOverlayFreezeColor = FreezeColor;
+			m_QmEntityOverlayPendingFreezeColor = FreezeColor;
+			m_QmEntityOverlayFreezeColorChangedAt = 0;
+			ReloadEntitiesTextures();
+		}
+	}
 }
 
 bool CMapImages::HookPreviewKeyMatches(int ModType, bool Masked) const

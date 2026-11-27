@@ -18,6 +18,12 @@
 namespace QmRecentGlyphs
 {
 	inline constexpr size_t MAX_ENTRIES = 4096;
+	enum class EPrewarmResult
+	{
+		READY,
+		SKIP,
+		RETRY,
+	};
 	// 沿用每条48字节序列化缓冲与4096项容量，为缓存读取提供格式派生预算。
 	inline constexpr size_t MAX_FILE_BYTES = MAX_ENTRIES * 48;
 	class CCollection
@@ -62,18 +68,20 @@ namespace QmRecentGlyphs
 			while(Done < MaxCount && m_Cursor < m_vItems.size())
 			{
 				const auto Item = m_vItems[m_Cursor];
-				bool Ready;
+				EPrewarmResult Result;
 				try
 				{
-					Ready = Warm(Item.first, Item.second);
+					Result = Warm(Item.first, Item.second);
 				}
 				catch(...)
 				{
 					break;
 				}
+				if(Result == EPrewarmResult::RETRY)
+					break;
 				++m_Cursor;
 				// 空结果沿原规则跳过，避免不受字体支持的项阻塞后续缓存。
-				if(Ready)
+				if(Result == EPrewarmResult::READY)
 					++Done;
 			}
 			m_Recording = true;

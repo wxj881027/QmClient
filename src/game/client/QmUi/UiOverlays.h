@@ -74,13 +74,15 @@ namespace ui_widget
 		bool m_FreshEnter = false;
 	};
 
-	inline SAnimatePresenceResult AnimatePresence(const IUiContext &Ctx, const void *pId, bool Visible, const SUiAnimTransition &Transition)
+	// pPresenceTransition 非空时拆成两条轨道：显隐/生命周期按它的时钟推进，
+	// 透明度用 Transition。为空时显隐仍由 ALPHA 轨道驱动（旧行为）。
+	inline SAnimatePresenceResult AnimatePresence(const IUiContext &Ctx, const void *pId, bool Visible, const SUiAnimTransition &Transition, const SUiAnimTransition *pPresenceTransition = nullptr)
 	{
 		const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pId));
 		if(Ctx.m_pTree == nullptr || Ctx.m_pAnim == nullptr)
 			return {Visible, Visible ? 1.0f : 0.0f, NodeKey, Visible};
 
-		const SUiPresenceResult Presence = Ctx.m_pTree->ResolvePresence(*Ctx.m_pAnim, NodeKey, Visible, Transition);
+		const SUiPresenceResult Presence = Ctx.m_pTree->ResolvePresence(*Ctx.m_pAnim, NodeKey, Visible, Transition, pPresenceTransition);
 		return {Presence.m_Render, Presence.m_Alpha, NodeKey, Presence.m_FreshEnter};
 	}
 
@@ -206,7 +208,7 @@ namespace ui_widget
 		if(Ctx.m_pUi == nullptr || pOpen == nullptr)
 			return false;
 
-		const SAnimatePresenceResult Presence = AnimatePresence(Ctx, pId, *pOpen, ui_token::motion::MODAL_IN);
+		const SAnimatePresenceResult Presence = AnimatePresence(Ctx, pId, *pOpen, ui_token::motion::MODAL_IN, &ui_token::motion::MODAL_PRESENCE);
 		if(!Presence.m_Render)
 			return false;
 
