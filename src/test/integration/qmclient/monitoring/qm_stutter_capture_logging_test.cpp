@@ -227,7 +227,8 @@ TEST_F(QmStutterCaptureLogging, WorstFrameAndWorstDetailedFrameKeepTheirOwnConte
 	const auto ComponentEvents = Events("component_sample");
 	ASSERT_EQ(SummaryEvents.size(), 1u);
 	ASSERT_EQ(FeatureEvents.size(), 3u);
-	ASSERT_EQ(ComponentEvents.size(), 4u);
+	// 0.0x ms 的组件样本不再落盘，只保留实际超过噪声阈值的 on_update。
+	ASSERT_EQ(ComponentEvents.size(), 1u);
 	const auto Summary = Parse(SummaryEvents.front());
 	const auto Feature = Parse(FeatureEvents.front());
 	const auto Component = Parse(ComponentEvents.front());
@@ -251,7 +252,7 @@ TEST_F(QmStutterCaptureLogging, RecoveryDropsFastPendingSamplesAndNextEpisodeUse
 		m_Capture.RecordUpdate(0, 100.0);
 		ASSERT_TRUE(m_Capture.ProcessFrame(Frame(Id, 3.0)));
 	}
-	ASSERT_EQ(m_Log.m_vMessages.size(), 8u);
+	ASSERT_EQ(m_Log.m_vMessages.size(), 5u);
 	const auto Recovered = Parse(0);
 	ASSERT_NE(Recovered, nullptr);
 	ExpectString(Recovered.get(), "end_reason", "recovered");
@@ -285,7 +286,7 @@ TEST_F(QmStutterCaptureLogging, PartialConfigEnumerationDoesNotReplaceEarlierWor
 	m_Capture.RecordUpdate(0, 3.0);
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(3, 8.0)));
 	ASSERT_TRUE(m_Capture.Finish(Frame(4, 0.0)));
-	ASSERT_EQ(m_Log.m_vMessages.size(), 8u);
+	ASSERT_EQ(m_Log.m_vMessages.size(), 5u);
 	const auto Summary = Parse(0);
 	ASSERT_NE(Summary, nullptr);
 	ExpectInteger(Summary.get(), "sample_frames", 2);
@@ -294,7 +295,7 @@ TEST_F(QmStutterCaptureLogging, PartialConfigEnumerationDoesNotReplaceEarlierWor
 	const auto Component = Parse(1);
 	ASSERT_NE(Component, nullptr);
 	ExpectDouble(Component.get(), "total_ms", 5.0);
-	const auto Mode = Parse(6);
+	const auto Mode = Parse(3);
 	ASSERT_NE(Mode, nullptr);
 	ExpectString(Mode.get(), "feature", "qm_mode");
 	ExpectInteger(Mode.get(), "config_value", 3);
@@ -313,7 +314,7 @@ TEST_F(QmStutterCaptureLogging, ExceptionAfterCompleteSnapshotStillKeepsOldOwned
 	const auto Summary = Parse(0);
 	ASSERT_NE(Summary, nullptr);
 	ExpectString(Summary.get(), "page", "settings");
-	const auto Mode = Parse(6);
+	const auto Mode = Parse(2);
 	ASSERT_NE(Mode, nullptr);
 	ExpectInteger(Mode.get(), "config_value", 3);
 }
@@ -323,13 +324,13 @@ TEST_F(QmStutterCaptureLogging, DisablingUsesForcedOutputWhenAllPerformanceFlags
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(1, 6.0)));
 	g_Config.m_QmPerfEnabled = false;
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(2, 0.0, false)));
-	ASSERT_EQ(m_Log.m_vMessages.size(), 8u);
+	ASSERT_EQ(m_Log.m_vMessages.size(), 4u);
 	const auto Summary = Parse(0);
 	ASSERT_NE(Summary, nullptr);
 	ExpectString(Summary.get(), "end_reason", "diagnostics_disabled");
 	EXPECT_FALSE(m_Capture.Active());
 	EXPECT_TRUE(m_Capture.ProcessFrame(Frame(3, 0.0, false)));
-	EXPECT_EQ(m_Log.m_vMessages.size(), 8u);
+	EXPECT_EQ(m_Log.m_vMessages.size(), 4u);
 }
 
 TEST_F(QmStutterCaptureLogging, OutputExceptionDoesNotReplayPartiallyDeliveredWindow)
@@ -337,13 +338,13 @@ TEST_F(QmStutterCaptureLogging, OutputExceptionDoesNotReplayPartiallyDeliveredWi
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(1, 6.0)));
 	m_Operations.m_FailOutputAt = 2;
 	EXPECT_FALSE(m_Capture.Finish(Frame(2, 0.0)));
-	ASSERT_EQ(m_Log.m_vMessages.size(), 8u);
-	EXPECT_EQ(m_Operations.m_OutputCount, 8);
+	ASSERT_EQ(m_Log.m_vMessages.size(), 4u);
+	EXPECT_EQ(m_Operations.m_OutputCount, 4);
 	EXPECT_TRUE(m_Capture.Finish(Frame(3, 0.0)));
-	EXPECT_EQ(m_Log.m_vMessages.size(), 8u);
+	EXPECT_EQ(m_Log.m_vMessages.size(), 4u);
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(4, 7.0)));
 	ASSERT_TRUE(m_Capture.Finish(Frame(5, 0.0)));
-	EXPECT_EQ(m_Log.m_vMessages.size(), 16u);
+	EXPECT_EQ(m_Log.m_vMessages.size(), 8u);
 	EXPECT_EQ(Events("stutter_event").size(), 2u);
 }
 
@@ -353,7 +354,7 @@ TEST_F(QmStutterCaptureLogging, PeriodicSegmentKeepsEpisodeAndOwnsOnlyItsWindowS
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(1, 9999.0)));
 	m_Capture.RecordUpdate(0, 3.0);
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(2, 6.0)));
-	ASSERT_EQ(m_Log.m_vMessages.size(), 8u);
+	ASSERT_EQ(m_Log.m_vMessages.size(), 5u);
 	const auto Periodic = Parse(0);
 	ASSERT_NE(Periodic, nullptr);
 	ExpectString(Periodic.get(), "end_reason", "periodic");
@@ -362,14 +363,14 @@ TEST_F(QmStutterCaptureLogging, PeriodicSegmentKeepsEpisodeAndOwnsOnlyItsWindowS
 	m_Capture.RecordUpdate(0, 2.0);
 	ASSERT_TRUE(m_Capture.ProcessFrame(Frame(3, 7.0)));
 	ASSERT_TRUE(m_Capture.Finish(Frame(4, 0.0)));
-	ASSERT_EQ(m_Log.m_vMessages.size(), 16u);
-	const auto Next = Parse(8);
+	ASSERT_EQ(m_Log.m_vMessages.size(), 10u);
+	const auto Next = Parse(5);
 	ASSERT_NE(Next, nullptr);
 	ExpectInteger(Next.get(), "stutter_id", 1);
 	ExpectInteger(Next.get(), "segment", 1);
 	ExpectInteger(Next.get(), "sample_frames", 1);
 	ExpectString(Next.get(), "page", "next-window");
-	const auto Component = Parse(9);
+	const auto Component = Parse(6);
 	ASSERT_NE(Component, nullptr);
 	ExpectDouble(Component.get(), "total_ms", 2.0);
 }

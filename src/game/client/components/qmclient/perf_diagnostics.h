@@ -195,6 +195,9 @@ class CQmPerfConfigSnapshot
 	struct SRecordedValue
 	{
 		SQmPerfConfigValue m_Value;
+		std::string m_RawString;
+		int64_t m_RawInt = 0;
+		bool m_HasRaw = false;
 		bool m_HasValue = false;
 		bool m_Incomplete = false;
 	};
@@ -205,6 +208,23 @@ class CQmPerfConfigSnapshot
 	IConfigManager *m_pManager = nullptr;
 	CQmPerfDiagnosticOperations *m_pOperations;
 	bool m_NeedsStart = false;
+
+	// 每秒检查变化时只比较底层值，未变化的项不构造类型/值字符串。
+	static bool RawMatches(const SConfigVariable &Variable, const SRecordedValue &Recorded, int64_t &RawInt) noexcept
+	{
+		if(!Recorded.m_HasRaw)
+			return false;
+		switch(Variable.m_Type)
+		{
+		case SConfigVariable::VAR_INT:
+			return Recorded.m_RawInt == RawInt;
+		case SConfigVariable::VAR_COLOR:
+			return Recorded.m_RawInt == RawInt;
+		case SConfigVariable::VAR_STRING:
+			return str_comp(Recorded.m_RawString.c_str(), static_cast<const SStringConfigVariable &>(Variable).m_pStr) == 0;
+		}
+		return false;
+	}
 
 public:
 	explicit CQmPerfConfigSnapshot(CQmPerfDiagnosticOperations *pOperations = nullptr) noexcept :
@@ -237,10 +257,20 @@ public:
 			++m_Revision;
 			for(const SConfigVariable *pVariable : m_vVariables)
 			{
-				auto Value = Operations.ReadValue(*pVariable);
+				int64_t RawInt = 0;
+				if(pVariable->m_Type == SConfigVariable::VAR_INT)
+					RawInt = *static_cast<const SIntConfigVariable &>(*pVariable).m_pVariable;
+				else if(pVariable->m_Type == SConfigVariable::VAR_COLOR)
+					RawInt = *static_cast<const SColorConfigVariable &>(*pVariable).m_pVariable;
 				auto Previous = m_Previous.find(pVariable->m_pScriptName);
-				if(Previous != m_Previous.end() && Previous->second.m_HasValue && !Previous->second.m_Incomplete && Previous->second.m_Value.m_Value == Value.m_Value && Previous->second.m_Value.m_IsDefault == Value.m_IsDefault)
-					continue;
+				if(Previous != m_Previous.end())
+				{
+					const auto &Recorded = Previous->second;
+					// 只有完整交付过的基线才能直接跳过；失败/半交付的项继续走格式化与重试。
+					if(Recorded.m_HasValue && !Recorded.m_Incomplete && RawMatches(*pVariable, Recorded, RawInt))
+						continue;
+				}
+				auto Value = Operations.ReadValue(*pVariable);
 				// 先准备节点；全部交付后用移动赋值提交基线，不再分配内存。
 				auto &Recorded = m_Previous.try_emplace(pVariable->m_pScriptName).first->second;
 				const auto vChunks = QmPerfConfigChunks(Value.m_Value);
@@ -251,6 +281,10 @@ public:
 				Recorded.m_Value = std::move(Value);
 				Recorded.m_HasValue = true;
 				Recorded.m_Incomplete = false;
+				Recorded.m_RawInt = RawInt;
+				if(pVariable->m_Type == SConfigVariable::VAR_STRING)
+					Recorded.m_RawString = static_cast<const SStringConfigVariable &>(*pVariable).m_pStr;
+				Recorded.m_HasRaw = true;
 			}
 			return true;
 		}
