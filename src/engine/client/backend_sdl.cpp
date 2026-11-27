@@ -60,6 +60,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <vector>
 
 class IStorage;
@@ -1213,32 +1214,32 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	*pDesktopWidth = pDisplayMode->w;
 	*pDesktopHeight = pDisplayMode->h;
 
-	// fetch supported video modes
-	bool SupportedResolution = false;
-
-	CVideoMode aModes[256];
-	int ModesCount = 0;
-	int IndexOfResolution = -1;
-	GetVideoModes(aModes, std::size(aModes), &ModesCount, 1, *pDesktopWidth, *pDesktopHeight, *pScreen);
-
-	for(int i = 0; i < ModesCount; i++)
+	const int DesktopRefreshRate = RoundRefreshRate(pDisplayMode->refresh_rate);
+	std::optional<int> MatchedRefreshRate;
+	if(*pWidth == *pDesktopWidth && *pHeight == *pDesktopHeight && *pRefreshRate > 0 && *pRefreshRate == DesktopRefreshRate)
+		MatchedRefreshRate = DesktopRefreshRate;
+	else if(*pWidth != 0 && *pHeight != 0)
 	{
-		if(*pWidth == aModes[i].m_WindowWidth && *pHeight == aModes[i].m_WindowHeight && (*pRefreshRate == aModes[i].m_RefreshRate || *pRefreshRate == 0))
+		// 自定义模式仍按显示器列表匹配，未指定刷新率时沿用首个匹配项。
+		CVideoMode aModes[256];
+		int ModesCount = 0;
+		GetVideoModes(aModes, std::size(aModes), &ModesCount, 1, *pDesktopWidth, *pDesktopHeight, *pScreen);
+		for(int i = 0; i < ModesCount; i++)
 		{
-			SupportedResolution = true;
-			IndexOfResolution = i;
-			break;
+			if(*pWidth == aModes[i].m_WindowWidth && *pHeight == aModes[i].m_WindowHeight && (*pRefreshRate == aModes[i].m_RefreshRate || *pRefreshRate == 0))
+			{
+				MatchedRefreshRate = aModes[i].m_RefreshRate;
+				break;
+			}
 		}
 	}
 
 	// set flags
 	SDL_WindowFlags SdlFlags = SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-	// Windows OpenGL 保留可见创建流程，避免隐藏窗口先渲染后显示留下旧的全屏捕获内容。
-	// 其他后端仍在首个有效帧准备好后显示，减少初始化期间的空帧。
-#if defined(CONF_FAMILY_WINDOWS)
-	if(!IsOpenGLFamilyBackend)
+	// Windows 在创建时显示游戏窗口，让 Vulkan 设备初始化也在窗口出现后进行。
+#if !defined(CONF_FAMILY_WINDOWS)
+	SdlFlags |= SDL_WINDOW_HIDDEN;
 #endif
-		SdlFlags |= SDL_WINDOW_HIDDEN;
 	if(IsOpenGLFamilyBackend)
 		SdlFlags |= SDL_WINDOW_OPENGL;
 	else if(m_BackendType == BACKEND_TYPE_METAL)
@@ -1258,22 +1259,16 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	bool IsFullscreen = (SdlFlags & SDL_WINDOW_FULLSCREEN) != 0 || g_Config.m_GfxFullscreen == 3;
 	// use desktop resolution as default resolution, clamp resolution if users's display is smaller than we remembered
 	// if the user starts in fullscreen, and the resolution was not found use the desktop one
-	if((IsFullscreen && !SupportedResolution) || *pWidth == 0 || *pHeight == 0 || (IsDesktopChanged && (!SupportedResolution || !IsFullscreen) && (*pWidth > *pDesktopWidth || *pHeight > *pDesktopHeight)))
+	if((IsFullscreen && !MatchedRefreshRate.has_value()) || *pWidth == 0 || *pHeight == 0 || (IsDesktopChanged && (!MatchedRefreshRate.has_value() || !IsFullscreen) && (*pWidth > *pDesktopWidth || *pHeight > *pDesktopHeight)))
 	{
 		*pWidth = *pDesktopWidth;
 		*pHeight = *pDesktopHeight;
-		*pRefreshRate = RoundRefreshRate(pDisplayMode->refresh_rate);
+		*pRefreshRate = DesktopRefreshRate;
 	}
 
 	// if in fullscreen and refresh rate wasn't set yet, just use the one from the found list
-	if(*pRefreshRate == 0 && SupportedResolution)
-	{
-		*pRefreshRate = aModes[IndexOfResolution].m_RefreshRate;
-	}
-	else if(*pRefreshRate == 0)
-	{
-		*pRefreshRate = RoundRefreshRate(pDisplayMode->refresh_rate);
-	}
+	if(*pRefreshRate == 0)
+		*pRefreshRate = MatchedRefreshRate.value_or(DesktopRefreshRate);
 
 	// set gl attributes
 	if(IsOpenGLFamilyBackend)

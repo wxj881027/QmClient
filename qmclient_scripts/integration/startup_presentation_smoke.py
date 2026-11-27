@@ -145,8 +145,12 @@ def smoke_window_presentation(env: StartupEnvironment) -> None:
 def smoke_vulkan_window_presentation(env: StartupEnvironment) -> None:
 	check_window_presentation(env, ["qm_graphics_mode 1", "gfx_backend Vulkan"])
 	assert env.client is not None
-	if not any("gfx: GPU version: Vulkan " in line for line in env.client._lines):
+	lines = env.client._lines
+	device_ready = next((i for i, line in enumerate(lines) if "gfx: GPU version: Vulkan " in line), None)
+	if device_ready is None:
 		raise AssertionError("client fell back from Vulkan before producing the screenshot")
+	if sys.platform == "win32" and not any("event=startup_show phase=create" in line for line in lines[:device_ready]):
+		raise AssertionError("the Windows game window was still hidden during Vulkan initialization")
 
 
 def smoke_metal_window_presentation(env: StartupEnvironment) -> None:

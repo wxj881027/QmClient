@@ -5076,22 +5076,6 @@ void CClient::Run()
 		g_UuidManager.DebugDump();
 	}
 
-	char aNetworkError[256];
-	if(!InitNetworkClient(aNetworkError, sizeof(aNetworkError)))
-	{
-		log_error("client", "%s", aNetworkError);
-		ShowMessageBox({.m_pTitle = "Network Error", .m_pMessage = aNetworkError});
-		return;
-	}
-
-	if(!m_pHttp->Init(std::chrono::seconds{1}))
-	{
-		const char *pErrorMessage = "Failed to initialize the HTTP client.";
-		log_error("client", "%s", pErrorMessage);
-		ShowMessageBox({.m_pTitle = "HTTP Error", .m_pMessage = pErrorMessage});
-		return;
-	}
-
 	// init graphics
 	m_pGraphics = CreateEngineGraphicsThreaded();
 	Kernel()->RegisterInterface(m_pGraphics); // IEngineGraphics
@@ -5129,6 +5113,26 @@ void CClient::Run()
 	Graphics()->Clear(0, 0, 0);
 	if(Graphics()->WindowOpen())
 		Graphics()->Swap();
+
+#if defined(CONF_FAMILY_WINDOWS)
+	ShellRegister();
+#endif
+
+	char aNetworkError[256];
+	if(!InitNetworkClient(aNetworkError, sizeof(aNetworkError)))
+	{
+		log_error("client", "%s", aNetworkError);
+		ShowMessageBox({.m_pTitle = "Network Error", .m_pMessage = aNetworkError});
+		return;
+	}
+
+	if(!m_pHttp->Init(std::chrono::seconds{1}))
+	{
+		const char *pErrorMessage = "Failed to initialize the HTTP client.";
+		log_error("client", "%s", pErrorMessage);
+		ShowMessageBox({.m_pTitle = "HTTP Error", .m_pMessage = pErrorMessage});
+		return;
+	}
 
 	// init localization first, making sure all errors during init can be localized
 	GameClient()->InitializeLanguage();
@@ -8995,11 +8999,6 @@ int main(int argc, const char **argv)
 		pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
 		pStorage->CreateFolder("dumps/QmClient_AutoDiagnostics", IStorage::TYPE_SAVE);
 	}
-
-	// Register protocol and file extensions
-#if defined(CONF_FAMILY_WINDOWS)
-	pClient->ShellRegister();
-#endif
 
 	// Do not automatically translate touch events to mouse events and vice versa.
 	SDL_SetHint("SDL_TOUCH_MOUSE_EVENTS", "0");
