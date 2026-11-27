@@ -3,7 +3,7 @@
     "must_i18n": 11346,
     "business_data": 13935,
     "test_only": 9688,
-    "needs_review": 5558,
+    "needs_review": 5574,
     "violation": 0
   },
   "must_i18n": [
@@ -45719,84 +45719,84 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4666,
+      "line": 4700,
       "text": "Whisper",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4740,
+      "line": 4774,
       "text": "Whisper target left the game",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4835,
+      "line": 4869,
       "text": "Right-click to disable auto-translate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4835,
+      "line": 4869,
       "text": "Right-click to enable auto-translate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5038,
+      "line": 5072,
       "text": "Chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5082,
+      "line": 5116,
       "text": "Copy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5087,
+      "line": 5121,
       "text": "Add one",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5092,
+      "line": 5126,
       "text": "Reply",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5097,
+      "line": 5131,
       "text": "Spectate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5107,
+      "line": 5141,
       "text": "Mute player",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5112,
+      "line": 5146,
       "text": "Add to blocked words",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 5117,
+      "line": 5151,
       "text": "Copy name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -110121,91 +110121,91 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3658,
+      "line": 3666,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3703,
+      "line": 3712,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4318,
+      "line": 4328,
       "text": "event=server_message_render_skip reason=invalid_text_container class=%d text_container=%d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4319,
+      "line": 4329,
       "text": "perf/autodiag_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4419,
+      "line": 4429,
       "text": "Welcome to QmClient",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4421,
-      "text": "Let's go!",
+      "line": 4454,
+      "text": "loading...",
       "category": "business_data",
-      "reason": "chat command preview, preview fixture, or streamer mask data"
+      "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4441,
+      "line": 4480,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4626,
+      "line": 4660,
       "text": "/w ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4628,
+      "line": 4662,
       "text": "/whisper ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4666,
+      "line": 4700,
       "text": "%s %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4707,
+      "line": 4741,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4965,
+      "line": 4999,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4974,
+      "line": 5008,
       "text": "%s: ",
       "category": "business_data",
       "reason": "display formatting template"
@@ -259561,36 +259561,148 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4422,
+      "line": 4432,
+      "text": "one sec",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4433,
+      "text": "Vote passed: /restart",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4435,
+      "text": "gl hf",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4436,
       "text": "Map changed to QmClient",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4423,
-      "text": "Nice one!",
+      "line": 4437,
+      "text": "left side is clear",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4424,
-      "text": "See you!",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/chat.cpp",
-      "line": 4425,
+      "line": 4439,
       "text": "Hey, I'm spamming here!",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4426,
-      "text": "Vote passed",
+      "line": 4440,
+      "text": "DYL finished in 01:23.456",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4442,
+      "text": "that was close",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4444,
+      "text": "Vote started: /map Kobra 2",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4446,
+      "text": "wait for me",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4447,
+      "text": "DYL entered and joined the game",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4449,
+      "text": "hi DYL",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4450,
+      "text": "This line is long on purpose so the preview shows a message that wraps at the full chat width",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4453,
+      "text": "Vote passed: /map Kobra 2",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4455,
+      "text": "take the top route",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4456,
+      "text": "Map changed to Kobra 2",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4457,
+      "text": "go go go",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4458,
+      "text": "nice one",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4459,
+      "text": "DYL finished in 00:58.120",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4460,
+      "text": "new pb?",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 4462,
+      "text": "Vote passed: /restart",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },

@@ -3634,7 +3634,7 @@ void CChat::OnRender()
 	// 若按当帧内容包围盒上报，消息一多一少整块就会被重新锚定到保存位置，
 	// 实机里最后一条消息永远贴着那个点，改行内留白也看不出变化。
 	const float ChatElementBottom = 300.0f - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
-	const CUIRect ChatElementRect{ChatRect.x, CHAT_HEIGHT_MIN, ChatRect.w, maximum(0.0f, ChatElementBottom - CHAT_HEIGHT_MIN)};
+	CUIRect ChatElementRect{ChatRect.x, CHAT_HEIGHT_MIN, ChatRect.w, maximum(0.0f, ChatElementBottom - CHAT_HEIGHT_MIN)};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Chat, ChatRect);
 	float MapX0, MapY0, MapX1, MapY1;
 	Graphics()->GetScreen(&MapX0, &MapY0, &MapX1, &MapY1);
@@ -3642,6 +3642,9 @@ void CChat::OnRender()
 	UpdatePointerState();
 
 	float x = HistoryStartX();
+	// 元素宽度按这一帧真正画出来的最右边界收缩：Canvas 的蓝框要和聊天内容同宽，
+	// 不能一直顶着配置上限，否则右边会留出一大块空白，元素也挪不到屏幕右侧。
+	float ChatContentRight = x;
 	CQmChatVisibleBounds VisibleBounds(ChatRect);
 	auto ExtendBounds = [&](float X, float Y, float W, float H) {
 		VisibleBounds.Extend({X, Y, W, H});
@@ -3681,6 +3684,7 @@ void CChat::OnRender()
 	if(InputActive || HudEditorPreview)
 	{
 		const SQmChatInputLayout InputLayout = QmChatResolveInputLayout(x, y, InputLineWidth, ScaledFontSize, InputPrefixWidth);
+		ChatContentRight = maximum(ChatContentRight, InputLayout.m_TextStartX + InputPrefixWidth);
 
 		// render chat input
 		CTextCursor InputCursor;
@@ -4264,7 +4268,8 @@ void CChat::OnRender()
 			continue;
 
 		const float RenderScale = maximum(0.0f, Line.m_Presentation.m_RenderScale);
-		const float RenderedContentWidth = Line.m_ContentWidth * RenderScale;
+			const float RenderedContentWidth = Line.m_ContentWidth * RenderScale;
+			ChatContentRight = maximum(ChatContentRight, x + AnimOffsetX + RenderedContentWidth);
 		const CUIRect RenderedTextRect = {x + AnimOffsetX, RenderY, RenderedContentWidth, LineHeight * RenderScale};
 		const bool MouseInsideLine = HistoryClipRect.Inside(MousePos) && IsChatLineHit(RenderedTextRect, MousePos);
 		if(CopyClickReleased && MouseInsideLine)
@@ -4422,13 +4427,39 @@ void CChat::OnRender()
 
 		static const SPreviewLine s_aPreviewLines[] = {
 			{"Server", "Welcome to QmClient", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
-			{"Teammate", "Ready?", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
-			{"Friend", "Let's go!", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Friend", "yo", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "ready?", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "one sec", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "Vote passed: /restart", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "go", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "gl hf", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
 			{"Server", "Map changed to QmClient", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
-			{"Teammate", "Nice one!", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
-			{"Friend", "See you!", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "left side is clear", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "nice", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
 			{"Spammer", "Hey, I'm spamming here!", ColorRGBA(1.0f, 0.72f, 0.72f, 0.92f)},
-			{"Server", "Vote passed", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Server", "DYL finished in 01:23.456", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "gg", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "that was close", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "again?", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "Vote started: /map Kobra 2", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "f3", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "wait for me", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "DYL entered and joined the game", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "welcome", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "hi DYL", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Server", "This line is long on purpose so the preview shows a message that wraps at the full chat width", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "lol", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "ok", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Server", "Vote passed: /map Kobra 2", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "loading...", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "take the top route", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Server", "Map changed to Kobra 2", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "go go go", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "nice one", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Server", "DYL finished in 00:58.120", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Friend", "new pb?", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+			{"Teammate", "almost", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Server", "Vote passed: /restart", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
 		};
 
 		// 从历史和输入行的交界处往上铺，填满展开后的聊天区，
@@ -4442,11 +4473,14 @@ void CChat::OnRender()
 		for(int PreviewIndex = 0; PreviewIndex < PreviewRows; ++PreviewIndex)
 		{
 			const float PreviewY = PreviewBottom - PreviewStep * (float)(PreviewIndex + 1);
-			const SPreviewLine &Line = s_aPreviewLines[PreviewIndex % (int)std::size(s_aPreviewLines)];
+			// 数组按时间正序排列，底部（最新）从最后一条往前取，预览读起来才像一段真实聊天，
+			// 而不是从第一句开始循环。
+			const SPreviewLine &Line = s_aPreviewLines[(int)std::size(s_aPreviewLines) - 1 - PreviewIndex % (int)std::size(s_aPreviewLines)];
 			char aPreviewText[256];
 			str_format(aPreviewText, sizeof(aPreviewText), "%s: %s", Line.m_pPrefix, Line.m_pMessage);
 			const float TextWidth = TextRender()->TextWidth(FontSize(), aPreviewText, -1, -1.0f);
 			const float PreviewWidth = minimum(ChatRect.w - x, TextWidth + RealMsgPaddingX * 1.5f + (g_Config.m_ClChatOld ? 0.0f : MessageTeeSize() + 2.0f));
+			ChatContentRight = maximum(ChatContentRight, x + PreviewWidth);
 
 			if(!g_Config.m_ClChatOld)
 			{
@@ -4470,7 +4504,9 @@ void CChat::OnRender()
 	Graphics()->ClipDisable();
 
 	// 编辑器选框与实机共用同一块占位：上沿是展开时的裁剪线
-	// （CHAT_HEIGHT_MIN 在这里是屏幕坐标，不是高度），下沿停在状态栏上边。
+	// （CHAT_HEIGHT_MIN 在这里是屏幕坐标，不是高度），下沿停在状态栏上边，
+	// 右沿贴着这一帧最宽的一条消息，蓝框不再比内容宽出一大截。
+	ChatElementRect.w = std::clamp(ChatContentRight - ChatRect.x, 1.0f, ChatRect.w);
 	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, ChatElementRect);
 
 	// 与输入法候选栏相同，浮层覆盖聊天记录，不参与记录布局。

@@ -2721,7 +2721,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 5087
+      "line": 5121
     },
     {
       "key": "Add one shortcut per message; it is used when the target is on the list.",
@@ -2931,7 +2931,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 5112
+      "line": 5146
     },
     {
       "key": "Add to category",
@@ -9686,7 +9686,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 5038
+      "line": 5072
     },
     {
       "key": "Chat",
@@ -14054,7 +14054,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 5082
+      "line": 5116
     },
     {
       "key": "Copy",
@@ -14117,7 +14117,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 5117
+      "line": 5151
     },
     {
       "key": "Copy name",
@@ -40101,7 +40101,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 5107
+      "line": 5141
     },
     {
       "key": "Mute player status sounds",
@@ -53548,7 +53548,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 5092
+      "line": 5126
     },
     {
       "key": "Reply content",
@@ -54605,14 +54605,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 4835
+      "line": 4869
     },
     {
       "key": "Right-click to enable auto-translate",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 4835
+      "line": 4869
     },
     {
       "key": "Ring",
@@ -64755,7 +64755,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 5097
+      "line": 5131
     },
     {
       "key": "Spectate",
@@ -77383,7 +77383,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 4666
+      "line": 4700
     },
     {
       "key": "Whisper",
@@ -77425,7 +77425,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/chat.cpp",
       "context": "",
-      "line": 4740
+      "line": 4774
     },
     {
       "key": "Whisper to %s",
