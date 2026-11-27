@@ -3076,6 +3076,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 
 void CMenus::StartLoading(int Total)
 {
+	m_TextureBlob = Graphics()->LoadTexture("blob.png", IStorage::TYPE_ALL);
 	m_LoadingState.m_Current = 0;
 	m_LoadingState.m_Total = Total;
 }
@@ -4393,8 +4394,6 @@ void CMenus::OnInit()
 
 	Console()->Chain("demo_play", ConchainDemoPlay, this);
 	Console()->Chain("demo_speed", ConchainDemoSpeed, this);
-
-	m_TextureBlob = Graphics()->LoadTexture("blob.png", IStorage::TYPE_ALL);
 
 	m_IsInit = true;
 	LoadSettingsRuntimeCacheMetadata();

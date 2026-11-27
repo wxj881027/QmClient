@@ -5109,14 +5109,8 @@ void CClient::Run()
 		}
 	}
 
-	// 可见窗口先呈现干净的初始帧；隐藏窗口只清理后缓冲，等有效内容就绪再显示。
+	// 首次交换交给加载页，清屏颜色只写入后缓冲。
 	Graphics()->Clear(0, 0, 0);
-	if(Graphics()->WindowOpen())
-		Graphics()->Swap();
-
-#if defined(CONF_FAMILY_WINDOWS)
-	ShellRegister();
-#endif
 
 	char aNetworkError[256];
 	if(!InitNetworkClient(aNetworkError, sizeof(aNetworkError)))
@@ -5136,9 +5130,6 @@ void CClient::Run()
 
 	// init localization first, making sure all errors during init can be localized
 	GameClient()->InitializeLanguage();
-
-	// init sound, allowed to fail
-	const bool SoundInitFailed = Sound()->Init() != 0;
 
 #if defined(CONF_VIDEORECORDER)
 	// init video recorder aka ffmpeg
@@ -5164,6 +5155,15 @@ void CClient::Run()
 
 	// init the input
 	Input()->Init();
+
+	GameClient()->RenderStartupLoadingScreen();
+
+#if defined(CONF_FAMILY_WINDOWS)
+	ShellRegister();
+#endif
+
+	// init sound, allowed to fail
+	const bool SoundInitFailed = Sound()->Init() != 0;
 
 	// init the editor
 	m_pEditor->Init();

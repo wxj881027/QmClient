@@ -1236,10 +1236,11 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 	// set flags
 	SDL_WindowFlags SdlFlags = SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-	// Windows 在创建时显示游戏窗口，让 Vulkan 设备初始化也在窗口出现后进行。
-#if !defined(CONF_FAMILY_WINDOWS)
-	SdlFlags |= SDL_WINDOW_HIDDEN;
+	// Vulkan 等第一帧加载内容就绪再显示。Windows OpenGL 保留可见创建的截图兼容路径。
+#if defined(CONF_FAMILY_WINDOWS)
+	if(!IsOpenGLFamilyBackend)
 #endif
+		SdlFlags |= SDL_WINDOW_HIDDEN;
 	if(IsOpenGLFamilyBackend)
 		SdlFlags |= SDL_WINDOW_OPENGL;
 	else if(m_BackendType == BACKEND_TYPE_METAL)

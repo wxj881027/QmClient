@@ -143,14 +143,17 @@ def smoke_window_presentation(env: StartupEnvironment) -> None:
 
 
 def smoke_vulkan_window_presentation(env: StartupEnvironment) -> None:
-	check_window_presentation(env, ["qm_graphics_mode 1", "gfx_backend Vulkan"])
+	check_window_presentation(env, ["qm_graphics_mode 1", "gfx_backend Vulkan", "qm_graphics_trace 3"])
 	assert env.client is not None
 	lines = env.client._lines
 	device_ready = next((i for i, line in enumerate(lines) if "gfx: GPU version: Vulkan " in line), None)
 	if device_ready is None:
 		raise AssertionError("client fell back from Vulkan before producing the screenshot")
-	if sys.platform == "win32" and not any("event=startup_show phase=create" in line for line in lines[:device_ready]):
-		raise AssertionError("the Windows game window was still hidden during Vulkan initialization")
+	if sys.platform == "win32":
+		first_loading = next((i for i, line in enumerate(lines) if "loading frame presented:" in line), None)
+		shown = next(i for i, line in enumerate(lines) if "event=startup_show" in line)
+		if first_loading is None or not device_ready < first_loading < shown:
+			raise AssertionError("the Windows Vulkan window appeared before the loading screen was drawn")
 
 
 def smoke_metal_window_presentation(env: StartupEnvironment) -> None:

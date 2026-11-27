@@ -1005,6 +1005,7 @@ public:
 	void LoadInitialGraphicsAssets(const std::function<void()> &OnAssetLoaded = {});
 
 	void InitializeLanguage() override;
+	void RenderStartupLoadingScreen() override;
 	bool m_LanguageChanged = false;
 	void OnLanguageChange();
 	void HandleLanguageChanged();

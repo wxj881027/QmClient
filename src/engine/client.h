@@ -586,6 +586,7 @@ public:
 	virtual void ProcessDemoSnapshot(CSnapshot *pSnap) = 0;
 
 	virtual void InitializeLanguage() = 0;
+	virtual void RenderStartupLoadingScreen() = 0;
 
 	virtual void ForceUpdateConsoleRemoteCompletionSuggestions() = 0;
 	virtual void RenderQmMonitoringHud() = 0;

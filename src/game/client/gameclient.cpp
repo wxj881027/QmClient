@@ -952,6 +952,32 @@ void CGameClient::ForceUpdateConsoleRemoteCompletionSuggestions()
 	m_GameConsole.ForceUpdateRemoteCompletionSuggestions();
 }
 
+void CGameClient::RenderStartupLoadingScreen()
+{
+	m_pGraphics = Kernel()->RequestInterface<IGraphics>();
+	// 设备重建后引擎会广播「图形资源已重置」，这里负责把游戏侧资源重新建起来。
+	// 注意必须早于任何资源加载：需要在 OnInit 的资产加载之前完成注册。
+	Graphics()->AddGraphicsResourcesResetListener([this]() { OnGraphicsResourcesReset(); });
+
+	m_UI.Init(Kernel());
+	m_RenderTools.Init(Graphics(), TextRender(), this); // TClient
+	m_RenderMap.Init(Graphics(), TextRender());
+
+	if(!TextRender()->LoadFonts())
+	{
+		Client()->AddWarning(SWarning(Localize("Some fonts could not be loaded. Check the local console for details.")));
+	}
+	TextRender()->SetFontLanguageVariant(g_Config.m_ClLanguagefile);
+
+	int LoadingTotal = g_pData->m_NumImages + ComponentCount();
+	if(!g_Config.m_ClThreadsoundloading)
+		LoadingTotal += g_pData->m_NumSounds;
+	m_Menus.StartLoading(LoadingTotal);
+
+	m_MenuBackground.OnInit();
+	m_Menus.RenderLoading(Localize("Loading DDNet Client"), Localize("Initializing components"), 0);
+}
+
 void CGameClient::OnInit()
 {
 	const int64_t OnInitStart = time_get();
@@ -1004,12 +1030,7 @@ void CGameClient::OnInit()
 		m_Menus.RenderLoading(pTitle, pMessage, 0);
 	});
 
-	m_pGraphics = Kernel()->RequestInterface<IGraphics>();
-	// 设备重建后引擎会广播「图形资源已重置」，这里负责把游戏侧资源重新建起来。
-	// 注意必须早于任何资源加载：需要在 OnInit 的资产加载之前完成注册。
-	Graphics()->AddGraphicsResourcesResetListener([this]() { OnGraphicsResourcesReset(); });
-
-	// propagate pointers
+	// 编辑器初始化切换了共享 UI 指针，恢复游戏 UI 再初始化组件。
 	m_UI.Init(Kernel());
 	m_UI.SetOnBackButtonPressedCallback([this]() {
 		m_BackButtonHandledKeyBind = m_KeyBinder.HasPendingKeyReader();
@@ -1028,8 +1049,6 @@ void CGameClient::OnInit()
 	m_UiRuntimeV2.Init(this);
 	m_UI.SetQmAnimationRuntime(&m_UiRuntimeV2.AnimRuntime());
 	m_UI.InitTooltips(this);
-	m_RenderTools.Init(Graphics(), TextRender(), this); // TClient
-	m_RenderMap.Init(Graphics(), TextRender());
 	m_AppliedQmUiIconWeight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
 
 	if(GIT_SHORTREV_HASH)
@@ -1051,35 +1070,12 @@ void CGameClient::OnInit()
 	for(int i = 0; i < OLD_NUM_NETOBJTYPES; i++)
 		pClient->SnapSetStaticsize7(i, m_NetObjHandler7.GetObjSize(i));
 
-	if(!TextRender()->LoadFonts())
-	{
-		pClient->AddWarning(SWarning(Localize("Some fonts could not be loaded. Check the local console for details.")));
-	}
-	TextRender()->SetFontLanguageVariant(g_Config.m_ClLanguagefile);
-
-	// 不在主题背景初始化前呈现中间帧。字体加载后的这次 Swap 会把清屏色
-	// 直接显示出来，随后主题地图加载完成又切回主题，启动时就会看到灰屏。
-
 	const char *pLoadingDDNetCaption = Localize("Loading DDNet Client");
 	const char *pLoadingMessageComponents = Localize("Initializing components");
 	const char *pLoadingMessageComponentsSpecial = Localize("Why are you slowmo replaying to read this?");
 	char aLoadingMessage[256];
 
-	int LoadingTotal = g_pData->m_NumImages + ComponentCount();
-	if(!g_Config.m_ClThreadsoundloading)
-		LoadingTotal += g_pData->m_NumSounds;
-	m_Menus.StartLoading(LoadingTotal);
-
-	// QmClient: 组件 OnInit 按添加顺序逆序执行，m_MenuBackground 排在列表后段，
-	// 主题背景要等若干个组件初始化后才就绪——最前面的加载帧只能用占位背景，
-	// 与主题就绪后的帧交替就是启动阶段的背景闪动。这里提前同步加载主题背景
-	//（本地小地图，耗时很小），让第一个加载帧就能使用主题背景。
-	// OnInit 已做幂等保护，组件循环里的再次调用不会重复初始化。
-	m_MenuBackground.OnInit();
-	// 主题背景已经就绪，后续组件加载帧可以安全呈现。
-	// 显示模式枚举必须在这里完成：SDL 首次枚举会同步初始化显示后端，放到设置页
-	// 或后台预算里会直接冻结动态加载背景和鼠标响应。此时第一个加载帧尚未呈现，
-	// 阻塞只增加启动绝对耗时，不会制造玩家可见的掉帧。
+	// 首帧已显示，再预热设置页的显示模式列表。
 	{
 		CPerfTimer VideoModeTimer(QmPerfEnabled());
 		Graphics()->PrewarmVideoModes();
